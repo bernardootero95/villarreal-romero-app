@@ -5,12 +5,14 @@ import {
   useState,
   ReactNode,
 } from "react";
-import type { Session, User } from "@supabase/supabase-js"; // <-- Corrección: import type
+import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import type { Usuario } from "../features/usuarios/types";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
+  perfil: Usuario | null;
   signOut: () => Promise<void>;
   isLoading: boolean;
 }
@@ -18,6 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
+  perfil: null,
   signOut: async () => {},
   isLoading: true,
 });
@@ -25,22 +28,48 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [perfil, setPerfil] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Función para obtener el perfil de la tabla pública
+  const cargarPerfil = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("usuarios")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) throw error;
+      setPerfil(data as Usuario);
+    } catch (error) {
+      console.error("Error cargando el perfil del usuario:", error);
+      setPerfil(null);
+    }
+  };
 
   useEffect(() => {
     // Obtener la sesión inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await cargarPerfil(session.user.id);
+      }
       setIsLoading(false);
     });
 
-    // Escuchar cambios de autenticación (login, logout, token refresh)
+    // Escuchar cambios de autenticación
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await cargarPerfil(session.user.id);
+      } else {
+        setPerfil(null);
+      }
       setIsLoading(false);
     });
 
@@ -52,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, signOut, isLoading }}>
+    <AuthContext.Provider value={{ session, user, perfil, signOut, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

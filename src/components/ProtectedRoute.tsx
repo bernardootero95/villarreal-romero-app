@@ -4,12 +4,16 @@ import { useAuth } from "../contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: ReactNode;
+  cargosPermitidos?: string[];
 }
 
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { session, isLoading } = useAuth();
+export const ProtectedRoute = ({
+  children,
+  cargosPermitidos,
+}: ProtectedRouteProps) => {
+  const { session, perfil, isLoading } = useAuth();
 
-  // Mientras se verifica el estado de la sesión, mostramos un spinner con el color de acento
+  // Spinner de carga mientras valida sesión y perfil
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -18,9 +22,14 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // Si no está autenticado, se le redirige al login de inmediato
+  // Si no hay sesión activa, al login
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Si la ruta es restringida y el cargo del usuario no está permitido, redirige al Dashboard
+  if (cargosPermitidos && perfil && !cargosPermitidos.includes(perfil.cargo)) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

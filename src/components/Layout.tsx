@@ -8,22 +8,22 @@ interface LayoutProps {
 }
 
 export const Layout = ({ children }: LayoutProps) => {
-  const { signOut } = useAuth();
-  const navigate = navigateHook();
+  const { signOut, perfil } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
 
-  // Función auxiliar para simular el hook debido al tipado
-  function navigateHook() {
-    const nav = useNavigate();
-    return nav;
-  }
-
+  // Definición de ítems del menú con sus cargos permitidos
   const menuItems = [
-    { icon: <BarChart2 className="w-5 h-5" />, label: "Dashboard", path: "/" },
+    {
+      icon: <BarChart2 className="w-5 h-5" />,
+      label: "Dashboard",
+      path: "/",
+    },
     {
       icon: <Users className="w-5 h-5" />,
       label: "Usuarios",
       path: "/usuarios",
+      roles: ["Gerente", "Ingeniero"], // Solo visible para Gerente e Ingeniero
     },
     {
       icon: <Calendar className="w-5 h-5" />,
@@ -36,6 +36,12 @@ export const Layout = ({ children }: LayoutProps) => {
       path: "/vencimientos",
     },
   ];
+
+  // Filtramos el menú según el cargo del usuario logueado
+  const filteredMenu = menuItems.filter((item) => {
+    if (!item.roles) return true; // Si no tiene restricciones, cualquiera lo ve
+    return perfil ? item.roles.includes(perfil.cargo) : false;
+  });
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -50,11 +56,21 @@ export const Layout = ({ children }: LayoutProps) => {
             <p className="text-xs text-accent mt-1 font-body font-medium uppercase tracking-wider">
               Asesorías Contables
             </p>
+            {perfil && (
+              <div className="mt-3 pt-2 border-t border-surface/5">
+                <p className="text-xs text-surface font-semibold truncate">
+                  {perfil.nombre_completo}
+                </p>
+                <p className="text-[10px] text-accent/80 font-mono">
+                  {perfil.cargo}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Navegación Principal */}
           <nav className="mt-6 px-3 space-y-1">
-            {menuItems.map((item, index) => {
+            {filteredMenu.map((item, index) => {
               const isActive = location.pathname === item.path;
               return (
                 <button

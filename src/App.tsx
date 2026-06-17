@@ -11,24 +11,20 @@ import { Layout } from "./components/Layout";
 import { UsersPage } from "./features/usuarios/UsersPage";
 
 function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Ruta Pública de Autenticación */}
-          <Route path="/login" element={<LoginPage />} />
-
-          {/* Subárbol de Rutas Protegidas */}
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Routes>
-                    {/* Marcadores de posición temporales para las vistas */}
-                    <Route
-                      path="/"
-                      element={
+  return AuthProvider({
+    children: Router({
+      children: Routes({
+        children: [
+          Route({ path: "/login", element: LoginPage() }),
+          Route({
+            path: "/*",
+            element: ProtectedRoute({
+              children: Layout({
+                children: Routes({
+                  children: [
+                    Route({
+                      path: "/",
+                      element: (
                         <div className="card-container">
                           <h1 className="text-xl font-semibold mb-2">
                             Resumen General
@@ -37,21 +33,28 @@ function App() {
                             El panel principal del sistema estará aquí.
                           </p>
                         </div>
-                      }
-                    />
-                    <Route path="/usuarios" element={<UsersPage />} />
-
-                    {/* Redirección automática si escriben una sub-ruta inválida */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
-    </AuthProvider>
-  );
+                      ),
+                    }),
+                    Route({
+                      path: "/usuarios",
+                      element: ProtectedRoute({
+                        cargosPermitidos: ["Gerente", "Ingeniero"], // <--- Restricción a nivel de enrutador
+                        children: UsersPage(),
+                      }),
+                    }),
+                    Route({
+                      path: "*",
+                      element: Navigate({ to: "/", replace: true }),
+                    }),
+                  ],
+                }),
+              }),
+            }),
+          }),
+        ],
+      }),
+    }),
+  });
 }
 
 export default App;
