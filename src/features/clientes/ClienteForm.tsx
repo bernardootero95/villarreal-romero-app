@@ -12,25 +12,61 @@ interface ClienteFormProps {
   onSuccess: () => void;
 }
 
+// Algoritmo oficial de la DIAN para calcular el DV
+const calcularDV = (nit: string): number | null => {
+  if (!nit || !/^[0-9]+$/.test(nit)) return null;
+
+  const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+  let x = 0;
+  let y = 0;
+  const z = nit.length;
+
+  for (let i = 0; i < z; i++) {
+    y = parseInt(nit.charAt(i), 10);
+    x += y * vpri[z - 1 - i];
+  }
+
+  const y1 = x % 11;
+  return y1 > 1 ? 11 - y1 : y1;
+};
+
 export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
   const [contadores, setContadores] = useState<Usuario[]>([]);
   const [loadingContadores, setLoadingContadores] = useState(true);
 
+  // Agregamos 'watch' y 'setValue' al destructuring
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ClienteFormData>({
     resolver: zodResolver(clienteSchema),
     defaultValues: { estado: "ACTIVO" },
   });
 
-  // Cargar la lista de usuarios para el selector
+  // Escuchamos los cambios en el campo NIT
+  const nitValue = watch("nit");
+
+  // Efecto que recalcula el DV cada vez que el NIT cambia
+  useEffect(() => {
+    if (nitValue && /^[0-9]+$/.test(nitValue)) {
+      const dv = calcularDV(nitValue);
+      if (dv !== null) {
+        // Asignamos el valor y le decimos a Zod que lo valide inmediatamente
+        setValue("dv", dv, { shouldValidate: true });
+      }
+    } else {
+      // Limpiamos el DV si el NIT se borra o es inválido
+      setValue("dv", 0, { shouldValidate: false });
+    }
+  }, [nitValue, setValue]);
+
   useEffect(() => {
     const cargarContadores = async () => {
       try {
         const data = await usuariosService.getAll();
-        // Filtramos para que solo se le puedan asignar clientes a roles contables/gerenciales activos
         const contadoresValidos = data.filter(
           (u) =>
             ["Contador", "Gerente", "Auxiliar"].includes(u.cargo) &&
@@ -72,7 +108,6 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
-          {/* Fila 1: NIT y DV */}
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-9 md:col-span-10">
               <label className="block text-sm font-medium text-text-main mb-1">
@@ -95,18 +130,17 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
               <input
                 {...register("dv")}
                 type="number"
-                min="0"
-                max="9"
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code text-center ${errors.dv ? "border-danger" : "border-gray-300"}`}
+                readOnly // Bloqueamos la edición manual
+                className={`w-full px-3 py-2 border rounded-md outline-none data-code text-center bg-gray-100 cursor-not-allowed ${errors.dv ? "border-danger" : "border-gray-300"}`}
                 placeholder="-"
               />
-              {errors.dv && (
-                <p className="text-danger text-xs mt-1">{errors.dv.message}</p>
-              )}
+              {/* Nota sutil para que el usuario entienda que es automático */}
+              <p className="text-[10px] text-text-muted mt-1 text-center">
+                Calculado
+              </p>
             </div>
           </div>
 
-          {/* Fila 2: Razón Social */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Razón Social / Nombre
@@ -123,7 +157,6 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
             )}
           </div>
 
-          {/* Fila 3: Email y Contador Asignado */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
@@ -165,7 +198,6 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
             </div>
           </div>
 
-          {/* Botones de Acción */}
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
             <button
               type="button"

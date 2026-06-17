@@ -9,23 +9,21 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./features/auth/LoginPage";
 import { Layout } from "./components/Layout";
 import { UsersPage } from "./features/usuarios/UsersPage";
+import { ClientesPage } from "./features/clientes/ClientesPage"; // <--- Importación
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Ruta Pública de Autenticación */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Subárbol de Rutas Protegidas */}
           <Route
             path="/*"
             element={
               <ProtectedRoute>
                 <Layout>
                   <Routes>
-                    {/* Dashboard */}
                     <Route
                       path="/"
                       element={
@@ -40,7 +38,9 @@ function App() {
                       }
                     />
 
-                    {/* Módulo de Usuarios (Protegido por Cargo) */}
+                    {/* Ruta de Clientes: Accesible a todos, permisos manejados dentro del componente */}
+                    <Route path="/clientes" element={<ClientesPage />} />
+
                     <Route
                       path="/usuarios"
                       element={
@@ -52,7 +52,6 @@ function App() {
                       }
                     />
 
-                    {/* Redirección automática */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Layout>

@@ -1,6 +1,13 @@
 import { ReactNode } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { Users, Calendar, CheckSquare, LogOut, BarChart2 } from "lucide-react";
+import {
+  Users,
+  Calendar,
+  CheckSquare,
+  LogOut,
+  BarChart2,
+  Building2,
+} from "lucide-react"; // <-- Building2 agregado
 import { useNavigate, useLocation } from "react-router-dom";
 
 interface LayoutProps {
@@ -12,7 +19,6 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Definición de ítems del menú con sus cargos permitidos
   const menuItems = [
     {
       icon: <BarChart2 className="w-5 h-5" />,
@@ -20,10 +26,15 @@ export const Layout = ({ children }: LayoutProps) => {
       path: "/",
     },
     {
+      icon: <Building2 className="w-5 h-5" />, // <--- Nueva opción visible para todos
+      label: "Clientes",
+      path: "/clientes",
+    },
+    {
       icon: <Users className="w-5 h-5" />,
       label: "Usuarios",
       path: "/usuarios",
-      roles: ["Gerente", "Ingeniero"], // Solo visible para Gerente e Ingeniero
+      roles: ["Gerente", "Ingeniero"],
     },
     {
       icon: <Calendar className="w-5 h-5" />,
@@ -37,18 +48,15 @@ export const Layout = ({ children }: LayoutProps) => {
     },
   ];
 
-  // Filtramos el menú según el cargo del usuario logueado
   const filteredMenu = menuItems.filter((item) => {
-    if (!item.roles) return true; // Si no tiene restricciones, cualquiera lo ve
+    if (!item.roles) return true;
     return perfil ? item.roles.includes(perfil.cargo) : false;
   });
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Sidebar Corporativo - Color Primario */}
       <aside className="w-64 bg-primary text-surface flex flex-col justify-between shadow-md z-10">
         <div>
-          {/* Encabezado del Sidebar */}
           <div className="p-6 border-b border-surface/10">
             <h2 className="text-xl font-title font-semibold text-surface tracking-wide">
               Villarreal-Romero
@@ -68,7 +76,6 @@ export const Layout = ({ children }: LayoutProps) => {
             )}
           </div>
 
-          {/* Navegación Principal */}
           <nav className="mt-6 px-3 space-y-1">
             {filteredMenu.map((item, index) => {
               const isActive = location.pathname === item.path;
@@ -92,7 +99,6 @@ export const Layout = ({ children }: LayoutProps) => {
           </nav>
         </div>
 
-        {/* Botón de Salida - Zona Inferior */}
         <div className="p-4 border-t border-surface/10">
           <button
             onClick={signOut}
@@ -104,7 +110,6 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </aside>
 
-      {/* Área de Contenido Principal (Fondo Gris Suave) */}
       <main className="flex-1 p-8 overflow-y-auto max-h-screen">
         <div className="max-w-7xl mx-auto">{children}</div>
       </main>
