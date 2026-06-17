@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Usuario } from "./types";
+import type { Usuario } from "./types";
 import { usuariosService } from "./usuariosService";
 import { UserPlus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { UserForm } from "./UserForm";

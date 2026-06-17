@@ -1,5 +1,5 @@
 import { supabase } from "../../lib/supabase";
-import { Usuario, UsuarioFormData } from "./types";
+import type { Usuario, UsuarioFormData } from "./types"; // <-- Corrección: import type
 
 export const usuariosService = {
   // Obtener todos los usuarios no eliminados

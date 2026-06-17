@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usuarioSchema, UsuarioFormData, CARGOS_PERMITIDOS } from "./types";
+import { usuarioSchema, CARGOS_PERMITIDOS } from "./types";
+import type { UsuarioFormData } from "./types";
 import { X, Save } from "lucide-react";
 
 interface UserFormProps {
