@@ -18,9 +18,9 @@ export const usuarioSchema = z.object({
     .string()
     .min(4, "El usuario debe tener al menos 4 caracteres")
     .regex(
-      /^[a-zA-Z0-9_]+$/,
-      "Solo letras, números y guiones bajos (sin espacios)",
-    ),
+      /^[a-zA-Z0-9_.]+$/,
+      "Solo letras, números, puntos y guiones bajos (sin espacios)",
+    ), // <-- Modificado aquí
   email: z
     .string()
     .email("Formato de correo inválido")
