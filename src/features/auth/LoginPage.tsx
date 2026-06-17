@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "../../lib/supabase";
 import { Lock, User as UserIcon, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Esquema de validación estricto
 const loginSchema = z.object({
@@ -17,6 +19,16 @@ export const LoginPage = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const navigate = useNavigate();
+  const { session } = useAuth();
+
+  // Si el usuario ya está logueado, lo sacamos del login y lo llevamos al Dashboard
+  useEffect(() => {
+    if (session) {
+      navigate("/", { replace: true });
+    }
+  }, [session, navigate]);
+
   const {
     register,
     handleSubmit,
@@ -29,8 +41,8 @@ export const LoginPage = () => {
     setIsLoading(true);
     setAuthError(null);
 
-    // Transformamos el username al formato de correo interno
-    const internalEmail = `${data.username.toLowerCase()}@villarreal.local`;
+    // Transformamos el username al formato de correo interno (Actualizado a tu dominio)
+    const internalEmail = `${data.username.toLowerCase()}@villarreal-romero.local`;
 
     const { error } = await supabase.auth.signInWithPassword({
       email: internalEmail,
@@ -43,7 +55,7 @@ export const LoginPage = () => {
       );
       setIsLoading(false);
     }
-    // Si es exitoso, el AuthContext detectará el cambio automáticamente y redirigirá
+    // Si no hay error, el useEffect de arriba detectará la sesión y hará la redirección
   };
 
   return (
