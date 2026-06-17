@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./features/auth/LoginPage";
 import { Layout } from "./components/Layout";
+import { UsersPage } from "./features/usuarios/UsersPage";
 
 function App() {
   return (
@@ -38,20 +39,7 @@ function App() {
                         </div>
                       }
                     />
-                    <Route
-                      path="/usuarios"
-                      element={
-                        <div className="card-container">
-                          <h1 className="text-xl font-semibold mb-2">
-                            Administración de Usuarios
-                          </h1>
-                          <p className="text-text-muted">
-                            Aquí listaremos y registraremos los cargos de la
-                            firma.
-                          </p>
-                        </div>
-                      }
-                    />
+                    <Route path="/usuarios" element={<UsersPage />} />
 
                     {/* Redirección automática si escriben una sub-ruta inválida */}
                     <Route path="*" element={<Navigate to="/" replace />} />
