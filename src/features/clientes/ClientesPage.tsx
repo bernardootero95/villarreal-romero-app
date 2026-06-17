@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { clientesService } from "./clientesService";
 import type { ClienteConContador } from "./types";
-import { Building2, Search, Trash2, Plus } from "lucide-react";
+import { Building2, Search, Trash2, Plus, Edit2 } from "lucide-react"; // <-- Edit2 importado
 import { ClienteForm } from "./ClienteForm";
 
 export const ClientesPage = () => {
@@ -10,6 +10,10 @@ export const ClientesPage = () => {
   const [clientes, setClientes] = useState<ClienteConContador[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+
+  // Nuevo estado para guardar el cliente que vamos a editar
+  const [clienteEditando, setClienteEditando] =
+    useState<ClienteConContador | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const puedeAdministrar =
@@ -46,6 +50,18 @@ export const ClientesPage = () => {
     }
   };
 
+  // Función para abrir el modal en modo edición
+  const handleEdit = (cliente: ClienteConContador) => {
+    setClienteEditando(cliente);
+    setShowForm(true);
+  };
+
+  // Función para abrir el modal en modo creación
+  const handleCreate = () => {
+    setClienteEditando(null);
+    setShowForm(true);
+  };
+
   const clientesFiltrados = clientes.filter(
     (c) =>
       c.razon_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,7 +82,7 @@ export const ClientesPage = () => {
 
         {puedeAdministrar && (
           <button
-            onClick={() => setShowForm(true)}
+            onClick={handleCreate} // Usamos la nueva función
             className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm"
           >
             <Plus className="w-5 h-5" />
@@ -140,7 +156,6 @@ export const ClientesPage = () => {
                           <span className="text-xs text-text-muted">
                             {cliente.email}
                           </span>
-                          {/* Visualización del celular en tipografía monoespaciada */}
                           <span className="text-[11px] text-text-muted font-mono mt-0.5">
                             Cel: {cliente.celular}
                           </span>
@@ -169,13 +184,25 @@ export const ClientesPage = () => {
                     </td>
                     {puedeAdministrar && (
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleDelete(cliente.id)}
-                          className="text-text-muted hover:text-danger p-2 transition-colors"
-                          title="Desactivar cliente"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Botón de Editar */}
+                          <button
+                            onClick={() => handleEdit(cliente)}
+                            className="text-text-muted hover:text-accent p-2 transition-colors"
+                            title="Editar cliente"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+
+                          {/* Botón de Eliminar */}
+                          <button
+                            onClick={() => handleDelete(cliente.id)}
+                            className="text-text-muted hover:text-danger p-2 transition-colors"
+                            title="Desactivar cliente"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -188,9 +215,14 @@ export const ClientesPage = () => {
 
       {showForm && (
         <ClienteForm
-          onClose={() => setShowForm(false)}
+          clienteAEditar={clienteEditando} // Pasamos el cliente seleccionado (o null si es creación)
+          onClose={() => {
+            setShowForm(false);
+            setClienteEditando(null);
+          }}
           onSuccess={() => {
             setShowForm(false);
+            setClienteEditando(null);
             fetchClientes();
           }}
         />

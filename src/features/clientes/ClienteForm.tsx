@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { clienteSchema, type ClienteFormData } from "./types";
+import {
+  clienteSchema,
+  type ClienteFormData,
+  type ClienteConContador,
+} from "./types"; // <-- Import actualizados
 import { X, Save, Building2 } from "lucide-react";
 import { clientesService } from "./clientesService";
 import { usuariosService } from "../usuarios/usuariosService";
@@ -10,6 +14,7 @@ import type { Usuario } from "../usuarios/types";
 interface ClienteFormProps {
   onClose: () => void;
   onSuccess: () => void;
+  clienteAEditar?: ClienteConContador | null; // <-- Propiedad opcional para edición
 }
 
 const calcularDV = (nit: string): number | null => {
@@ -29,20 +34,41 @@ const calcularDV = (nit: string): number | null => {
   return y1 > 1 ? 11 - y1 : y1;
 };
 
-export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
+export const ClienteForm = ({
+  onClose,
+  onSuccess,
+  clienteAEditar,
+}: ClienteFormProps) => {
   const [contadores, setContadores] = useState<Usuario[]>([]);
   const [loadingContadores, setLoadingContadores] = useState(true);
 
+  // Extraemos 'reset' para poder inyectar los datos del cliente a editar
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ClienteFormData>({
     resolver: zodResolver(clienteSchema),
     defaultValues: { estado: "ACTIVO" },
   });
+
+  // Si hay un cliente para editar, precargamos el formulario
+  useEffect(() => {
+    if (clienteAEditar) {
+      reset({
+        nit: clienteAEditar.nit,
+        dv: clienteAEditar.dv,
+        razon_social: clienteAEditar.razon_social,
+        email: clienteAEditar.email,
+        celular: clienteAEditar.celular,
+        contador_id: clienteAEditar.contador_id,
+        estado: clienteAEditar.estado as "ACTIVO" | "INACTIVO",
+      });
+    }
+  }, [clienteAEditar, reset]);
 
   const nitValue = watch("nit");
 
@@ -78,12 +104,20 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
 
   const onSubmit = async (data: ClienteFormData) => {
     try {
-      await clientesService.create(data);
+      if (clienteAEditar) {
+        // Modo Edición
+        await clientesService.update(clienteAEditar.id, data);
+      } else {
+        // Modo Creación
+        await clientesService.create(data);
+      }
       onSuccess();
     } catch (error: any) {
       alert(error.message || "Error al guardar el cliente");
     }
   };
+
+  const isEditing = !!clienteAEditar;
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -91,7 +125,9 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
         <div className="bg-primary p-4 flex justify-between items-center">
           <div className="flex items-center gap-2 text-surface">
             <Building2 className="w-5 h-5" />
-            <h2 className="font-title font-semibold">Registrar Cliente</h2>
+            <h2 className="font-title font-semibold">
+              {isEditing ? "Editar Cliente" : "Registrar Cliente"}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -102,7 +138,6 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
-          {/* Fila 1: NIT y DV */}
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-9 md:col-span-10">
               <label className="block text-sm font-medium text-text-main mb-1">
@@ -110,7 +145,8 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
               </label>
               <input
                 {...register("nit")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code ${errors.nit ? "border-danger" : "border-gray-300"}`}
+                disabled={isEditing} // Bloqueamos el NIT si estamos editando (evita errores de clave única)
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code ${errors.nit ? "border-danger" : "border-gray-300"} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="Ej. 900123456"
               />
               {errors.nit && (
@@ -135,7 +171,6 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
             </div>
           </div>
 
-          {/* Fila 2: Razón Social */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Razón Social / Nombre
@@ -152,7 +187,6 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
             )}
           </div>
 
-          {/* Fila 3: Email y Celular (Nuevo campo integrado) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
@@ -187,7 +221,6 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
             </div>
           </div>
 
-          {/* Fila 4: Contador Asignado */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Contador Responsable
@@ -211,7 +244,6 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
             )}
           </div>
 
-          {/* Botones de Acción */}
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
             <button
               type="button"
@@ -226,7 +258,11 @@ export const ClienteForm = ({ onClose, onSuccess }: ClienteFormProps) => {
               className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4" />
-              {isSubmitting ? "Guardando..." : "Guardar Cliente"}
+              {isSubmitting
+                ? "Guardando..."
+                : isEditing
+                  ? "Actualizar Cliente"
+                  : "Guardar Cliente"}
             </button>
           </div>
         </form>
