@@ -21,15 +21,11 @@ export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
 
   const onSubmit = async (data: UsuarioFormData) => {
     try {
-      // Nota: En un flujo real, aquí llamaríamos a una función de Supabase
-      // para crear el usuario en Auth primero.
-      // Por ahora, simularemos la inserción en la tabla pública.
-      alert(
-        "Funcionalidad de creación en Auth requiere Edge Function. Procediendo con lógica de validación UI.",
-      );
+      await usuariosService.create(data);
       onSuccess();
     } catch (error) {
       console.error(error);
+      alert("Error al crear el usuario. Revisa la consola.");
     }
   };
 

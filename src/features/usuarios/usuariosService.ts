@@ -1,74 +1,66 @@
-import { supabase } from "../../lib/supabase";
-import type { Usuario, UsuarioFormData } from "./types"; // <-- Corrección: import type
+import { supabase } from '../../lib/supabase';
+import type { Usuario, UsuarioFormData } from './types';
 
 export const usuariosService = {
-  // Obtener todos los usuarios no eliminados
   async getAll() {
     const { data, error } = await supabase
-      .from("usuarios")
-      .select("*")
-      .is("eliminado", null)
-      .order("creado", { ascending: false });
-
+      .from('usuarios')
+      .select('*')
+      .is('eliminado', null)
+      .order('creado', { ascending: false });
+    
     if (error) throw error;
     return data as Usuario[];
   },
 
-  // Registrar auditoría de forma genérica
-  async registrarAuditoria(
-    accion: string,
-    modulo: string,
-    id: string,
-    previo: any = null,
-    nuevo: any = null,
-  ) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  async registrarAuditoria(accion: string, modulo: string, id: string, previo: any = null, nuevo: any = null) {
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from("auditoria").insert({
+    await supabase.from('auditoria').insert({
       usuario_id: user.id,
       accion,
       modulo,
       registro_id: id,
       datos_previos: previo,
-      datos_nuevos: nuevo,
+      datos_nuevos: nuevo
     });
   },
 
-  // Crear Usuario (Nota: En Supabase Auth se suele hacer vía Edge Function,
-  // aquí asumimos que ya existe en Auth o manejamos solo la tabla pública por ahora)
-  async create(id: string, formData: UsuarioFormData) {
-    const { data, error } = await supabase
-      .from("usuarios")
-      .insert([{ id, ...formData }])
-      .select()
-      .single();
+  // LLAMADA A LA EDGE FUNCTION ACTUALIZADA
+  async create(formData: UsuarioFormData) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Invocamos la función segura en la nube
+    const { data, error } = await supabase.functions.invoke('crear-usuario', {
+      body: {
+        ...formData,
+        admin_id: user?.id // Pasamos el ID del admin para la auditoría
+      }
+    });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error invocando function:', error);
+      throw new Error('No se pudo crear el usuario');
+    }
 
-    await this.registrarAuditoria("CREAR", "USUARIOS", id, null, data);
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
     return data;
   },
 
-  // Soft Delete (Marcar como eliminado)
   async delete(id: string) {
-    const { data: previo } = await supabase
-      .from("usuarios")
-      .select("*")
-      .eq("id", id)
-      .single();
-
+    const { data: previo } = await supabase.from('usuarios').select('*').eq('id', id).single();
+    
     const { error } = await supabase
-      .from("usuarios")
-      .update({ eliminado: new Date().toISOString(), estado: "INACTIVO" })
-      .eq("id", id);
+      .from('usuarios')
+      .update({ eliminado: new Date().toISOString(), estado: 'INACTIVO' })
+      .eq('id', id);
 
     if (error) throw error;
 
-    await this.registrarAuditoria("ELIMINAR", "USUARIOS", id, previo, {
-      eliminado: true,
-    });
-  },
+    await this.registrarAuditoria('ELIMINAR', 'USUARIOS', id, previo, { eliminado: true });
+  }
 };
