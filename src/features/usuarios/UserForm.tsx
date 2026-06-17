@@ -1,8 +1,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usuarioSchema, CARGOS_PERMITIDOS } from "./types";
-import type { UsuarioFormData } from "./types";
+import {
+  usuarioSchema,
+  type UsuarioFormData,
+  CARGOS_PERMITIDOS,
+} from "./types"; // <-- Corrección: agregada la palabra 'type'
 import { X, Save } from "lucide-react";
+import { usuariosService } from "./usuariosService";
 
 interface UserFormProps {
   onClose: () => void;
@@ -53,6 +57,7 @@ export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
               <input
                 {...register("username")}
                 className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${errors.username ? "border-danger" : "border-gray-300"}`}
+                placeholder="juan.perez"
               />
               {errors.username && (
                 <p className="text-danger text-xs mt-1">
@@ -115,7 +120,7 @@ export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md"
+              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4" />
               {isSubmitting ? "Guardando..." : "Guardar Usuario"}
