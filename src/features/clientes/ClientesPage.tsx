@@ -12,7 +12,6 @@ export const ClientesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Lógica de permisos: Solo Gerente e Ingeniero pueden administrar clientes
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
@@ -47,7 +46,6 @@ export const ClientesPage = () => {
     }
   };
 
-  // Filtrado simple en el cliente
   const clientesFiltrados = clientes.filter(
     (c) =>
       c.razon_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,7 +64,6 @@ export const ClientesPage = () => {
           </p>
         </div>
 
-        {/* Renderizado condicional del botón crear */}
         {puedeAdministrar && (
           <button
             onClick={() => setShowForm(true)}
@@ -142,6 +139,10 @@ export const ClientesPage = () => {
                           </span>
                           <span className="text-xs text-text-muted">
                             {cliente.email}
+                          </span>
+                          {/* Visualización del celular en tipografía monoespaciada */}
+                          <span className="text-[11px] text-text-muted font-mono mt-0.5">
+                            Cel: {cliente.celular}
                           </span>
                         </div>
                       </div>
