@@ -10,7 +10,9 @@ import {
   Edit2,
   Filter,
   Upload,
-} from "lucide-react"; // <-- Upload importado correctamente
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"; // <-- Iconos de navegación añadidos
 import { CalendarioBaseForm } from "./CalendarioBaseForm";
 import { CalendarioCargaMasiva } from "./CalendarioCargaMasiva";
 
@@ -28,6 +30,10 @@ export const CalendarioBasePage = () => {
   const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
   const [searchTerm, setSearchTerm] = useState("");
 
+  // ESTADOS PARA PAGINACIÓN
+  const [paginaActual, setPaginaActual] = useState(1);
+  const registrosPorPagina = 10; // Cantidad de filas por vista
+
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
@@ -36,6 +42,7 @@ export const CalendarioBasePage = () => {
       setLoading(true);
       const data = await calendarioBaseService.getAll(anioFiltro);
       setFechas(data);
+      setPaginaActual(1); // Resetear a la primera página si cambia el año de filtro
     } catch (error) {
       console.error(error);
     } finally {
@@ -46,6 +53,11 @@ export const CalendarioBasePage = () => {
   useEffect(() => {
     fetchFechas();
   }, [anioFiltro]);
+
+  // Resetear a página 1 si el usuario escribe en el buscador
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchTerm]);
 
   const handleDelete = async (id: string) => {
     if (
@@ -62,10 +74,25 @@ export const CalendarioBasePage = () => {
     }
   };
 
+  // 1. Filtrado de datos
   const filteredFechas = fechas.filter(
     (f) =>
       f.impuestos?.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       f.periodo.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  // 2. LÓGICA MATEMÁTICA DE PAGINACIÓN
+  const totalRegistros = filteredFechas.length;
+  const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
+
+  // Obtener el índice inicial y final de las filas para la página actual
+  const indiceUltimoRegistro = paginaActual * registrosPorPagina;
+  const indicePrimerRegistro = indiceUltimoRegistro - registrosPorPagina;
+
+  // Cortar el array original para mostrar solo el segmento de la página actual
+  const fechasPaginadas = filteredFechas.slice(
+    indicePrimerRegistro,
+    indiceUltimoRegistro,
   );
 
   return (
@@ -103,7 +130,7 @@ export const CalendarioBasePage = () => {
         )}
       </div>
 
-      <div className="card-container !p-0 overflow-hidden">
+      <div className="card-container !p-0 overflow-hidden flex flex-col justify-between">
         {/* Barra de Filtros */}
         <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-wrap gap-4 justify-between items-center">
           <div className="relative flex-1 max-w-md">
@@ -133,7 +160,8 @@ export const CalendarioBasePage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Tabla */}
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider">
@@ -158,17 +186,17 @@ export const CalendarioBasePage = () => {
                     Cargando matriz de fechas...
                   </td>
                 </tr>
-              ) : filteredFechas.length === 0 ? (
+              ) : fechasPaginadas.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
                     className="px-6 py-8 text-center text-text-muted"
                   >
-                    No hay fechas parametrizadas para el año {anioFiltro}.
+                    No hay fechas parametrizadas para los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
-                filteredFechas.map((f) => (
+                fechasPaginadas.map((f) => (
                   <tr
                     key={f.id}
                     className="hover:bg-gray-50/50 transition-colors"
@@ -227,14 +255,62 @@ export const CalendarioBasePage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* CONTROLES DE INTERFAZ DE PAGINACIÓN */}
+        {!loading && totalPaginas > 1 && (
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+            <div className="text-xs text-text-muted">
+              Mostrando{" "}
+              <span className="font-semibold">{indicePrimerRegistro + 1}</span>{" "}
+              al{" "}
+              <span className="font-semibold">
+                {indiceUltimoRegistro > totalRegistros
+                  ? totalRegistros
+                  : indiceUltimoRegistro}
+              </span>{" "}
+              de <span className="font-semibold">{totalRegistros}</span>{" "}
+              registros
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPaginaActual((prev) => Math.max(prev - 1, 1))}
+                disabled={paginaActual === 1}
+                className="p-1.5 rounded-md border border-gray-200 bg-surface text-text-main hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <div className="text-xs text-text-main font-medium">
+                Página{" "}
+                <span className="text-primary font-bold">{paginaActual}</span>{" "}
+                de {totalPaginas}
+              </div>
+
+              <button
+                onClick={() =>
+                  setPaginaActual((prev) => Math.min(prev + 1, totalPaginas))
+                }
+                disabled={paginaActual === totalPaginas}
+                className="p-1.5 rounded-md border border-gray-200 bg-surface text-text-main hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showForm && (
         <CalendarioBaseForm
           fechaAEditar={fechaEditando}
-          onClose={() => setShowForm(false)}
+          onClose={() => {
+            setShowForm(false);
+            setFechaEditando(null);
+          }}
           onSuccess={() => {
             setShowForm(false);
+            setFechaEditando(null);
             fetchFechas();
           }}
         />
