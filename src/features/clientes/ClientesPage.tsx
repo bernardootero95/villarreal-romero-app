@@ -2,18 +2,24 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { clientesService } from "./clientesService";
 import type { ClienteConContador } from "./types";
-import { Building2, Search, Trash2, Plus, Edit2 } from "lucide-react"; // <-- Edit2 importado
+import { Building2, Search, Trash2, Plus, Edit2, Landmark } from "lucide-react"; // <-- Landmark importado
 import { ClienteForm } from "./ClienteForm";
+import { FichaObligaciones } from "./FichaObligaciones"; // <-- Importamos nuestro nuevo componente
 
 export const ClientesPage = () => {
   const { perfil } = useAuth();
   const [clientes, setClientes] = useState<ClienteConContador[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
 
-  // Nuevo estado para guardar el cliente que vamos a editar
+  // Control de Modales
+  const [showForm, setShowForm] = useState(false);
   const [clienteEditando, setClienteEditando] =
     useState<ClienteConContador | null>(null);
+
+  // Nuevo estado para controlar a qué cliente le estamos gestionando los impuestos
+  const [clienteObligaciones, setClienteObligaciones] =
+    useState<ClienteConContador | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
 
   const puedeAdministrar =
@@ -50,13 +56,11 @@ export const ClientesPage = () => {
     }
   };
 
-  // Función para abrir el modal en modo edición
   const handleEdit = (cliente: ClienteConContador) => {
     setClienteEditando(cliente);
     setShowForm(true);
   };
 
-  // Función para abrir el modal en modo creación
   const handleCreate = () => {
     setClienteEditando(null);
     setShowForm(true);
@@ -82,7 +86,7 @@ export const ClientesPage = () => {
 
         {puedeAdministrar && (
           <button
-            onClick={handleCreate} // Usamos la nueva función
+            onClick={handleCreate}
             className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm"
           >
             <Plus className="w-5 h-5" />
@@ -185,6 +189,17 @@ export const ClientesPage = () => {
                     {puedeAdministrar && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {/* BOTÓN DE OBLIGACIONES / IMPUESTOS */}
+                          <button
+                            onClick={() => setClienteObligaciones(cliente)}
+                            className="text-text-muted hover:text-accent p-2 transition-colors bg-gray-50 hover:bg-accent/10 rounded-md border border-gray-100"
+                            title="Gestionar Obligaciones Tributarias"
+                          >
+                            <Landmark className="w-4 h-4" />
+                          </button>
+
+                          <div className="w-px h-6 bg-gray-200 mx-1"></div>
+
                           {/* Botón de Editar */}
                           <button
                             onClick={() => handleEdit(cliente)}
@@ -215,7 +230,7 @@ export const ClientesPage = () => {
 
       {showForm && (
         <ClienteForm
-          clienteAEditar={clienteEditando} // Pasamos el cliente seleccionado (o null si es creación)
+          clienteAEditar={clienteEditando}
           onClose={() => {
             setShowForm(false);
             setClienteEditando(null);
@@ -225,6 +240,14 @@ export const ClientesPage = () => {
             setClienteEditando(null);
             fetchClientes();
           }}
+        />
+      )}
+
+      {/* Renderizamos el modal de obligaciones si hay un cliente seleccionado */}
+      {clienteObligaciones && (
+        <FichaObligaciones
+          cliente={clienteObligaciones}
+          onClose={() => setClienteObligaciones(null)}
         />
       )}
     </div>
