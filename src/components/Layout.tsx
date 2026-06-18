@@ -37,6 +37,12 @@ export const Layout = ({ children }: LayoutProps) => {
       path: "/impuestos",
     },
     {
+      icon: <Calendar className="w-5 h-5" />,
+      label: "Calendario Base",
+      path: "/calendario-base",
+      roles: ["Gerente", "Ingeniero"], // Solo administradores parametrizan el calendario oficial
+    },
+    {
       icon: <Users className="w-5 h-5" />,
       label: "Usuarios",
       path: "/usuarios",
