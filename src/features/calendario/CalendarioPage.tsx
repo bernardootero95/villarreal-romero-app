@@ -9,6 +9,7 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
+  CheckSquare,
 } from "lucide-react";
 
 export const CalendarioPage = () => {
@@ -16,47 +17,47 @@ export const CalendarioPage = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Estado para el Modal de Detalle Diario
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
+  // Estados para controlar la acción de marcar como presentado
+  const [radicados, setRadicados] = useState<Record<string, string>>({});
+  const [guardandoId, setGuardandoId] = useState<string | null>(null);
+
   const year = currentDate.getFullYear();
-  const month = currentDate.getMonth(); // 0-11
+  const month = currentDate.getMonth();
+
+  const fetchDatos = async () => {
+    if (!perfil) return;
+    try {
+      setLoading(true);
+      const data = await vencimientosService.getVencimientosMes(
+        year,
+        month,
+        perfil.id,
+        perfil.cargo,
+      );
+      setVencimientos(data);
+    } catch (error) {
+      console.error("Error cargando calendario:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDatos = async () => {
-      if (!perfil) return;
-      try {
-        setLoading(true);
-        const data = await vencimientosService.getVencimientosMes(
-          year,
-          month,
-          perfil.id,
-          perfil.cargo,
-        );
-        setVencimientos(data);
-      } catch (error) {
-        console.error("Error cargando calendario:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchDatos();
   }, [year, month, perfil]);
 
-  // Controles del calendario
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const goToToday = () => setCurrentDate(new Date());
 
-  // Lógica de Cuadrícula
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 = Domingo
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
 
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  // Agrupar vencimientos por fecha (YYYY-MM-DD)
   const vencimientosPorDia = vencimientos.reduce(
     (acc, v) => {
       if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
@@ -82,12 +83,36 @@ export const CalendarioPage = () => {
   ];
   const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-  // Renderizado del Modal de Día
+  // Función para procesar el cambio de estado de una tarea
+  const handleMarcarPresentado = async (tareaId: string) => {
+    const observacionText = radicados[tareaId] || "";
+    try {
+      setGuardandoId(tareaId);
+      await vencimientosService.actualizarEstado(
+        tareaId,
+        "PRESENTADO",
+        observacionText,
+      );
+
+      // Limpiar el input de ese ID específico
+      setRadicados((prev) => {
+        const copia = { ...prev };
+        delete copia[tareaId];
+        return copia;
+      });
+
+      // Refrescar los datos del calendario al vuelo
+      await fetchDatos();
+    } catch (error) {
+      alert("Error al actualizar el estado del vencimiento");
+    } finally {
+      setGuardandoId(null);
+    }
+  };
+
   const renderDayModal = () => {
     if (!selectedDate) return null;
     const tareasDelDia = vencimientosPorDia[selectedDate] || [];
-
-    // Formatear la fecha para lectura humana
     const fechaObj = new Date(selectedDate + "T12:00:00");
     const fechaFormateada = fechaObj.toLocaleDateString("es-CO", {
       weekday: "long",
@@ -102,7 +127,7 @@ export const CalendarioPage = () => {
           <div className="bg-primary p-4 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-2 text-surface">
               <CalendarIcon className="w-5 h-5" />
-              <h2 className="font-title font-semibold capitalize">
+              <h2 className="font-title font-semibold capitalize text-sm md:text-base">
                 {fechaFormateada}
               </h2>
             </div>
@@ -114,54 +139,82 @@ export const CalendarioPage = () => {
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
+          <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50 space-y-4">
             {tareasDelDia.length === 0 ? (
               <p className="text-center text-text-muted py-8">
                 No hay vencimientos programados para este día.
               </p>
             ) : (
-              <div className="space-y-3">
-                {tareasDelDia.map((tarea) => (
-                  <div
-                    key={tarea.id}
-                    className="bg-surface border border-gray-200 rounded-lg p-4 shadow-sm flex items-start justify-between gap-4"
-                  >
-                    <div>
-                      <h4 className="font-bold text-primary">
-                        {tarea.clientes.razon_social}
-                      </h4>
-                      <p className="text-xs text-text-muted font-mono mb-2">
-                        NIT: {tarea.clientes.nit}-{tarea.clientes.dv}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-1 rounded font-semibold">
-                          {tarea.impuestos.nombre}
-                        </span>
-                        <span className="text-xs text-text-muted font-medium bg-gray-100 px-2 py-1 rounded">
-                          Periodo: {tarea.periodo_fiscal}
-                        </span>
+              <div className="space-y-4">
+                {tareasDelDia.map((tarea) => {
+                  const esPendiente = tarea.estado_tarea === "PENDIENTE";
+
+                  return (
+                    <div
+                      key={tarea.id}
+                      className="bg-surface border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    >
+                      <div className="flex-1 space-y-1">
+                        <h4 className="font-bold text-primary text-base leading-tight">
+                          {tarea.clientes.razon_social}
+                        </h4>
+                        <p className="text-xs text-text-muted font-mono">
+                          NIT: {tarea.clientes.nit}-{tarea.clientes.dv}
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <span className="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded font-semibold">
+                            {tarea.impuestos.nombre}
+                          </span>
+                          <span className="text-xs text-text-muted font-medium bg-gray-100 px-2 py-0.5 rounded">
+                            Periodo: {tarea.periodo_fiscal}
+                          </span>
+                        </div>
+
+                        {/* Mostrar observaciones o radicado si ya está presentado */}
+                        {!esPendiente && tarea.observaciones && (
+                          <p className="text-xs text-success bg-success/5 border border-success/10 px-2 py-1 rounded mt-2 font-medium">
+                            <b>Radicado / Notas:</b> {tarea.observaciones}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* PANEL DE ACCIÓN TRIBUTARIA */}
+                      <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
+                        {tarea.estado_tarea === "PRESENTADO" ? (
+                          <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full">
+                            <CheckCircle className="w-4 h-4" /> Presentado
+                          </span>
+                        ) : (
+                          <div className="w-full space-y-2">
+                            <input
+                              type="text"
+                              value={radicados[tarea.id] || ""}
+                              onChange={(e) =>
+                                setRadicados({
+                                  ...radicados,
+                                  [tarea.id]: e.target.value,
+                                })
+                              }
+                              placeholder="N° Radicado de la DIAN..."
+                              className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-surface outline-none focus:ring-1 focus:ring-accent"
+                            />
+                            <button
+                              onClick={() => handleMarcarPresentado(tarea.id)}
+                              disabled={guardandoId === tarea.id}
+                              className="w-full bg-success hover:bg-success/90 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all"
+                            >
+                              <CheckSquare className="w-3.5 h-3.5" />
+                              {guardandoId === tarea.id
+                                ? "Guardando..."
+                                : "Marcar Presentado"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end">
-                      {/* Badge de Estado Visual */}
-                      {tarea.estado_tarea === "PRESENTADO" && (
-                        <span className="flex items-center gap-1 text-xs font-bold text-success">
-                          <CheckCircle className="w-3 h-3" /> Presentado
-                        </span>
-                      )}
-                      {tarea.estado_tarea === "PENDIENTE" && (
-                        <span className="flex items-center gap-1 text-xs font-bold text-amber-600">
-                          <Clock className="w-3 h-3" /> Pendiente
-                        </span>
-                      )}
-                      {tarea.estado_tarea === "VENCIDO" && (
-                        <span className="flex items-center gap-1 text-xs font-bold text-danger">
-                          <AlertTriangle className="w-3 h-3" /> Vencido
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -204,14 +257,13 @@ export const CalendarioPage = () => {
         </div>
       </div>
 
-      <div className="card-container !p-0 overflow-hidden bg-surface">
+      <div className="card-container !p-0 overflow-hidden bg-surface shadow-lg">
         <div className="p-4 border-b border-gray-100 bg-gray-50/80 text-center">
           <h2 className="text-xl font-title font-bold text-primary">
             {meses[month]} {year}
           </h2>
         </div>
 
-        {/* Días de la semana */}
         <div className="grid grid-cols-7 border-b border-gray-200">
           {diasSemana.map((d) => (
             <div
@@ -223,26 +275,26 @@ export const CalendarioPage = () => {
           ))}
         </div>
 
-        {/* Cuadrícula del Calendario */}
         <div className="grid grid-cols-7 auto-rows-[100px] md:auto-rows-[120px] bg-gray-200 gap-px border-b border-gray-200">
-          {/* Celdas vacías del principio */}
           {blanks.map((b) => (
             <div key={`blank-${b}`} className="bg-gray-50/50" />
           ))}
 
-          {/* Días del mes */}
           {days.map((day) => {
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const tareasDelDia = vencimientosPorDia[dateStr] || [];
-
-            // Comprobar si el día renderizado es hoy
             const isToday = new Date().toISOString().split("T")[0] === dateStr;
+
+            // Contar pendientes reales del día para cambiar el color del puntito
+            const pendientes = tareasDelDia.filter(
+              (t) => t.estado_tarea === "PENDIENTE",
+            ).length;
 
             return (
               <div
                 key={day}
                 onClick={() => setSelectedDate(dateStr)}
-                className={`bg-surface p-2 flex flex-col hover:bg-blue-50/50 cursor-pointer transition-colors relative group`}
+                className="bg-surface p-2 flex flex-col hover:bg-blue-50/50 cursor-pointer transition-colors relative group"
               >
                 <div className="flex justify-between items-start">
                   <span
@@ -252,29 +304,24 @@ export const CalendarioPage = () => {
                   </span>
                 </div>
 
-                {/* Indicador de Tareas */}
                 <div className="mt-2 flex-1 overflow-hidden flex flex-col gap-1">
-                  {loading ? null : tareasDelDia.length > 0 ? (
+                  {!loading && tareasDelDia.length > 0 ? (
                     <>
-                      {/* Muestra un puntito rojo si hay tareas para dar un aspecto de mapa de calor rápido */}
                       <div className="flex flex-wrap gap-1">
-                        {tareasDelDia.slice(0, 3).map((t, i) => (
+                        {tareasDelDia.slice(0, 4).map((t, i) => (
                           <div
                             key={i}
                             className={`w-2 h-2 rounded-full ${t.estado_tarea === "PRESENTADO" ? "bg-success" : "bg-danger"}`}
                           />
                         ))}
-                        {tareasDelDia.length > 3 && (
-                          <span className="text-[10px] text-text-muted leading-none">
-                            +{tareasDelDia.length - 3}
-                          </span>
-                        )}
                       </div>
 
-                      {/* Texto resumen */}
-                      <span className="text-[10px] font-medium text-text-main bg-amber-100/50 px-1.5 py-0.5 rounded mt-auto w-fit">
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded mt-auto w-fit ${pendientes === 0 ? "bg-success/10 text-success" : "bg-amber-100 text-text-main"}`}
+                      >
                         {tareasDelDia.length} vto
-                        {tareasDelDia.length > 1 ? "s" : ""}
+                        {tareasDelDia.length > 1 ? "s" : ""}{" "}
+                        {pendientes > 0 && `(${pendientes} P)`}
                       </span>
                     </>
                   ) : null}

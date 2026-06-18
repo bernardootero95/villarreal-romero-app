@@ -1,11 +1,12 @@
 import { supabase } from '../../lib/supabase';
+import { usuariosService } from '../usuarios/usuariosService'; // <-- Importamos para la auditoría
 
-// Tipos inferidos de nuestra base de datos
 export interface Vencimiento {
   id: string;
   fecha_limite: string;
   periodo_fiscal: string;
   estado_tarea: 'PENDIENTE' | 'REVISIÓN' | 'PRESENTADO' | 'VENCIDO';
+  observaciones: string | null; // <-- Aseguramos el campo observaciones
   clientes: {
     id: string;
     razon_social: string;
@@ -21,9 +22,7 @@ export interface Vencimiento {
 }
 
 export const vencimientosService = {
-  // Obtener los vencimientos de un mes específico
   async getVencimientosMes(anio: number, mes: number, usuarioId: string, cargo: string) {
-    // Definimos el inicio y fin del mes para la consulta SQL
     const startDate = new Date(anio, mes, 1).toISOString().split('T')[0];
     const endDate = new Date(anio, mes + 1, 0).toISOString().split('T')[0];
 
@@ -34,6 +33,7 @@ export const vencimientosService = {
         fecha_limite,
         periodo_fiscal,
         estado_tarea,
+        observaciones,
         clientes ( id, razon_social, nit, dv, contador_id ),
         impuestos ( id, nombre, especialista_id )
       `)
@@ -45,13 +45,35 @@ export const vencimientosService = {
 
     const isAdmin = ['Gerente', 'Ingeniero'].includes(cargo);
 
-    // Filtramos en el cliente por seguridad de roles
     const vencimientosPermitidos = (data as any[]).filter(v => {
       if (isAdmin) return true;
-      // Si soy el contador de la empresa, o soy el especialista de ese impuesto
       return v.clientes.contador_id === usuarioId || v.impuestos.especialista_id === usuarioId;
     });
 
     return vencimientosPermitidos as Vencimiento[];
+  },
+
+  // NUEVO MÉTODO: CAMBIAR ESTADO DE LA OBLIGACIÓN
+  async actualizarEstado(id: string, nuevoEstado: string, observaciones: string = '') {
+    // A. Capturar estado previo para auditoría
+    const { data: previo } = await supabase.from('vencimientos').select('*').eq('id', id).single();
+
+    // B. Realizar la actualización en Supabase
+    const { data, error } = await supabase
+      .from('vencimientos')
+      .update({ 
+        estado_tarea: nuevoEstado, 
+        observaciones: observaciones || null,
+        actualizado: new Date().toISOString() 
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // C. Registrar auditoría con el radicado u observaciones adjuntas
+    await usuariosService.registrarAuditoria('GESTIONAR_TAREA', 'VENCIMIENTOS', id, previo, data);
+    return data;
   }
 };
