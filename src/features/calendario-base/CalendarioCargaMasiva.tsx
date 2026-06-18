@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, Upload, FileSpreadsheet } from "lucide-react";
+import { X, Upload, FileSpreadsheet, FileUp } from "lucide-react";
 import { calendarioBaseService } from "./calendarioBaseService";
 import { impuestosService } from "../impuestos/impuestosService";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
+import * as XLSX from "xlsx";
 
 interface CalendarioCargaMasivaProps {
   onClose: () => void;
@@ -16,7 +17,7 @@ export const CalendarioCargaMasiva = ({
   const [impuestos, setImpuestos] = useState<ImpuestoConEspecialista[]>([]);
   const [selectedImpuesto, setSelectedImpuesto] = useState("");
   const [anio, setAnio] = useState(new Date().getFullYear());
-  const [rawData, setRawData] = useState("");
+  const [archivo, setArchivo] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -25,52 +26,101 @@ export const CalendarioCargaMasiva = ({
       .then((data) => setImpuestos(data.filter((i) => i.estado === "ACTIVO")));
   }, []);
 
+  const procesarFechaExcel = (fechaStr: any) => {
+    // Si Excel lo pasa como número de serie (ej. 45000), SheetJS con raw: false suele devolver "MM/DD/YYYY" o "DD/MM/YYYY" dependiendo del locale.
+    // Lo ideal es que el usuario configure la celda en Excel como Texto (AAAA-MM-DD), pero intentaremos parsearlo si viene como fecha estándar.
+    if (!fechaStr) return "";
+    const parts = String(fechaStr).split(/[-/]/);
+    if (parts.length === 3) {
+      // Ajuste básico para tratar de estandarizar a AAAA-MM-DD
+      const [p1, p2, p3] = parts;
+      if (p1.length === 4)
+        return `${p1}-${p2.padStart(2, "0")}-${p3.padStart(2, "0")}`; // Ya viene AAAA-MM-DD
+      if (p3.length === 4)
+        return `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`; // Viene DD-MM-AAAA
+    }
+    return String(fechaStr).trim(); // Retorna como venga si no coincide
+  };
+
   const handleCargaMasiva = async () => {
     if (!selectedImpuesto) return alert("Debes seleccionar un impuesto");
-    if (!rawData.trim())
-      return alert("Debes pegar los datos en el área de texto");
+    if (!archivo) return alert("Debes seleccionar un archivo de Excel");
 
     try {
       setIsSubmitting(true);
-      // 1. Separar por saltos de línea (filas de Excel)
-      const lineas = rawData
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l !== "");
 
-      const registros = lineas.map((linea) => {
-        // 2. Separar por tabulación (copiado de Excel) o punto y coma
-        const columnas = linea.split(/[\t;]/).map((c) => c.trim());
+      const reader = new FileReader();
 
-        // Asumimos que el usuario pegó 3 columnas: PERIODO | DIGITO | FECHA
-        return {
-          impuesto_id: selectedImpuesto,
-          anio: anio,
-          periodo: columnas[0] || "",
-          digito:
-            columnas[1] === "" || columnas[1].toUpperCase() === "N/A"
-              ? null
-              : Number(columnas[1]),
-          fecha_vencimiento_oficial: columnas[2] || "",
-        };
-      });
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: "binary", cellDates: true }); // cellDates ayuda a leer las fechas reales
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
 
-      // 3. Validación rápida antes de enviar
-      const invalidos = registros.filter(
-        (r) => !r.periodo || !r.fecha_vencimiento_oficial,
-      );
-      if (invalidos.length > 0) {
-        throw new Error(
-          "Hay filas con datos incompletos. Asegúrate de tener las 3 columnas: Periodo, Dígito y Fecha (AAAA-MM-DD).",
-        );
-      }
+          // Convertir la hoja a un arreglo de arreglos (ignorar la fila 1 asumiendo que son los títulos)
+          const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
+            header: 1,
+            raw: false,
+            dateNF: "yyyy-mm-dd",
+          });
 
-      await calendarioBaseService.createBulk(registros as any);
-      alert(`¡Éxito! Se cargaron ${registros.length} fechas correctamente.`);
-      onSuccess();
+          const registrosValidos = [];
+
+          // Empezamos desde i = 1 para saltar la fila de los encabezados de Excel
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0 || !row[0]) continue; // Fila vacía
+
+            const periodo = String(row[0] || "").trim();
+            const digitoStr = String(row[1] || "").trim();
+            const fechaStr = procesarFechaExcel(row[2]);
+
+            // Validación rápida de fila
+            if (!periodo || !fechaStr) {
+              throw new Error(
+                `Fila ${i + 1} incompleta: Falta el periodo o la fecha.`,
+              );
+            }
+
+            registrosValidos.push({
+              impuesto_id: selectedImpuesto,
+              anio: anio,
+              periodo: periodo,
+              digito:
+                digitoStr === "" || digitoStr.toUpperCase() === "N/A"
+                  ? null
+                  : Number(digitoStr),
+              fecha_vencimiento_oficial: fechaStr,
+            });
+          }
+
+          if (registrosValidos.length === 0) {
+            throw new Error(
+              "El archivo parece estar vacío o no tiene el formato correcto.",
+            );
+          }
+
+          // Enviar a Supabase
+          await calendarioBaseService.createBulk(registrosValidos as any);
+          alert(
+            `¡Éxito! Se cargaron ${registrosValidos.length} fechas correctamente desde el archivo Excel.`,
+          );
+          onSuccess();
+        } catch (error: any) {
+          alert(error.message);
+          setIsSubmitting(false);
+        }
+      };
+
+      reader.onerror = () => {
+        alert("Error leyendo el archivo Excel");
+        setIsSubmitting(false);
+      };
+
+      reader.readAsBinaryString(archivo);
     } catch (error: any) {
       alert(error.message);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -82,7 +132,7 @@ export const CalendarioCargaMasiva = ({
           <div className="flex items-center gap-2 text-surface">
             <FileSpreadsheet className="w-5 h-5" />
             <h2 className="font-title font-semibold">
-              Carga Masiva desde Excel
+              Subir Archivo Excel de Vencimientos
             </h2>
           </div>
           <button
@@ -93,7 +143,7 @@ export const CalendarioCargaMasiva = ({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-4">
+        <div className="p-6 overflow-y-auto space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
@@ -127,48 +177,53 @@ export const CalendarioCargaMasiva = ({
 
           <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg">
             <h3 className="text-sm font-bold text-blue-800 mb-2">
-              3. Instrucciones de pegado
+              Estructura obligatoria del Excel
             </h3>
             <p className="text-xs text-blue-700 mb-2">
-              Copia desde Excel o Google Sheets estrictamente <b>3 columnas</b>{" "}
-              en este orden y pégalas en el cuadro de abajo:
+              Tu archivo <b>.xlsx</b> debe tener encabezados en la primera fila
+              (los ignoraremos) y los datos a partir de la segunda fila,
+              estrictamente en las columnas A, B y C:
             </p>
-            <table className="w-full text-xs text-left bg-white border border-blue-200">
-              <thead className="bg-blue-100 text-blue-800">
-                <tr>
-                  <th className="p-1.5 border-b border-blue-200">
-                    Columna 1: Periodo
-                  </th>
-                  <th className="p-1.5 border-b border-blue-200">
-                    Columna 2: Dígito
-                  </th>
-                  <th className="p-1.5 border-b border-blue-200">
-                    Columna 3: Fecha Límite
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="p-1.5 border-b border-blue-100">B1</td>
-                  <td className="p-1.5 border-b border-blue-100">0</td>
-                  <td className="p-1.5 border-b border-blue-100">2026-05-10</td>
-                </tr>
-                <tr>
-                  <td className="p-1.5">B1</td>
-                  <td className="p-1.5">1</td>
-                  <td className="p-1.5">2026-05-11</td>
-                </tr>
-              </tbody>
-            </table>
+            <ul className="text-xs text-blue-700 list-disc list-inside space-y-1">
+              <li>
+                <b>Columna A:</b> Periodo (Ej. B1, 01, ANUAL)
+              </li>
+              <li>
+                <b>Columna B:</b> Dígito (Ej. 0, 1, 99. Dejar vacío si no
+                aplica)
+              </li>
+              <li>
+                <b>Columna C:</b> Fecha de Vencimiento (Formato AAAA-MM-DD
+                preferiblemente)
+              </li>
+            </ul>
           </div>
 
           <div>
-            <textarea
-              value={rawData}
-              onChange={(e) => setRawData(e.target.value)}
-              placeholder="Pega aquí los datos desde Excel..."
-              className="w-full h-40 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none font-mono text-sm whitespace-pre"
-            ></textarea>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              3. Selecciona tu archivo Excel (.xlsx, .xls)
+            </label>
+            <label
+              className={`mt-2 flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-accent hover:bg-gray-50 focus:outline-none ${archivo ? "border-accent bg-blue-50/30" : ""}`}
+            >
+              <span className="flex flex-col items-center justify-center space-y-2">
+                <FileUp
+                  className={`w-8 h-8 ${archivo ? "text-accent" : "text-gray-400"}`}
+                />
+                <span className="font-medium text-gray-600">
+                  {archivo
+                    ? archivo.name
+                    : "Haz clic para explorar o arrastra el archivo aquí"}
+                </span>
+              </span>
+              <input
+                type="file"
+                name="file_upload"
+                className="hidden"
+                accept=".xlsx, .xls, .csv"
+                onChange={(e) => setArchivo(e.target.files?.[0] || null)}
+              />
+            </label>
           </div>
         </div>
 
@@ -182,11 +237,11 @@ export const CalendarioCargaMasiva = ({
           </button>
           <button
             onClick={handleCargaMasiva}
-            disabled={isSubmitting || !selectedImpuesto || !rawData}
-            className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70"
+            disabled={isSubmitting || !selectedImpuesto || !archivo}
+            className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
           >
             <Upload className="w-4 h-4" />
-            {isSubmitting ? "Procesando..." : "Subir y Procesar"}
+            {isSubmitting ? "Procesando archivo..." : "Subir y Procesar"}
           </button>
         </div>
       </div>
