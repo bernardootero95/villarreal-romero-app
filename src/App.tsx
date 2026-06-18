@@ -9,7 +9,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./features/auth/LoginPage";
 import { Layout } from "./components/Layout";
 import { UsersPage } from "./features/usuarios/UsersPage";
-import { ClientesPage } from "./features/clientes/ClientesPage"; // <--- Importación
+import { ClientesPage } from "./features/clientes/ClientesPage";
+import { ImpuestosPage } from "./features/impuestos/ImpuestosPage";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
 
                     {/* Ruta de Clientes: Accesible a todos, permisos manejados dentro del componente */}
                     <Route path="/clientes" element={<ClientesPage />} />
+                    <Route path="/impuestos" element={<ImpuestosPage />} />
 
                     <Route
                       path="/usuarios"

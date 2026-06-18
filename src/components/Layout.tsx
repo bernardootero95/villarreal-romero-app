@@ -7,7 +7,8 @@ import {
   LogOut,
   BarChart2,
   Building2,
-} from "lucide-react"; // <-- Building2 agregado
+  Landmark,
+} from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 interface LayoutProps {
@@ -29,6 +30,11 @@ export const Layout = ({ children }: LayoutProps) => {
       icon: <Building2 className="w-5 h-5" />, // <--- Nueva opción visible para todos
       label: "Clientes",
       path: "/clientes",
+    },
+    {
+      icon: <Landmark className="w-5 h-5" />, // <--- Nueva opción visible para todos
+      label: "Impuestos",
+      path: "/impuestos",
     },
     {
       icon: <Users className="w-5 h-5" />,
