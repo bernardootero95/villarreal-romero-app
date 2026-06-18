@@ -9,14 +9,20 @@ import {
   Trash2,
   Edit2,
   Filter,
-} from "lucide-react";
+  Upload,
+} from "lucide-react"; // <-- Upload importado correctamente
 import { CalendarioBaseForm } from "./CalendarioBaseForm";
+import { CalendarioCargaMasiva } from "./CalendarioCargaMasiva";
 
 export const CalendarioBasePage = () => {
   const { perfil } = useAuth();
   const [fechas, setFechas] = useState<CalendarioBaseConImpuesto[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Control de Modales
   const [showForm, setShowForm] = useState(false);
+  const [showBulkForm, setShowBulkForm] = useState(false);
+
   const [fechaEditando, setFechaEditando] =
     useState<CalendarioBaseConImpuesto | null>(null);
   const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
@@ -75,16 +81,25 @@ export const CalendarioBasePage = () => {
         </div>
 
         {puedeAdministrar && (
-          <button
-            onClick={() => {
-              setFechaEditando(null);
-              setShowForm(true);
-            }}
-            className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm"
-          >
-            <Plus className="w-5 h-5" />
-            Parametrizar Fecha
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowBulkForm(true)}
+              className="bg-surface border border-gray-200 text-text-main px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm"
+            >
+              <Upload className="w-4 h-4 text-accent" />
+              Carga Masiva
+            </button>
+            <button
+              onClick={() => {
+                setFechaEditando(null);
+                setShowForm(true);
+              }}
+              className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm"
+            >
+              <Plus className="w-5 h-5" />
+              Parametrizar Fecha
+            </button>
+          </div>
         )}
       </div>
 
@@ -220,6 +235,16 @@ export const CalendarioBasePage = () => {
           onClose={() => setShowForm(false)}
           onSuccess={() => {
             setShowForm(false);
+            fetchFechas();
+          }}
+        />
+      )}
+
+      {showBulkForm && (
+        <CalendarioCargaMasiva
+          onClose={() => setShowBulkForm(false)}
+          onSuccess={() => {
+            setShowBulkForm(false);
             fetchFechas();
           }}
         />

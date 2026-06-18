@@ -92,5 +92,33 @@ export const calendarioBaseService = {
     }
 
     await usuariosService.registrarAuditoria('ELIMINAR', 'CALENDARIO_BASE', id, previo, null);
-  }
+  },
+
+  async createBulk(registros: CalendarioBaseFormData[]) {
+    const payloads = registros.map(r => ({
+      impuesto_id: r.impuesto_id,
+      anio: r.anio,
+      periodo: r.periodo,
+      digito: r.digito === '' || r.digito === undefined || isNaN(r.digito as number) 
+        ? null 
+        : Number(r.digito),
+      fecha_vencimiento_oficial: r.fecha_vencimiento_oficial
+    }));
+
+    const { data, error } = await supabase
+      .from('calendario_base_impuestos')
+      .insert(payloads)
+      .select();
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error('Error: Al menos una de las fechas en tu lista ya existe en la base de datos (Duplicado).');
+      }
+      throw new Error('Error en la carga masiva: ' + error.message);
+    }
+
+    // Auditoría de carga masiva
+    await usuariosService.registrarAuditoria('CREAR_MASIVO', 'CALENDARIO_BASE', 'bulk', null, { cantidad: payloads.length });
+    return data;
+  },
 };
