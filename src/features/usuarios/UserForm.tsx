@@ -1,35 +1,65 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   usuarioSchema,
   type UsuarioFormData,
   CARGOS_PERMITIDOS,
-} from "./types"; // <-- Corrección: agregada la palabra 'type'
+  ESTADOS_USUARIO,
+  type Usuario,
+} from "./types"; // <-- Importaciones protegidas para Vite
 import { X, Save } from "lucide-react";
 import { usuariosService } from "./usuariosService";
 
 interface UserFormProps {
   onClose: () => void;
   onSuccess: () => void;
+  usuarioAEditar?: Usuario | null; // <-- Propiedad opcional para edición
 }
 
-export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
+export const UserForm = ({
+  onClose,
+  onSuccess,
+  usuarioAEditar,
+}: UserFormProps) => {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<UsuarioFormData>({
     resolver: zodResolver(usuarioSchema),
     defaultValues: { estado: "ACTIVO" },
   });
 
+  const isEditing = !!usuarioAEditar;
+
+  // Efecto para rellenar los campos si viene un usuario a editar
+  useEffect(() => {
+    if (usuarioAEditar) {
+      reset({
+        username: usuarioAEditar.username,
+        nombre_completo: usuarioAEditar.nombre_completo,
+        email: usuarioAEditar.email || "",
+        cargo: usuarioAEditar.cargo as any,
+        estado: usuarioAEditar.estado as any,
+      });
+    }
+  }, [usuarioAEditar, reset]);
+
   const onSubmit = async (data: UsuarioFormData) => {
     try {
-      await usuariosService.create(data);
+      if (isEditing && usuarioAEditar) {
+        // Modo Edición
+        await usuariosService.update(usuarioAEditar.id, data);
+      } else {
+        // Modo Creación
+        await usuariosService.create(data);
+      }
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Error al crear el usuario. Revisa la consola.");
+      alert(error.message || "Error al guardar el usuario.");
     }
   };
 
@@ -38,7 +68,9 @@ export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
       <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-gray-200">
         <div className="bg-primary p-4 flex justify-between items-center">
           <h2 className="text-surface font-title font-semibold">
-            Registrar Nuevo Miembro
+            {isEditing
+              ? "Editar Miembro del Equipo"
+              : "Registrar Nuevo Miembro"}
           </h2>
           <button
             onClick={onClose}
@@ -56,7 +88,8 @@ export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
               </label>
               <input
                 {...register("username")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${errors.username ? "border-danger" : "border-gray-300"}`}
+                disabled={isEditing} // No permitimos editar el username corporativo una vez asignado
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${errors.username ? "border-danger" : "border-gray-300"} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="juan.perez"
               />
               {errors.username && (
@@ -80,6 +113,11 @@ export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
                   </option>
                 ))}
               </select>
+              {errors.cargo && (
+                <p className="text-danger text-xs mt-1">
+                  {errors.cargo.message}
+                </p>
+              )}
             </div>
           </div>
 
@@ -100,16 +138,43 @@ export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
 
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
-              Email (Opcional)
+              Email Interno
             </label>
             <input
               {...register("email")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none"
               placeholder="ejemplo@correo.com"
             />
+            {errors.email && (
+              <p className="text-danger text-xs mt-1">{errors.email.message}</p>
+            )}
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          {/* Mostrar el estado solo si estamos en edición */}
+          {isEditing && (
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">
+                Estado de Acceso
+              </label>
+              <select
+                {...register("estado")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface"
+              >
+                {ESTADOS_USUARIO.map((est) => (
+                  <option key={est} value={est}>
+                    {est}
+                  </option>
+                ))}
+              </select>
+              {errors.estado && (
+                <p className="text-danger text-xs mt-1">
+                  {errors.estado.message}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 mt-6 pt-2 border-t border-gray-100">
             <button
               type="button"
               onClick={onClose}
@@ -123,7 +188,11 @@ export const UserForm = ({ onClose, onSuccess }: UserFormProps) => {
               className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4" />
-              {isSubmitting ? "Guardando..." : "Guardar Usuario"}
+              {isSubmitting
+                ? "Guardando..."
+                : isEditing
+                  ? "Actualizar Usuario"
+                  : "Guardar Usuario"}
             </button>
           </div>
         </form>
