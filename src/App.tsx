@@ -12,6 +12,7 @@ import { UsersPage } from "./features/usuarios/UsersPage";
 import { ClientesPage } from "./features/clientes/ClientesPage";
 import { ImpuestosPage } from "./features/impuestos/ImpuestosPage";
 import { CalendarioBasePage } from "./features/calendario-base/CalendarioBasePage";
+import { CalendarioPage } from "./features/calendario/CalendarioPage";
 
 function App() {
   return (
@@ -53,7 +54,7 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
-
+                    <Route path="/calendario" element={<CalendarioPage />} />
                     <Route
                       path="/usuarios"
                       element={
