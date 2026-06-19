@@ -60,8 +60,9 @@ export const ClienteForm = ({
         nit: clienteAEditar.nit,
         dv: clienteAEditar.dv,
         razon_social: clienteAEditar.razon_social,
-        email: clienteAEditar.email,
-        celular: clienteAEditar.celular,
+        // Protegemos con un OR para que no intente cargar null en el input
+        email: clienteAEditar.email || "",
+        celular: clienteAEditar.celular || "",
         contador_id: clienteAEditar.contador_id,
         estado: clienteAEditar.estado as "ACTIVO" | "INACTIVO",
       });
@@ -85,7 +86,6 @@ export const ClienteForm = ({
     const cargarContadores = async () => {
       try {
         const data = await usuariosService.getAll();
-        // MODIFICACIÓN: Ahora traemos a TODOS los usuarios que estén ACTIVOS, sin importar su cargo.
         const contadoresValidos = data.filter((u) => u.estado === "ACTIVO");
         setContadores(contadoresValidos);
       } catch (error) {
@@ -99,10 +99,17 @@ export const ClienteForm = ({
 
   const onSubmit = async (data: ClienteFormData) => {
     try {
+      // Limpieza de datos: Si el usuario dejó los campos opcionales vacíos, los enviamos como null a la BD
+      const datosLimpios = {
+        ...data,
+        email: data.email?.trim() || null,
+        celular: data.celular?.trim() || null,
+      };
+
       if (clienteAEditar) {
-        await clientesService.update(clienteAEditar.id, data);
+        await clientesService.update(clienteAEditar.id, datosLimpios);
       } else {
-        await clientesService.create(data);
+        await clientesService.create(datosLimpios);
       }
       onSuccess();
     } catch (error: any) {
@@ -183,7 +190,10 @@ export const ClienteForm = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
-                Email de Contacto
+                Email de Contacto{" "}
+                <span className="text-text-muted font-normal text-xs">
+                  (Opcional)
+                </span>
               </label>
               <input
                 {...register("email")}
@@ -199,7 +209,10 @@ export const ClienteForm = ({
 
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
-                Número de Celular
+                Número de Celular{" "}
+                <span className="text-text-muted font-normal text-xs">
+                  (Opcional)
+                </span>
               </label>
               <input
                 {...register("celular")}
@@ -215,7 +228,6 @@ export const ClienteForm = ({
           </div>
 
           <div>
-            {/* MODIFICACIÓN: Cambio visual de "Contador Responsable" a "Responsable Asignado" */}
             <label className="block text-sm font-medium text-text-main mb-1">
               Responsable Asignado
             </label>

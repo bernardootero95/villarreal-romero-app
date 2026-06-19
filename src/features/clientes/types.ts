@@ -16,11 +16,19 @@ export const clienteSchema = z.object({
     .min(0, 'El DV debe ser entre 0 y 9')
     .max(9, 'El DV debe ser entre 0 y 9'),
   razon_social: z.string().min(3, 'La Razón Social debe tener al menos 3 caracteres'),
-  email: z.string().email('Formato de correo inválido'),
+  
+  // MODIFICACIÓN: Email Opcional
+  email: z.string()
+    .email('Formato de correo inválido')
+    .optional()
+    .or(z.literal('')),
+    
+  // MODIFICACIÓN: Celular Opcional (Si se escribe, debe cumplir la regla de 10 dígitos)
   celular: z.string()
-    .min(10, 'El celular debe tener 10 dígitos')
-    .max(10, 'El celular debe tener 10 dígitos')
-    .regex(/^3[0-9]{9}$/, 'El celular debe ser válido (10 dígitos y empezar por 3)'), // Validación específica para Colombia
+    .regex(/^3[0-9]{9}$/, 'El celular debe tener 10 dígitos y empezar por 3')
+    .optional()
+    .or(z.literal('')),
+    
   contador_id: z.string().uuid('Debes seleccionar un contador responsable'),
   estado: z.enum(ESTADOS_CLIENTE).default('ACTIVO'),
 });
