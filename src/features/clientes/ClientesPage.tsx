@@ -2,9 +2,18 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { clientesService } from "./clientesService";
 import type { ClienteConContador } from "./types";
-import { Building2, Search, Trash2, Plus, Edit2, Landmark } from "lucide-react"; // <-- Landmark importado
+import {
+  Building2,
+  Search,
+  Trash2,
+  Plus,
+  Edit2,
+  Landmark,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { ClienteForm } from "./ClienteForm";
-import { FichaObligaciones } from "./FichaObligaciones"; // <-- Importamos nuestro nuevo componente
+import { FichaObligaciones } from "./FichaObligaciones";
 
 export const ClientesPage = () => {
   const { perfil } = useAuth();
@@ -15,12 +24,14 @@ export const ClientesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [clienteEditando, setClienteEditando] =
     useState<ClienteConContador | null>(null);
-
-  // Nuevo estado para controlar a qué cliente le estamos gestionando los impuestos
   const [clienteObligaciones, setClienteObligaciones] =
     useState<ClienteConContador | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  // ESTADOS Y CONSTANTES PARA PAGINACIÓN
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10; // Cambia este número si quieres mostrar más filas por defecto
 
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
@@ -40,6 +51,11 @@ export const ClientesPage = () => {
   useEffect(() => {
     fetchClientes();
   }, []);
+
+  // Volver a la página 1 cuando el usuario busca algo
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleDelete = async (id: string) => {
     if (
@@ -66,10 +82,20 @@ export const ClientesPage = () => {
     setShowForm(true);
   };
 
+  // 1. Filtrado de clientes
   const clientesFiltrados = clientes.filter(
     (c) =>
       c.razon_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.nit.includes(searchTerm),
+  );
+
+  // 2. Lógica Matemática de Paginación
+  const totalPages = Math.ceil(clientesFiltrados.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  // 3. Arreglo cortado para la vista actual
+  const paginatedClientes = clientesFiltrados.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE,
   );
 
   return (
@@ -95,7 +121,7 @@ export const ClientesPage = () => {
         )}
       </div>
 
-      <div className="card-container !p-0 overflow-hidden">
+      <div className="card-container !p-0 overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -108,7 +134,7 @@ export const ClientesPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider">
@@ -133,17 +159,19 @@ export const ClientesPage = () => {
                     Cargando directorio...
                   </td>
                 </tr>
-              ) : clientesFiltrados.length === 0 ? (
+              ) : paginatedClientes.length === 0 ? (
                 <tr>
                   <td
                     colSpan={puedeAdministrar ? 5 : 4}
                     className="px-6 py-8 text-center text-text-muted"
                   >
-                    No se encontraron clientes.
+                    {searchTerm
+                      ? "No se encontraron clientes con esa búsqueda."
+                      : "No hay clientes registrados."}
                   </td>
                 </tr>
               ) : (
-                clientesFiltrados.map((cliente) => (
+                paginatedClientes.map((cliente) => (
                   <tr
                     key={cliente.id}
                     className="hover:bg-gray-50/50 transition-colors"
@@ -158,10 +186,10 @@ export const ClientesPage = () => {
                             {cliente.razon_social}
                           </span>
                           <span className="text-xs text-text-muted">
-                            {cliente.email}
+                            {cliente.email || "Sin correo"}
                           </span>
                           <span className="text-[11px] text-text-muted font-mono mt-0.5">
-                            Cel: {cliente.celular}
+                            Cel: {cliente.celular || "No registrado"}
                           </span>
                         </div>
                       </div>
@@ -189,7 +217,6 @@ export const ClientesPage = () => {
                     {puedeAdministrar && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {/* BOTÓN DE OBLIGACIONES / IMPUESTOS */}
                           <button
                             onClick={() => setClienteObligaciones(cliente)}
                             className="text-text-muted hover:text-accent p-2 transition-colors bg-gray-50 hover:bg-accent/10 rounded-md border border-gray-100"
@@ -200,7 +227,6 @@ export const ClientesPage = () => {
 
                           <div className="w-px h-6 bg-gray-200 mx-1"></div>
 
-                          {/* Botón de Editar */}
                           <button
                             onClick={() => handleEdit(cliente)}
                             className="text-text-muted hover:text-accent p-2 transition-colors"
@@ -209,7 +235,6 @@ export const ClientesPage = () => {
                             <Edit2 className="w-4 h-4" />
                           </button>
 
-                          {/* Botón de Eliminar */}
                           <button
                             onClick={() => handleDelete(cliente.id)}
                             className="text-text-muted hover:text-danger p-2 transition-colors"
@@ -226,6 +251,56 @@ export const ClientesPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* CONTROLES DE PAGINACIÓN */}
+        {!loading && clientesFiltrados.length > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-surface flex items-center justify-between text-sm">
+            <span className="text-text-muted">
+              Mostrando{" "}
+              <span className="font-semibold text-text-main">
+                {startIndex + 1}
+              </span>{" "}
+              a{" "}
+              <span className="font-semibold text-text-main">
+                {Math.min(
+                  startIndex + ITEMS_PER_PAGE,
+                  clientesFiltrados.length,
+                )}
+              </span>{" "}
+              de{" "}
+              <span className="font-semibold text-text-main">
+                {clientesFiltrados.length}
+              </span>{" "}
+              clientes
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Página anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <span className="text-text-muted font-medium px-2">
+                Página {currentPage} de {totalPages}
+              </span>
+
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Página siguiente"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showForm && (
@@ -243,7 +318,6 @@ export const ClientesPage = () => {
         />
       )}
 
-      {/* Renderizamos el modal de obligaciones si hay un cliente seleccionado */}
       {clienteObligaciones && (
         <FichaObligaciones
           cliente={clienteObligaciones}
