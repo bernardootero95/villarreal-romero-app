@@ -13,6 +13,7 @@ import { ClientesPage } from "./features/clientes/ClientesPage";
 import { ImpuestosPage } from "./features/impuestos/ImpuestosPage";
 import { CalendarioBasePage } from "./features/calendario-base/CalendarioBasePage";
 import { CalendarioPage } from "./features/calendario/CalendarioPage";
+import { PerfilPage } from "./features/perfil/PerfilPage";
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
                     {/* Ruta de Clientes: Accesible a todos, permisos manejados dentro del componente */}
                     <Route path="/clientes" element={<ClientesPage />} />
                     <Route path="/impuestos" element={<ImpuestosPage />} />
+                    <Route path="perfil" element={<PerfilPage />} />
                     <Route
                       path="/calendario-base"
                       element={

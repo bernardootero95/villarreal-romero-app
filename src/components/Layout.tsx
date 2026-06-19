@@ -8,6 +8,11 @@ import {
   BarChart2,
   Building2,
   Landmark,
+  LayoutDashboard,
+  FileText,
+  Menu,
+  X,
+  UserCircle,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
