@@ -1,17 +1,26 @@
 import { useEffect, useState } from "react";
-import { type Usuario } from "./types"; // <-- Importación Vite fix
+import { type Usuario } from "./types";
 import { usuariosService } from "./usuariosService";
-import { UserPlus, Search, Trash2, Edit2 } from "lucide-react"; // <-- Edit2 importado
+import {
+  UserPlus,
+  Search,
+  Trash2,
+  Edit2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { UserForm } from "./UserForm";
 
 export const UsersPage = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-
-  // Nuevo estado para controlar el usuario seleccionado para edición
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // ESTADOS Y CONSTANTES PARA PAGINACIÓN
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5; // Puedes cambiar este número para mostrar más o menos filas
 
   const fetchUsuarios = async () => {
     try {
@@ -29,6 +38,11 @@ export const UsersPage = () => {
     fetchUsuarios();
   }, []);
 
+  // Si el usuario escribe algo en el buscador, regresamos a la página 1 para evitar que la tabla quede vacía
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const handleDelete = async (id: string) => {
     if (
       window.confirm(
@@ -37,7 +51,7 @@ export const UsersPage = () => {
     ) {
       try {
         await usuariosService.delete(id);
-        fetchUsuarios(); // Recargar tabla
+        fetchUsuarios();
       } catch (error) {
         alert("Error al desactivar el miembro del equipo");
       }
@@ -54,11 +68,21 @@ export const UsersPage = () => {
     setShowForm(true);
   };
 
+  // 1. Aplicamos el Filtro de búsqueda primero
   const usuariosFiltrados = usuarios.filter(
     (u) =>
       u.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.cargo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.username.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  // 2. Lógica Matemática de Paginación
+  const totalPages = Math.ceil(usuariosFiltrados.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  // 3. Cortamos el arreglo para obtener solo los de la página actual
+  const paginatedUsuarios = usuariosFiltrados.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE,
   );
 
   return (
@@ -81,7 +105,7 @@ export const UsersPage = () => {
         </button>
       </div>
 
-      <div className="card-container !p-0 overflow-hidden">
+      <div className="card-container !p-0 overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -94,7 +118,7 @@ export const UsersPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider">
@@ -114,17 +138,19 @@ export const UsersPage = () => {
                     Cargando equipo...
                   </td>
                 </tr>
-              ) : usuariosFiltrados.length === 0 ? (
+              ) : paginatedUsuarios.length === 0 ? (
                 <tr>
                   <td
                     colSpan={4}
                     className="px-6 py-8 text-center text-text-muted"
                   >
-                    No hay usuarios registrados.
+                    {searchTerm
+                      ? "No se encontraron usuarios que coincidan con la búsqueda."
+                      : "No hay usuarios registrados."}
                   </td>
                 </tr>
               ) : (
-                usuariosFiltrados.map((user) => (
+                paginatedUsuarios.map((user) => (
                   <tr
                     key={user.id}
                     className="hover:bg-gray-50/50 transition-colors"
@@ -138,7 +164,7 @@ export const UsersPage = () => {
                           @{user.username}
                         </span>
                         {user.email && (
-                          <span className="text-[11px] text-text-muted font-mono">
+                          <span className="text-[11px] text-text-muted font-mono mt-0.5">
                             {user.email}
                           </span>
                         )}
@@ -173,7 +199,6 @@ export const UsersPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Botón de Editar */}
                         <button
                           onClick={() => handleEdit(user)}
                           className="text-text-muted hover:text-accent p-2 transition-colors"
@@ -182,7 +207,6 @@ export const UsersPage = () => {
                           <Edit2 className="w-4 h-4" />
                         </button>
 
-                        {/* Botón de Desactivar */}
                         <button
                           onClick={() => handleDelete(user.id)}
                           className="text-text-muted hover:text-danger p-2 transition-colors"
@@ -198,6 +222,56 @@ export const UsersPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* CONTROLES DE PAGINACIÓN */}
+        {!loading && usuariosFiltrados.length > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-surface flex items-center justify-between text-sm">
+            <span className="text-text-muted">
+              Mostrando{" "}
+              <span className="font-semibold text-text-main">
+                {startIndex + 1}
+              </span>{" "}
+              a{" "}
+              <span className="font-semibold text-text-main">
+                {Math.min(
+                  startIndex + ITEMS_PER_PAGE,
+                  usuariosFiltrados.length,
+                )}
+              </span>{" "}
+              de{" "}
+              <span className="font-semibold text-text-main">
+                {usuariosFiltrados.length}
+              </span>{" "}
+              usuarios
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Página anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <span className="text-text-muted font-medium px-2">
+                Página {currentPage} de {totalPages}
+              </span>
+
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Página siguiente"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showForm && (
