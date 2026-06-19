@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import {
@@ -8,50 +8,95 @@ import {
   ShieldCheck,
   Key,
   Save,
+  Edit,
 } from "lucide-react";
 
 export const PerfilPage = () => {
-  const { perfil, session } = useAuth();
+  const { perfil } = useAuth();
   const [newPassword, setNewPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [mensaje, setMensaje] = useState({ tipo: "", texto: "" });
+  const [correoNotif, setCorreoNotif] = useState("");
+  const [loadingPass, setLoadingPass] = useState(false);
+  const [loadingCorreo, setLoadingCorreo] = useState(false);
+  const [mensajePass, setMensajePass] = useState({ tipo: "", texto: "" });
+  const [mensajeCorreo, setMensajeCorreo] = useState({ tipo: "", texto: "" });
+
+  // Sincronizar el estado local cuando el perfil termine de cargar
+  useEffect(() => {
+    if (perfil?.correo_notificacion) {
+      setCorreoNotif(perfil.correo_notificacion);
+    }
+  }, [perfil]);
 
   if (!perfil) return null;
 
+  // 1. Manejo del Cambio de Contraseña
   const handleActualizarPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (newPassword.length < 6) {
-      setMensaje({
+      setMensajePass({
         tipo: "error",
         texto: "La nueva contraseña debe tener al menos 6 caracteres.",
       });
       return;
     }
-
     try {
-      setLoading(true);
-      setMensaje({ tipo: "", texto: "" });
-
-      // Actualizamos la contraseña directamente en la bóveda de Supabase
+      setLoadingPass(true);
+      setMensajePass({ tipo: "", texto: "" });
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
-
       if (error) throw error;
-
-      setMensaje({
+      setMensajePass({
         tipo: "exito",
-        texto: "¡Tu contraseña ha sido actualizada correctamente!",
+        texto: "¡Contraseña actualizada con éxito!",
       });
       setNewPassword("");
     } catch (error: any) {
-      setMensaje({
+      setMensajePass({
         tipo: "error",
-        texto: error.message || "Error al actualizar la contraseña.",
+        texto: error.message || "Error al actualizar.",
       });
     } finally {
-      setLoading(false);
+      setLoadingPass(false);
+    }
+  };
+
+  // 2. Manejo de la Actualización del Correo de Notificación
+  const handleActualizarCorreoNotificacion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!correoNotif.trim() || !correoNotif.includes("@")) {
+      setMensajeCorreo({
+        tipo: "error",
+        texto: "Por favor ingresa un correo electrónico válido.",
+      });
+      return;
+    }
+    try {
+      setLoadingCorreo(true);
+      setMensajeCorreo({ tipo: "", texto: "" });
+
+      // Actualizamos solo en nuestra tabla pública de usuarios
+      const { error } = await supabase
+        .from("usuarios")
+        .update({
+          correo_notificacion: correoNotif.trim(),
+          actualizado: new Date().toISOString(),
+        })
+        .eq("id", perfil.id);
+
+      if (error) throw error;
+      setMensajeCorreo({
+        tipo: "exito",
+        texto:
+          "¡Correo de notificación guardado! (Reinicia la app para ver los cambios)",
+      });
+    } catch (error: any) {
+      setMensajeCorreo({
+        tipo: "error",
+        texto: error.message || "Error al guardar el correo.",
+      });
+    } finally {
+      setLoadingCorreo(false);
     }
   };
 
@@ -62,69 +107,110 @@ export const PerfilPage = () => {
           Mi Perfil
         </h1>
         <p className="text-text-muted">
-          Gestiona tu información personal y credenciales de acceso.
+          Gestiona tus preferencias de notificación y seguridad.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* TARJETA 1: INFORMACIÓN DEL USUARIO */}
-        <div className="bg-surface rounded-xl shadow-sm border border-gray-100 overflow-hidden h-fit">
-          <div className="bg-primary/5 p-6 flex flex-col items-center justify-center border-b border-gray-100">
-            <div className="w-20 h-20 bg-primary text-surface rounded-full flex items-center justify-center mb-4 shadow-md">
-              <UserCircle className="w-12 h-12" />
+        {/* TARJETA 1: INFORMACIÓN PÚBLICA Y NOTIFICACIONES */}
+        <div className="space-y-6">
+          <div className="bg-surface rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-primary/5 p-6 flex flex-col items-center justify-center border-b border-gray-100">
+              <div className="w-20 h-20 bg-primary text-surface rounded-full flex items-center justify-center mb-4 shadow-md">
+                <UserCircle className="w-12 h-12" />
+              </div>
+              <h2 className="text-xl font-bold text-primary">
+                {perfil.nombre_completo}
+              </h2>
+              <span className="text-sm font-medium text-text-muted">
+                @{perfil.username}
+              </span>
             </div>
-            <h2 className="text-xl font-bold text-primary">
-              {perfil.nombre_completo}
-            </h2>
-            <span className="text-sm font-medium text-text-muted">
-              @{perfil.username}
-            </span>
+
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 text-text-main">
+                <div className="w-8 h-8 rounded bg-gray-50 flex items-center justify-center shrink-0">
+                  <Briefcase className="w-4 h-4 text-text-muted" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-text-muted uppercase">
+                    Cargo en la Firma
+                  </p>
+                  <p className="text-sm font-medium">{perfil.cargo}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 text-text-main">
+                <div className="w-8 h-8 rounded bg-gray-50 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-text-muted" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-text-muted uppercase">
+                    Estado de la Cuenta
+                  </p>
+                  <p className="text-sm font-bold text-success flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-success"></span>
+                    {perfil.estado}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="p-6 space-y-4">
-            <div className="flex items-center gap-3 text-text-main">
-              <div className="w-8 h-8 rounded bg-gray-50 flex items-center justify-center shrink-0">
-                <Mail className="w-4 h-4 text-text-muted" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-text-muted uppercase">
-                  Correo Electrónico
-                </p>
-                <p className="text-sm font-medium">{perfil.email}</p>
-              </div>
+          {/* FORMULARIO PARA EDITAR EL CORREO DE NOTIFICACIÓN */}
+          <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Mail className="w-5 h-5 text-accent" />
+              <h3 className="text-lg font-bold text-primary">
+                Canal de Notificaciones
+              </h3>
             </div>
-
-            <div className="flex items-center gap-3 text-text-main">
-              <div className="w-8 h-8 rounded bg-gray-50 flex items-center justify-center shrink-0">
-                <Briefcase className="w-4 h-4 text-text-muted" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-text-muted uppercase">
-                  Cargo en la Firma
+            <form
+              onSubmit={handleActualizarCorreoNotificacion}
+              className="space-y-4"
+            >
+              {mensajeCorreo.texto && (
+                <div
+                  className={`p-3 rounded-md text-xs font-medium border ${mensajeCorreo.tipo === "exito" ? "bg-success/10 text-success border-success/20" : "bg-danger/10 text-danger border-danger/20"}`}
+                >
+                  {mensajeCorreo.texto}
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold text-text-muted uppercase mb-1">
+                  Correo Electrónico para Alertas
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={correoNotif}
+                  onChange={(e) => setCorreoNotif(e.target.value)}
+                  placeholder="ejemplo@correo.com"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:bg-surface text-sm focus:ring-1 focus:ring-accent outline-none"
+                />
+                <p className="text-[10px] text-text-muted mt-1 leading-tight">
+                  * Aquí recibirás las alertas de vencimiento. Tu correo de
+                  inicio de sesión se mantiene oculto por seguridad.
                 </p>
-                <p className="text-sm font-medium">{perfil.cargo}</p>
               </div>
-            </div>
-
-            <div className="flex items-center gap-3 text-text-main">
-              <div className="w-8 h-8 rounded bg-gray-50 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-4 h-4 text-text-muted" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-text-muted uppercase">
-                  Estado de la Cuenta
-                </p>
-                <p className="text-sm font-bold text-success flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-success"></span>
-                  {perfil.estado}
-                </p>
-              </div>
-            </div>
+              <button
+                type="submit"
+                disabled={
+                  loadingCorreo || correoNotif === perfil.correo_notificacion
+                }
+                className="w-full bg-primary hover:bg-primary/90 text-surface text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                {loadingCorreo
+                  ? "Guardando Correo..."
+                  : "Actualizar Correo de Alertas"}
+              </button>
+            </form>
           </div>
         </div>
 
         {/* TARJETA 2: CAMBIO DE CONTRASEÑA */}
-        <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6 h-fit">
           <div className="flex items-center gap-2 mb-6">
             <Key className="w-5 h-5 text-accent" />
             <h3 className="text-lg font-bold text-primary">
@@ -133,11 +219,11 @@ export const PerfilPage = () => {
           </div>
 
           <form onSubmit={handleActualizarPassword} className="space-y-4">
-            {mensaje.texto && (
+            {mensajePass.texto && (
               <div
-                className={`p-3 rounded-md text-sm font-medium border ${mensaje.tipo === "exito" ? "bg-success/10 text-success border-success/20" : "bg-danger/10 text-danger border-danger/20"}`}
+                className={`p-3 rounded-md text-sm font-medium border ${mensajePass.tipo === "exito" ? "bg-success/10 text-success border-success/20" : "bg-danger/10 text-danger border-danger/20"}`}
               >
-                {mensaje.texto}
+                {mensajePass.texto}
               </div>
             )}
 
@@ -161,11 +247,11 @@ export const PerfilPage = () => {
 
             <button
               type="submit"
-              disabled={loading || !newPassword}
+              disabled={loadingPass || !newPassword}
               className="w-full bg-primary hover:bg-primary/90 text-surface font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 mt-6 shadow-sm"
             >
               <Save className="w-4 h-4" />
-              {loading ? "Actualizando..." : "Actualizar Contraseña"}
+              {loadingPass ? "Actualizando..." : "Actualizar Contraseña"}
             </button>
           </form>
         </div>

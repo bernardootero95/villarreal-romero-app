@@ -8,10 +8,6 @@ import {
   BarChart2,
   Building2,
   Landmark,
-  LayoutDashboard,
-  FileText,
-  Menu,
-  X,
   UserCircle,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -30,6 +26,11 @@ export const Layout = ({ children }: LayoutProps) => {
       icon: <BarChart2 className="w-5 h-5" />,
       label: "Dashboard",
       path: "/",
+    },
+    {
+      icon: <UserCircle className="w-5 h-5" />,
+      label: "Mi Perfil",
+      path: "/perfil",
     },
     {
       icon: <Building2 className="w-5 h-5" />, // <--- Nueva opción visible para todos

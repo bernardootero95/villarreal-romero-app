@@ -20,12 +20,17 @@ export const usuarioSchema = z.object({
     .regex(
       /^[a-zA-Z0-9_.]+$/,
       "Solo letras, números, puntos y guiones bajos (sin espacios)",
-    ), // <-- Modificado aquí
+    ),
   email: z
     .string()
     .email("Formato de correo inválido")
     .optional()
     .or(z.literal("")),
+  // NUEVO CAMPO DE VALIDACIÓN PARA EL FORMULARIO
+  correo_notificacion: z
+    .string()
+    .email("Formato de correo de notificación inválido")
+    .min(5, "El correo de notificación es obligatorio"),
   nombre_completo: z
     .string()
     .min(3, "El nombre debe tener al menos 3 caracteres"),
@@ -35,7 +40,7 @@ export const usuarioSchema = z.object({
   estado: z.enum(ESTADOS_USUARIO).default("ACTIVO"),
 });
 
-// 3. Tipos inferidos de Zod
+// 3. Tipos inferidos de Zod (Ahora incluye automáticamente correo_notificacion)
 export type UsuarioFormData = z.infer<typeof usuarioSchema>;
 
 // 4. Interfaz Base para TODAS las tablas del sistema
@@ -46,7 +51,7 @@ export interface CamposBase {
   eliminado: string | null; // Timestamps para Soft Delete
 }
 
-// 5. Interfaces de Base de Datos
+// 5. Interfaces de Base de Datos (Ya hereda correo_notificacion mediante UsuarioFormData)
 export interface Usuario extends UsuarioFormData, CamposBase {
   id: string; // UUID proveniente de Supabase Auth
 }
