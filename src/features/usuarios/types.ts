@@ -26,11 +26,11 @@ export const usuarioSchema = z.object({
     .email("Formato de correo inválido")
     .optional()
     .or(z.literal("")),
-  // NUEVO CAMPO DE VALIDACIÓN PARA EL FORMULARIO
   correo_notificacion: z
     .string()
     .email("Formato de correo de notificación inválido")
-    .min(5, "El correo de notificación es obligatorio"),
+    .optional()
+    .or(z.literal("")),
   nombre_completo: z
     .string()
     .min(3, "El nombre debe tener al menos 3 caracteres"),

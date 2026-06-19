@@ -5,7 +5,7 @@ import {
   clienteSchema,
   type ClienteFormData,
   type ClienteConContador,
-} from "./types"; // <-- Import actualizados
+} from "./types";
 import { X, Save, Building2 } from "lucide-react";
 import { clientesService } from "./clientesService";
 import { usuariosService } from "../usuarios/usuariosService";
@@ -14,7 +14,7 @@ import type { Usuario } from "../usuarios/types";
 interface ClienteFormProps {
   onClose: () => void;
   onSuccess: () => void;
-  clienteAEditar?: ClienteConContador | null; // <-- Propiedad opcional para edición
+  clienteAEditar?: ClienteConContador | null;
 }
 
 const calcularDV = (nit: string): number | null => {
@@ -42,7 +42,6 @@ export const ClienteForm = ({
   const [contadores, setContadores] = useState<Usuario[]>([]);
   const [loadingContadores, setLoadingContadores] = useState(true);
 
-  // Extraemos 'reset' para poder inyectar los datos del cliente a editar
   const {
     register,
     handleSubmit,
@@ -55,7 +54,6 @@ export const ClienteForm = ({
     defaultValues: { estado: "ACTIVO" },
   });
 
-  // Si hay un cliente para editar, precargamos el formulario
   useEffect(() => {
     if (clienteAEditar) {
       reset({
@@ -87,14 +85,11 @@ export const ClienteForm = ({
     const cargarContadores = async () => {
       try {
         const data = await usuariosService.getAll();
-        const contadoresValidos = data.filter(
-          (u) =>
-            ["Contador", "Gerente", "Auxiliar"].includes(u.cargo) &&
-            u.estado === "ACTIVO",
-        );
+        // MODIFICACIÓN: Ahora traemos a TODOS los usuarios que estén ACTIVOS, sin importar su cargo.
+        const contadoresValidos = data.filter((u) => u.estado === "ACTIVO");
         setContadores(contadoresValidos);
       } catch (error) {
-        console.error("Error cargando contadores:", error);
+        console.error("Error cargando responsables:", error);
       } finally {
         setLoadingContadores(false);
       }
@@ -105,10 +100,8 @@ export const ClienteForm = ({
   const onSubmit = async (data: ClienteFormData) => {
     try {
       if (clienteAEditar) {
-        // Modo Edición
         await clientesService.update(clienteAEditar.id, data);
       } else {
-        // Modo Creación
         await clientesService.create(data);
       }
       onSuccess();
@@ -145,7 +138,7 @@ export const ClienteForm = ({
               </label>
               <input
                 {...register("nit")}
-                disabled={isEditing} // Bloqueamos el NIT si estamos editando (evita errores de clave única)
+                disabled={isEditing}
                 className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code ${errors.nit ? "border-danger" : "border-gray-300"} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="Ej. 900123456"
               />
@@ -222,15 +215,16 @@ export const ClienteForm = ({
           </div>
 
           <div>
+            {/* MODIFICACIÓN: Cambio visual de "Contador Responsable" a "Responsable Asignado" */}
             <label className="block text-sm font-medium text-text-main mb-1">
-              Contador Responsable
+              Responsable Asignado
             </label>
             <select
               {...register("contador_id")}
               disabled={loadingContadores}
               className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.contador_id ? "border-danger" : "border-gray-300"}`}
             >
-              <option value="">Seleccione un contador...</option>
+              <option value="">Seleccione un responsable...</option>
               {contadores.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.nombre_completo} ({user.cargo})

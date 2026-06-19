@@ -7,14 +7,14 @@ import {
   CARGOS_PERMITIDOS,
   ESTADOS_USUARIO,
   type Usuario,
-} from "./types"; // <-- Importaciones protegidas para Vite
+} from "./types";
 import { X, Save } from "lucide-react";
 import { usuariosService } from "./usuariosService";
 
 interface UserFormProps {
   onClose: () => void;
   onSuccess: () => void;
-  usuarioAEditar?: Usuario | null; // <-- Propiedad opcional para edición
+  usuarioAEditar?: Usuario | null;
 }
 
 export const UserForm = ({
@@ -26,6 +26,7 @@ export const UserForm = ({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<UsuarioFormData>({
     resolver: zodResolver(usuarioSchema),
@@ -34,13 +35,16 @@ export const UserForm = ({
 
   const isEditing = !!usuarioAEditar;
 
-  // Efecto para rellenar los campos si viene un usuario a editar
+  // Observamos lo que el usuario escribe en 'username' para armar el correo visualmente
+  const watchUsername = watch("username");
+
   useEffect(() => {
     if (usuarioAEditar) {
       reset({
         username: usuarioAEditar.username,
         nombre_completo: usuarioAEditar.nombre_completo,
         email: usuarioAEditar.email || "",
+        correo_notificacion: usuarioAEditar.correo_notificacion || "",
         cargo: usuarioAEditar.cargo as any,
         estado: usuarioAEditar.estado as any,
       });
@@ -53,8 +57,15 @@ export const UserForm = ({
         // Modo Edición
         await usuariosService.update(usuarioAEditar.id, data);
       } else {
-        // Modo Creación
-        await usuariosService.create(data);
+        // MODO CREACIÓN: Inyectamos el correo generado automáticamente
+        const generatedEmail = `${data.username.toLowerCase().trim()}@villarreal-romero.local`;
+        const dataAEnviar = {
+          ...data,
+          email: generatedEmail,
+          // Si el correo de notificación viene vacío, lo mandamos como null para la BD
+          correo_notificacion: data.correo_notificacion?.trim() || null,
+        };
+        await usuariosService.create(dataAEnviar as UsuarioFormData);
       }
       onSuccess();
     } catch (error: any) {
@@ -88,7 +99,7 @@ export const UserForm = ({
               </label>
               <input
                 {...register("username")}
-                disabled={isEditing} // No permitimos editar el username corporativo una vez asignado
+                disabled={isEditing}
                 className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${errors.username ? "border-danger" : "border-gray-300"} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="juan.perez"
               />
@@ -136,21 +147,24 @@ export const UserForm = ({
             )}
           </div>
 
+          {/* Email de Notificaciones (Opcional) */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
-              Email Interno
+              Email para Alertas{" "}
+              <span className="text-text-muted font-normal">(Opcional)</span>
             </label>
             <input
-              {...register("email")}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none"
-              placeholder="ejemplo@correo.com"
+              {...register("correo_notificacion")}
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${errors.correo_notificacion ? "border-danger" : "border-gray-300"}`}
+              placeholder="alertas@correo.com"
             />
-            {errors.email && (
-              <p className="text-danger text-xs mt-1">{errors.email.message}</p>
+            {errors.correo_notificacion && (
+              <p className="text-danger text-xs mt-1">
+                {errors.correo_notificacion.message}
+              </p>
             )}
           </div>
 
-          {/* Mostrar el estado solo si estamos en edición */}
           {isEditing && (
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
@@ -166,11 +180,6 @@ export const UserForm = ({
                   </option>
                 ))}
               </select>
-              {errors.estado && (
-                <p className="text-danger text-xs mt-1">
-                  {errors.estado.message}
-                </p>
-              )}
             </div>
           )}
 
