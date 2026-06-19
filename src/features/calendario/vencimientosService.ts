@@ -6,13 +6,14 @@ export interface Vencimiento {
   fecha_limite: string;
   periodo_fiscal: string;
   estado_tarea: 'PENDIENTE' | 'REVISIÓN' | 'PRESENTADO' | 'VENCIDO';
-  observaciones: string | null; // <-- Aseguramos el campo observaciones
+  observaciones: string | null;
   clientes: {
     id: string;
     razon_social: string;
     nit: string;
     dv: number;
     contador_id: string;
+    estado?: string; // Lo traemos para verificar, aunque supabase hace el filtro interno
   };
   impuestos: {
     id: string;
@@ -26,6 +27,7 @@ export const vencimientosService = {
     const startDate = new Date(anio, mes, 1).toISOString().split('T')[0];
     const endDate = new Date(anio, mes + 1, 0).toISOString().split('T')[0];
 
+    // SOLUCIÓN: Agregamos el filtro (!inner) para obligar a que el cliente relacionado esté ACTIVO
     const { data, error } = await supabase
       .from('vencimientos')
       .select(`
@@ -34,11 +36,12 @@ export const vencimientosService = {
         periodo_fiscal,
         estado_tarea,
         observaciones,
-        clientes ( id, razon_social, nit, dv, contador_id ),
+        clientes!inner ( id, razon_social, nit, dv, contador_id, estado ),
         impuestos ( id, nombre, especialista_id )
       `)
       .gte('fecha_limite', startDate)
       .lte('fecha_limite', endDate)
+      .eq('clientes.estado', 'ACTIVO') // <-- ESTE ES EL FILTRO MAGICO
       .order('fecha_limite', { ascending: true });
 
     if (error) throw error;
@@ -53,7 +56,7 @@ export const vencimientosService = {
     return vencimientosPermitidos as Vencimiento[];
   },
 
-  // NUEVO MÉTODO: CAMBIAR ESTADO DE LA OBLIGACIÓN
+  // MÉTODO: CAMBIAR ESTADO DE LA OBLIGACIÓN
   async actualizarEstado(id: string, nuevoEstado: string, observaciones: string = '') {
     // A. Capturar estado previo para auditoría
     const { data: previo } = await supabase.from('vencimientos').select('*').eq('id', id).single();

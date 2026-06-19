@@ -31,7 +31,7 @@ export const ClientesPage = () => {
 
   // ESTADOS Y CONSTANTES PARA PAGINACIÓN
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10; // Cambia este número si quieres mostrar más filas por defecto
+  const ITEMS_PER_PAGE = 5; // Cambia este número si quieres mostrar más filas por defecto
 
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
@@ -89,10 +89,15 @@ export const ClientesPage = () => {
       c.nit.includes(searchTerm),
   );
 
-  // 2. Lógica Matemática de Paginación
+  // 2. Ordenamiento alfabético A-Z por Nombre/Razón Social
+  clientesFiltrados.sort((a, b) =>
+    a.razon_social.localeCompare(b.razon_social, "es", { sensitivity: "base" }),
+  );
+
+  // 3. Lógica Matemática de Paginación
   const totalPages = Math.ceil(clientesFiltrados.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  // 3. Arreglo cortado para la vista actual
+  // 4. Arreglo cortado para la vista actual
   const paginatedClientes = clientesFiltrados.slice(
     startIndex,
     startIndex + ITEMS_PER_PAGE,
