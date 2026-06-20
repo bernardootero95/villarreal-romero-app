@@ -22,7 +22,6 @@ export const usuarioSchema = z.object({
       "Solo letras, números, puntos y guiones bajos (sin espacios)",
     ),
   
-  // MODIFICACIÓN: Agregamos .nullable()
   email: z
     .string()
     .email("Formato de correo inválido")
@@ -30,7 +29,6 @@ export const usuarioSchema = z.object({
     .nullable()
     .optional(),
     
-  // MODIFICACIÓN: Agregamos .nullable()
   correo_notificacion: z
     .string()
     .email("Formato de correo de notificación inválido")
@@ -42,17 +40,15 @@ export const usuarioSchema = z.object({
     .string()
     .min(3, "El nombre debe tener al menos 3 caracteres"),
     
-  // MODIFICACIÓN: Sintaxis correcta para mensajes de error en Zod enum
+  // MODIFICACIÓN: Utilizamos la sintaxis exacta ({ message }) que exige tu versión de Zod
   cargo: z.enum(CARGOS_PERMITIDOS, {
-    required_error: "Debes seleccionar un cargo",
-    invalid_type_error: "Debes seleccionar un cargo válido",
+    message: "Debes seleccionar un cargo válido",
   }),
   
-  // MODIFICACIÓN: Quitamos .default() para que TypeScript lo infiera como requerido
   estado: z.enum(ESTADOS_USUARIO),
 });
 
-// 3. Tipos inferidos de Zod (Ahora incluye automáticamente correo_notificacion)
+// 3. Tipos inferidos de Zod
 export type UsuarioFormData = z.infer<typeof usuarioSchema>;
 
 // 4. Interfaz Base para TODAS las tablas del sistema
@@ -63,7 +59,7 @@ export interface CamposBase {
   eliminado: string | null; // Timestamps para Soft Delete
 }
 
-// 5. Interfaces de Base de Datos (Ya hereda correo_notificacion mediante UsuarioFormData)
+// 5. Interfaces de Base de Datos
 export interface Usuario extends UsuarioFormData, Omit<CamposBase, 'estado'> {
   id: string; // UUID proveniente de Supabase Auth
 }
