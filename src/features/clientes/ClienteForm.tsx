@@ -159,7 +159,7 @@ export const ClienteForm = ({
                 DV
               </label>
               <input
-                {...register("dv")}
+                {...register("dv", { valueAsNumber: true })}
                 type="number"
                 readOnly
                 className={`w-full px-3 py-2 border rounded-md outline-none data-code text-center bg-gray-100 cursor-not-allowed ${errors.dv ? "border-danger" : "border-gray-300"}`}

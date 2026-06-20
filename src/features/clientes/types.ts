@@ -13,7 +13,8 @@ export const clienteSchema = z.object({
     .min(5, 'El NIT es muy corto')
     .regex(/^[0-9]+$/, 'El NIT debe contener solo números (sin puntos ni guiones)'),
   
-  dv: z.coerce.number()
+  // Usamos z.number() puro, ya que delegaremos el parseo a React Hook Form
+  dv: z.number()
     .min(0, 'El DV debe ser entre 0 y 9')
     .max(9, 'El DV debe ser entre 0 y 9'),
   
