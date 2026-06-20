@@ -21,12 +21,11 @@ export const calendarioBaseService = {
   },
 
   async create(formData: CalendarioBaseFormData) {
-    // Si no enviaron dígito (porque es fecha fija), nos aseguramos de que viaje como null
+    // La capa de validación ya garantiza que 'digito' es number, null o undefined.
+    // Usamos ?? null para que si es undefined pase a null, y si es 0 se mantenga como 0.
     const payload = {
       ...formData,
-      digito: formData.digito === '' || formData.digito === undefined || isNaN(formData.digito as number) 
-        ? null 
-        : Number(formData.digito)
+      digito: formData.digito ?? null
     };
 
     const { data, error } = await supabase
@@ -49,9 +48,7 @@ export const calendarioBaseService = {
   async update(id: string, formData: CalendarioBaseFormData) {
     const payload = {
       ...formData,
-      digito: formData.digito === '' || formData.digito === undefined || isNaN(formData.digito as number) 
-        ? null 
-        : Number(formData.digito),
+      digito: formData.digito ?? null,
       actualizado: new Date().toISOString()
     };
 
@@ -99,9 +96,7 @@ export const calendarioBaseService = {
       impuesto_id: r.impuesto_id,
       anio: r.anio,
       periodo: r.periodo,
-      digito: r.digito === '' || r.digito === undefined || isNaN(r.digito as number) 
-        ? null 
-        : Number(r.digito),
+      digito: r.digito ?? null,
       fecha_vencimiento_oficial: r.fecha_vencimiento_oficial
     }));
 
