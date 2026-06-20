@@ -22,11 +22,18 @@ export const ESTADOS_IMPUESTO = ['ACTIVO', 'INACTIVO'] as const;
 // 2. Esquema Zod
 export const impuestoSchema = z.object({
   nombre: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
-  periodicidad: z.enum(PERIODICIDADES, { errorMap: () => ({ message: 'Periodicidad inválida' }) }),
-  regla_vencimiento: z.enum(REGLAS_VENCIMIENTO, { errorMap: () => ({ message: 'Regla inválida' }) }),
-  // El especialista es opcional. Usamos or(z.literal('')) para aceptar el valor por defecto del select
-  especialista_id: z.string().uuid('ID de especialista inválido').optional().or(z.literal('')),
-  estado: z.enum(ESTADOS_IMPUESTO).default('ACTIVO'),
+  
+  // MODIFICACIÓN: Uso de { message } en lugar de errorMap
+  periodicidad: z.enum(PERIODICIDADES, { message: 'Periodicidad inválida' }),
+  
+  // MODIFICACIÓN: Uso de { message } en lugar de errorMap
+  regla_vencimiento: z.enum(REGLAS_VENCIMIENTO, { message: 'Regla inválida' }),
+  
+  // MODIFICACIÓN: Agregamos nullable() para consistencia con los IDs vacíos hacia Supabase
+  especialista_id: z.string().uuid('ID de especialista inválido').or(z.literal('')).nullable().optional(),
+  
+  // MODIFICACIÓN: Quitamos .default() para que TypeScript lo infiera como requerido en el Form
+  estado: z.enum(ESTADOS_IMPUESTO),
 });
 
 // 3. Tipos Inferidos
