@@ -94,4 +94,11 @@ El proyecto está construido bajo una arquitectura moderna sin servidor (Serverl
 
 ---
 
-Proyecto desarrollado siguiendo altos estándares de escalabilidad y rendimiento.
+## 👨‍💻 Autoría y Desarrollo
+
+- **Desarrollado por:** Tecnoingeniería B.O.
+- **Ingeniero Encargado:** Bernardo Andres Otero Jimenez
+
+---
+
+_Proyecto desarrollado por Tecnoingeniería B.O. siguiendo altos estándares de escalabilidad, rendimiento y principios SOLID._
