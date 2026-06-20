@@ -21,23 +21,35 @@ export const usuarioSchema = z.object({
       /^[a-zA-Z0-9_.]+$/,
       "Solo letras, números, puntos y guiones bajos (sin espacios)",
     ),
+  
+  // MODIFICACIÓN: Agregamos .nullable()
   email: z
     .string()
     .email("Formato de correo inválido")
-    .optional()
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .nullable()
+    .optional(),
+    
+  // MODIFICACIÓN: Agregamos .nullable()
   correo_notificacion: z
     .string()
     .email("Formato de correo de notificación inválido")
-    .optional()
-    .or(z.literal("")),
+    .or(z.literal(""))
+    .nullable()
+    .optional(),
+    
   nombre_completo: z
     .string()
     .min(3, "El nombre debe tener al menos 3 caracteres"),
+    
+  // MODIFICACIÓN: Sintaxis correcta para mensajes de error en Zod enum
   cargo: z.enum(CARGOS_PERMITIDOS, {
-    errorMap: () => ({ message: "Debes seleccionar un cargo válido" }),
+    required_error: "Debes seleccionar un cargo",
+    invalid_type_error: "Debes seleccionar un cargo válido",
   }),
-  estado: z.enum(ESTADOS_USUARIO).default("ACTIVO"),
+  
+  // MODIFICACIÓN: Quitamos .default() para que TypeScript lo infiera como requerido
+  estado: z.enum(ESTADOS_USUARIO),
 });
 
 // 3. Tipos inferidos de Zod (Ahora incluye automáticamente correo_notificacion)

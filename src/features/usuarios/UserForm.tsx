@@ -26,7 +26,6 @@ export const UserForm = ({
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<UsuarioFormData>({
     resolver: zodResolver(usuarioSchema),
@@ -34,9 +33,6 @@ export const UserForm = ({
   });
 
   const isEditing = !!usuarioAEditar;
-
-  // Observamos lo que el usuario escribe en 'username' para armar el correo visualmente
-  const watchUsername = watch("username");
 
   useEffect(() => {
     if (usuarioAEditar) {
