@@ -3,9 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "../../lib/supabase";
-import { Lock, User as UserIcon, AlertCircle } from "lucide-react";
+import { Lock, User as UserIcon, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+// Importamos el logo de la empresa
+import logo from "../../assets/LOGO-2.png";
 
 // Esquema de validación estricto
 const loginSchema = z.object({
@@ -18,6 +20,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export const LoginPage = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // Estado para alternar visibilidad de clave
 
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -42,7 +45,7 @@ export const LoginPage = () => {
     setAuthError(null);
 
     // Transformamos el username al formato de correo interno (Actualizado a tu dominio)
-    const internalEmail = `${data.username.toLowerCase()}@villarreal-romero.local`;
+    const internalEmail = `${data.username.toLowerCase().trim()}@villarreal-romero.local`;
 
     const { error } = await supabase.auth.signInWithPassword({
       email: internalEmail,
@@ -61,11 +64,17 @@ export const LoginPage = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="card-container w-full max-w-md">
-        <div className="text-center mb-8">
+        {/* Cabecera con Logo */}
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img
+            src={logo}
+            alt="Logo Villarreal-Romero"
+            className="h-20 w-auto mb-4 object-contain"
+          />
           <h1 className="text-2xl font-title font-semibold text-primary">
             Villarreal-Romero
           </h1>
-          <p className="text-text-muted mt-2 font-body text-sm">
+          <p className="text-text-muted mt-1 font-body text-sm">
             Sistema de Gestión y Vencimientos
           </p>
         </div>
@@ -97,7 +106,7 @@ export const LoginPage = () => {
             )}
           </div>
 
-          {/* Campo Contraseña */}
+          {/* Campo Contraseña con Toggle de Visibilidad */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Contraseña
@@ -107,14 +116,30 @@ export const LoginPage = () => {
                 <Lock className="h-5 w-5 text-text-muted" />
               </div>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 {...register("password")}
                 disabled={isLoading}
-                className={`block w-full pl-10 pr-3 py-2 border ${
+                // pr-10 asegura que el texto no se superponga con el botón del ojo
+                className={`block w-full pl-10 pr-10 py-2 border ${
                   errors.password ? "border-danger" : "border-gray-300"
                 } rounded-md focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm transition-colors bg-surface`}
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                disabled={isLoading}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-muted hover:text-primary transition-colors focus:outline-none"
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
             </div>
             {errors.password && (
               <p className="mt-1 text-sm text-danger">
@@ -135,9 +160,34 @@ export const LoginPage = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-surface bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed transition-all"
+            className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-surface bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed transition-all"
           >
-            {isLoading ? "Iniciando sesión..." : "Ingresar al sistema"}
+            {isLoading ? (
+              <>
+                <svg
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-surface"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Iniciando sesión...
+              </>
+            ) : (
+              "Ingresar al sistema"
+            )}
           </button>
         </form>
       </div>
