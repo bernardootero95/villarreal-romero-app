@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { impuestosService } from "./impuestosService";
 import type { ImpuestoConEspecialista } from "./types";
-import { Landmark, Search, Trash2, Plus, Edit2 } from "lucide-react";
+import { Search, Trash2, Plus, Edit2 } from "lucide-react";
 import { ImpuestoForm } from "./ImpuestoForm";
 
 export const ImpuestosPage = () => {
