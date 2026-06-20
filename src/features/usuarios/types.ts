@@ -52,7 +52,7 @@ export interface CamposBase {
 }
 
 // 5. Interfaces de Base de Datos (Ya hereda correo_notificacion mediante UsuarioFormData)
-export interface Usuario extends UsuarioFormData, CamposBase {
+export interface Usuario extends UsuarioFormData, Omit<CamposBase, 'estado'> {
   id: string; // UUID proveniente de Supabase Auth
 }
 

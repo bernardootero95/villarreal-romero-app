@@ -136,7 +136,7 @@ export const CalendarioBaseForm = ({
               </label>
               <input
                 type="number"
-                {...register("anio")}
+                {...register("anio", { valueAsNumber: true })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none"
               />
               {errors.anio && (
@@ -173,7 +173,10 @@ export const CalendarioBaseForm = ({
               </label>
               <input
                 type="number"
-                {...register("digito")}
+                {...register("digito", {
+                  setValueAs: (v) =>
+                    v === "" || v === null ? null : Number(v),
+                })}
                 disabled={!requiereDigito}
                 placeholder={requiereDigito ? "0-9 o 00-99" : "No aplica"}
                 className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${!requiereDigito ? "bg-gray-100 cursor-not-allowed" : "bg-surface border-gray-300"}`}

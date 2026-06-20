@@ -33,7 +33,7 @@ export const impuestoSchema = z.object({
 export type ImpuestoFormData = z.infer<typeof impuestoSchema>;
 
 // 4. Interfaces de Base de Datos
-export interface Impuesto extends ImpuestoFormData, CamposBase {
+export interface Impuesto extends ImpuestoFormData, Omit<CamposBase, 'estado'> {
   id: string;
 }
 
