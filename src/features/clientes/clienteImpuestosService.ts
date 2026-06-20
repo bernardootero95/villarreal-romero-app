@@ -91,7 +91,7 @@ export const clienteImpuestosService = {
       .update({ estado: 'INACTIVO', eliminado: ahora })
       .eq('id', asignacionId);
 
-    if (error) throw errorSunc;
+    if (errorSunc) throw errorSunc;
 
     // B. Limpieza preventiva: Removemos del calendario visual las tareas de este impuesto 
     // que todavía estén 'PENDIENTES'. Las tareas ya 'PRESENTADAS' se conservan por histórico financiero.
