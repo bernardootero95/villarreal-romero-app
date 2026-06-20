@@ -12,7 +12,7 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react"; // <-- Iconos de navegación añadidos
+} from "lucide-react"; // Se eliminaron Clock y AlertTriangle
 import { CalendarioBaseForm } from "./CalendarioBaseForm";
 import { CalendarioCargaMasiva } from "./CalendarioCargaMasiva";
 
