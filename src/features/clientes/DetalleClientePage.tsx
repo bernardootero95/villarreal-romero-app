@@ -4,19 +4,20 @@ import {
   Building2,
   Mail,
   Phone,
-  Shield,
   Hash,
   Briefcase,
-  ExternalLink,
   Calendar,
   AlertCircle,
   Clock,
+  Plus,
+  FileText,
 } from "lucide-react";
 import type { ClienteConContador } from "./types";
 import {
   vencimientosService,
   type Vencimiento,
 } from "../calendario/vencimientosService";
+import { FichaObligaciones } from "./FichaObligaciones"; // <-- Reutilizamos tu componente existente
 
 interface DetalleClientePageProps {
   cliente: ClienteConContador;
@@ -30,34 +31,39 @@ export const DetalleClientePage = ({
   const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
   const [loadingVencimientos, setLoadingVencimientos] = useState(true);
 
-  // Carga de vencimientos del cliente para el mes en curso de forma asíncrona y aislada
+  // Estado para controlar la apertura del modal nativo de obligaciones
+  const [showObligacionesModal, setShowObligacionesModal] = useState(false);
+
+  // ESTADOS PARA IMPUESTOS A CARGO (Simulado o mapeado desde las obligaciones del cliente)
+  const [impuestosCargo, setImpuestosCargo] = useState([
+    { id: "1", nombre: "IVA - Cuatrimestral" },
+    { id: "2", nombre: "Retención en la Fuente - Mensual" },
+  ]);
+
+  const cargarVencimientosCliente = async () => {
+    try {
+      setLoadingVencimientos(true);
+      const hoy = new Date();
+      const data = await vencimientosService.getVencimientosMes(
+        hoy.getFullYear(),
+        hoy.getMonth(),
+        "",
+        "Gerente",
+      );
+
+      const filtrados = data.filter((v) => v.clientes.id === cliente.id);
+      setVencimientos(filtrados);
+    } catch (error) {
+      console.error("Error al cargar los vencimientos del cliente:", error);
+    } finally {
+      setLoadingVencimientos(false);
+    }
+  };
+
   useEffect(() => {
-    const cargarVencimientosCliente = async () => {
-      try {
-        setLoadingVencimientos(true);
-        const hoy = new Date();
-        // Consumimos el servicio reutilizando la lógica base filtrada
-        const data = await vencimientosService.getVencimientosMes(
-          hoy.getFullYear(),
-          hoy.getMonth(),
-          "", // No pasamos ID de usuario para que el filtrado por cliente sea total si eres administrador/responsable
-          "Gerente", // Forzamos bypass administrativo para ver todo el espectro de este cliente
-        );
-
-        // Filtramos en memoria únicamente las obligaciones de ESTE cliente
-        const filtrados = data.filter((v) => v.clientes.id === cliente.id);
-        setVencimientos(filtrados);
-      } catch (error) {
-        console.error("Error al cargar los vencimientos del cliente:", error);
-      } finally {
-        setLoadingVencimientos(false);
-      }
-    };
-
     cargarVencimientosCliente();
   }, [cliente.id]);
 
-  // Helper para asignar estilos visuales según el estado de la tarea tributaria
   const getBadgeStyles = (estado: string) => {
     switch (estado) {
       case "PRESENTADO":
@@ -82,7 +88,7 @@ export const DetalleClientePage = ({
         Volver
       </button>
 
-      {/* Encabezado Principal de la Ficha Técnica */}
+      {/* Encabezado Principal */}
       <div className="card-container flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface p-6 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 border border-primary/5">
@@ -111,31 +117,28 @@ export const DetalleClientePage = ({
         </div>
       </div>
 
-      {/* Grid de Secciones de Dos Columnas (2/3 de info, 1/3 de vencimientos) */}
+      {/* Grid de Secciones */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Bloque Izquierdo: Ficha de Identificación Fiscal y Contacto */}
+        {/* Bloque Izquierdo: Información Base e Impuestos Asignados */}
         <div className="lg:col-span-2 space-y-6">
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
+            {/* Sección Legal */}
             <div>
               <h3 className="text-lg font-title font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
                 Información Legal y Tributaria
               </h3>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
-                    <Hash className="w-3.5 h-3.5" /> Número de Identificación
-                    Tributaria (NIT)
+                    <Hash className="w-3.5 h-3.5" /> NIT
                   </span>
                   <p className="text-base font-semibold text-text-main font-mono bg-gray-50 px-3 py-2 rounded-md border border-gray-100">
                     {cliente.nit}-{cliente.dv}
                   </p>
                 </div>
-
                 <div className="space-y-1">
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
-                    <Briefcase className="w-3.5 h-3.5" /> Profesional Contable
-                    Responsable
+                    <Briefcase className="w-3.5 h-3.5" /> Responsable Contable
                   </span>
                   <p className="text-base font-medium text-primary bg-gray-50 px-3 py-2 rounded-md border border-gray-100 truncate">
                     {cliente.usuarios?.nombre_completo ||
@@ -145,17 +148,15 @@ export const DetalleClientePage = ({
               </div>
             </div>
 
-            {/* Área de Canales de Comunicación */}
+            {/* Sección Contacto */}
             <div>
               <h3 className="text-lg font-title font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
                 Canales Oficiales de Contacto
               </h3>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5" /> Correo de Notificación
-                    Facturación / DIAN
+                    <Mail className="w-3.5 h-3.5" /> Correo Notificaciones
                   </span>
                   <p className="text-sm font-medium text-text-main bg-gray-50 px-3 py-2 rounded-md border border-gray-100 truncate">
                     {cliente.email || (
@@ -165,10 +166,9 @@ export const DetalleClientePage = ({
                     )}
                   </p>
                 </div>
-
                 <div className="space-y-1">
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5" /> Línea de Contacto Móvil
+                    <Phone className="w-3.5 h-3.5" /> Celular
                   </span>
                   <p className="text-sm font-semibold text-text-main bg-gray-50 px-3 py-2 rounded-md border border-gray-100 font-mono">
                     {cliente.celular || (
@@ -181,26 +181,49 @@ export const DetalleClientePage = ({
               </div>
             </div>
 
-            {/* ESPACIO RESERVADO CONTENEDOR PARA FUTURAS OPCIONES */}
-            <div className="p-6 border border-dashed border-gray-200 rounded-xl bg-gray-50/50 flex flex-col items-center justify-center text-center min-h-[160px]">
-              <ExternalLink className="w-8 h-8 text-text-muted mb-2 stroke-[1.5]" />
-              <h4 className="text-sm font-semibold text-text-main">
-                Módulos Complementarios Próximos
-              </h4>
-              <p className="text-xs text-text-muted max-w-sm mt-1">
-                Este bloque está aislado y optimizado arquitectónicamente para
-                integrar el historial de logs de WhatsApp y cobros dinámicos.
-              </p>
+            {/* Gestión Reutilizable de Impuestos a Cargo */}
+            <div className="border-t border-gray-100 pt-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-title font-semibold text-primary">
+                  Impuestos y Obligaciones a Cargo
+                </h3>
+                <button
+                  onClick={() => setShowObligacionesModal(true)} // <-- Abrimos el modal real
+                  className="text-xs font-semibold bg-primary text-surface px-3 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Gestionar Obligaciones
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {impuestosCargo.length === 0 ? (
+                  <p className="text-xs text-text-muted italic col-span-2 py-2">
+                    No tiene impuestos configurados a cargo.
+                  </p>
+                ) : (
+                  impuestosCargo.map((imp) => (
+                    <div
+                      key={imp.id}
+                      className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg border border-gray-100"
+                    >
+                      <FileText className="w-4 h-4 text-text-muted flex-shrink-0" />
+                      <span className="text-xs font-semibold text-text-main truncate">
+                        {imp.nombre}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Bloque Derecho: Próximos Vencimientos del Cliente */}
+        {/* Bloque Derecho: Vencimientos */}
         <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <Clock className="w-5 h-5 text-primary" />
             <h3 className="text-base font-title font-semibold text-primary">
-              Próximos Vencimientos
+              Vencimientos del Mes
             </h3>
           </div>
 
@@ -251,6 +274,17 @@ export const DetalleClientePage = ({
           </div>
         </div>
       </div>
+
+      {/* MODAL INYECTADO: Invocación directa y limpia a tu FichaObligaciones */}
+      {showObligacionesModal && (
+        <FichaObligaciones
+          cliente={cliente}
+          onClose={() => {
+            setShowObligacionesModal(false);
+            cargarVencimientosCliente(); // Refrescamos el feed lateral tras el cierre por si cambiaron impuestos
+          }}
+        />
+      )}
     </div>
   );
 };
