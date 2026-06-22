@@ -15,6 +15,7 @@ import { ImpuestosPage } from "./features/impuestos/ImpuestosPage";
 import { CalendarioBasePage } from "./features/calendario-base/CalendarioBasePage";
 import { CalendarioPage } from "./features/calendario/CalendarioPage";
 import { PerfilPage } from "./features/perfil/PerfilPage";
+import { DashboardPage } from "./features/dashboard/DashboardPage";
 
 function App() {
   return (
@@ -29,19 +30,7 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <Routes>
-                    <Route
-                      path="/"
-                      element={
-                        <div className="card-container">
-                          <h1 className="text-xl font-semibold mb-2">
-                            Resumen General
-                          </h1>
-                          <p className="text-text-muted">
-                            El panel principal del sistema estará aquí.
-                          </p>
-                        </div>
-                      }
-                    />
+                    <Route path="/" element={<DashboardPage />} />
 
                     {/* Ruta de Clientes: Directorio general */}
                     <Route path="/clientes" element={<ClientesPage />} />
