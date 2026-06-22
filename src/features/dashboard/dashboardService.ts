@@ -1,4 +1,3 @@
-import { supabase } from '../../lib/supabase';
 import { vencimientosService } from '../calendario/vencimientosService';
 import { clientesService } from '../clientes/clientesService';
 

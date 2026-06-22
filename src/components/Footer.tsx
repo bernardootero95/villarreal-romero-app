@@ -13,9 +13,14 @@ export const Footer = () => {
         </p>
         <p className="mt-2 md:mt-0">
           Diseñado y desarrollado por{" "}
-          <span className="font-semibold text-primary">
+          <a
+            className="font-semibold text-primary"
+            href="https://tecnoingenieriabo.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Tecnoingeniería B.O.
-          </span>
+          </a>
         </p>
       </div>
     </footer>
