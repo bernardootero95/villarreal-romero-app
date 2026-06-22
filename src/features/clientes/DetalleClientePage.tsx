@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom"; // <-- Hooks de enrutamiento dinámico
+import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Building2,
@@ -18,11 +18,12 @@ import {
   vencimientosService,
   type Vencimiento,
 } from "../calendario/vencimientosService";
-import { clientesService } from "./clientesService"; // <-- Consumo de base de datos
+import { clientesService } from "./clientesService";
+import { clienteImpuestosService } from "./clienteImpuestosService"; // <-- Consumo del servicio real de obligaciones
 import { FichaObligaciones } from "./FichaObligaciones";
 
 export const DetalleClientePage = () => {
-  const { id } = useParams<{ id: string }>(); // <-- Capturamos la URL dinámica /clientes/:id
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [cliente, setCliente] = useState<ClienteConContador | null>(null);
@@ -31,19 +32,16 @@ export const DetalleClientePage = () => {
   const [loadingVencimientos, setLoadingVencimientos] = useState(true);
   const [showObligacionesModal, setShowObligacionesModal] = useState(false);
 
-  // Todo: Mapear esto dinámicamente de tu tabla intermedia si es requerido a futuro
-  const [impuestosCargo, setImpuestosCargo] = useState([
-    { id: "1", nombre: "IVA - Cuatrimestral" },
-    { id: "2", nombre: "Retención en la Fuente - Mensual" },
-  ]);
+  // ESTADO CORREGIDO: Mapeará la estructura real devuelta por tu clienteImpuestosService
+  const [impuestosCargo, setImpuestosCargo] = useState<any[]>([]);
+  const [loadingImpuestos, setLoadingImpuestos] = useState(true);
 
-  // Cargar información del cliente basándonos puramente en la ID de la URL (Deep linking)
+  // 1. Cargar información base del cliente corporativo
   useEffect(() => {
     const fetchClienteData = async () => {
       if (!id) return;
       try {
         setLoadingCliente(true);
-        // Implementar getById o reusar mapeo sobre getAll filtrado para optimizar código existente
         const data = await clientesService.getAll();
         const encontrado = data.find((c) => c.id === id);
         if (encontrado) {
@@ -59,7 +57,30 @@ export const DetalleClientePage = () => {
     fetchClienteData();
   }, [id]);
 
-  // Cargar Vencimientos Tributarios asociados
+  // 2. CORRECCIÓN PRINCIPAL: Consumo del servicio real de obligaciones activas
+  const cargarImpuestosA_Cargo = async () => {
+    if (!id) return;
+    try {
+      setLoadingImpuestos(true);
+      // Usamos el mismo método que utiliza FichaObligaciones garantizando total fidelidad de datos
+      const misObligaciones =
+        await clienteImpuestosService.getImpuestosPorCliente(id);
+      setImpuestosCargo(misObligaciones);
+    } catch (error) {
+      console.error(
+        "Error cargando obligaciones reales desde clienteImpuestosService:",
+        error,
+      );
+    } finally {
+      setLoadingImpuestos(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarImpuestosA_Cargo();
+  }, [id]);
+
+  // 3. Cargar Vencimientos Tributarios del mes actual
   useEffect(() => {
     if (!id) return;
     const cargarVencimientosCliente = async () => {
@@ -125,7 +146,6 @@ export const DetalleClientePage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Retorno por Historial de Navegador de forma nativa */}
       <button
         onClick={() => navigate("/clientes")}
         className="flex items-center gap-2 text-sm font-medium text-text-muted hover:text-primary transition-colors group"
@@ -165,7 +185,7 @@ export const DetalleClientePage = () => {
 
       {/* Grid de Secciones */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Bloque Izquierdo: Información Base */}
+        {/* Bloque Izquierdo */}
         <div className="lg:col-span-2 space-y-6">
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
             {/* Sección Legal */}
@@ -227,7 +247,7 @@ export const DetalleClientePage = () => {
               </div>
             </div>
 
-            {/* Impuestos a Cargo */}
+            {/* Impuestos a Cargo Sincronizados de Forma Fidedigna */}
             <div className="border-t border-gray-100 pt-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-title font-semibold text-primary">
@@ -241,25 +261,37 @@ export const DetalleClientePage = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {impuestosCargo.length === 0 ? (
-                  <p className="text-xs text-text-muted italic col-span-2 py-2">
-                    No tiene impuestos configurados a cargo.
+              {loadingImpuestos ? (
+                <p className="text-xs text-text-muted italic py-2">
+                  Sincronizando obligaciones fiscales...
+                </p>
+              ) : impuestosCargo.length === 0 ? (
+                <div className="p-4 rounded-lg bg-gray-50 border border-gray-100 text-center">
+                  <p className="text-xs text-text-muted italic">
+                    Esta empresa no tiene obligaciones tributarias configuradas
+                    a su cargo.
                   </p>
-                ) : (
-                  impuestosCargo.map((imp) => (
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {impuestosCargo.map((obl) => (
                     <div
-                      key={imp.id}
-                      className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg border border-gray-100"
+                      key={obl.id}
+                      className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg border border-gray-100 shadow-2xs"
                     >
                       <FileText className="w-4 h-4 text-text-muted flex-shrink-0" />
-                      <span className="text-xs font-semibold text-text-main truncate">
-                        {imp.nombre}
-                      </span>
+                      <div className="flex flex-col truncate">
+                        <span className="text-xs font-semibold text-text-main truncate">
+                          {obl.impuestos?.nombre}
+                        </span>
+                        <span className="text-[10px] text-text-muted font-mono mt-0.5">
+                          Periodicidad: {obl.impuestos?.periodicidad}
+                        </span>
+                      </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -324,7 +356,10 @@ export const DetalleClientePage = () => {
       {showObligacionesModal && (
         <FichaObligaciones
           cliente={cliente}
-          onClose={() => setShowObligacionesModal(false)}
+          onClose={() => {
+            setShowObligacionesModal(false);
+            cargarImpuestosA_Cargo(); // <-- Sincronización fidedigna reactiva al cerrar el modal
+          }}
         />
       )}
     </div>
