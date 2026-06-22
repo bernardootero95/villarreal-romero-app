@@ -11,7 +11,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Footer } from "./Footer"; // <-- Importamos el Footer de forma limpia
+import { Footer } from "./Footer";
 
 interface LayoutProps {
   children: ReactNode;
@@ -73,9 +73,9 @@ export const Layout = ({ children }: LayoutProps) => {
   });
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Sidebar - Panel Lateral */}
-      <aside className="w-64 bg-primary text-surface flex flex-col justify-between shadow-md z-10 flex-shrink-0">
+    <div className="h-screen w-screen flex bg-background overflow-hidden">
+      {/* Sidebar - Panel Lateral Fijo */}
+      <aside className="w-64 bg-primary text-surface flex flex-col justify-between shadow-md z-10 flex-shrink-0 h-full">
         <div>
           <div className="p-6 border-b border-surface/10">
             <h2 className="text-xl font-title font-semibold text-surface tracking-wide">
@@ -130,16 +130,16 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </aside>
 
-      {/* Contenedor Principal con scroll independiente y Footer pegado abajo */}
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-background">
-        {/* Contenido dinámico expandible */}
-        <div className="flex-1 p-8">
+      {/* Contenedor Derecho Completo (Ocupa el resto de la pantalla de forma rígida) */}
+      <div className="flex-1 flex flex-col h-full min-w-0">
+        {/* Contenedor con Scroll - Únicamente para el contenido dinámico */}
+        <main className="flex-1 overflow-y-auto p-8 focus:outline-none">
           <div className="max-w-7xl mx-auto w-full">{children}</div>
-        </div>
+        </main>
 
-        {/* Footer global inyectado al final del flujo vertical */}
+        {/* Footer Persistente (Siempre visible abajo, fuera del flujo del scroll) */}
         <Footer />
-      </main>
+      </div>
     </div>
   );
 };
