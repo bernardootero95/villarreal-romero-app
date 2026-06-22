@@ -27,19 +27,16 @@ export const CalendarioCargaMasiva = ({
   }, []);
 
   const procesarFechaExcel = (fechaStr: any) => {
-    // Si Excel lo pasa como número de serie (ej. 45000), SheetJS con raw: false suele devolver "MM/DD/YYYY" o "DD/MM/YYYY" dependiendo del locale.
-    // Lo ideal es que el usuario configure la celda en Excel como Texto (AAAA-MM-DD), pero intentaremos parsearlo si viene como fecha estándar.
     if (!fechaStr) return "";
     const parts = String(fechaStr).split(/[-/]/);
     if (parts.length === 3) {
-      // Ajuste básico para tratar de estandarizar a AAAA-MM-DD
       const [p1, p2, p3] = parts;
       if (p1.length === 4)
-        return `${p1}-${p2.padStart(2, "0")}-${p3.padStart(2, "0")}`; // Ya viene AAAA-MM-DD
+        return `${p1}-${p2.padStart(2, "0")}-${p3.padStart(2, "0")}`; // AAAA-MM-DD
       if (p3.length === 4)
-        return `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`; // Viene DD-MM-AAAA
+        return `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`; // DD-MM-AAAA
     }
-    return String(fechaStr).trim(); // Retorna como venga si no coincide
+    return String(fechaStr).trim();
   };
 
   const handleCargaMasiva = async () => {
@@ -54,11 +51,10 @@ export const CalendarioCargaMasiva = ({
       reader.onload = async (e) => {
         try {
           const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: "binary", cellDates: true }); // cellDates ayuda a leer las fechas reales
+          const workbook = XLSX.read(data, { type: "binary", cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
 
-          // Convertir la hoja a un arreglo de arreglos (ignorar la fila 1 asumiendo que son los títulos)
           const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
             header: 1,
             raw: false,
@@ -67,16 +63,14 @@ export const CalendarioCargaMasiva = ({
 
           const registrosValidos = [];
 
-          // Empezamos desde i = 1 para saltar la fila de los encabezados de Excel
           for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            if (!row || row.length === 0 || !row[0]) continue; // Fila vacía
+            if (!row || row.length === 0 || !row[0]) continue;
 
             const periodo = String(row[0] || "").trim();
             const digitoStr = String(row[1] || "").trim();
             const fechaStr = procesarFechaExcel(row[2]);
 
-            // Validación rápida de fila
             if (!periodo || !fechaStr) {
               throw new Error(
                 `Fila ${i + 1} incompleta: Falta el periodo o la fecha.`,
@@ -101,7 +95,6 @@ export const CalendarioCargaMasiva = ({
             );
           }
 
-          // Enviar a Supabase
           await calendarioBaseService.createBulk(registrosValidos as any);
           alert(
             `¡Éxito! Se cargaron ${registrosValidos.length} fechas correctamente desde el archivo Excel.`,
@@ -152,12 +145,14 @@ export const CalendarioCargaMasiva = ({
               <select
                 value={selectedImpuesto}
                 onChange={(e) => setSelectedImpuesto(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface text-sm"
               >
                 <option value="">Seleccione...</option>
+                {/* CORRECCIÓN VISUAL: Añadimos la periodicidad explícita en las opciones para diferenciar tipos de IVA */}
                 {impuestos.map((imp) => (
                   <option key={imp.id} value={imp.id}>
-                    {imp.nombre}
+                    {imp.nombre}{" "}
+                    {imp.periodicidad ? `- (${imp.periodicidad})` : ""}
                   </option>
                 ))}
               </select>
