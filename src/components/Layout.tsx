@@ -11,6 +11,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Footer } from "./Footer"; // <-- Importamos el Footer de forma limpia
 
 interface LayoutProps {
   children: ReactNode;
@@ -33,12 +34,12 @@ export const Layout = ({ children }: LayoutProps) => {
       path: "/perfil",
     },
     {
-      icon: <Building2 className="w-5 h-5" />, // <--- Nueva opción visible para todos
+      icon: <Building2 className="w-5 h-5" />,
       label: "Clientes",
       path: "/clientes",
     },
     {
-      icon: <Landmark className="w-5 h-5" />, // <--- Nueva opción visible para todos
+      icon: <Landmark className="w-5 h-5" />,
       label: "Impuestos",
       path: "/impuestos",
     },
@@ -46,7 +47,7 @@ export const Layout = ({ children }: LayoutProps) => {
       icon: <Calendar className="w-5 h-5" />,
       label: "Calendario Base",
       path: "/calendario-base",
-      roles: ["Gerente", "Ingeniero"], // Solo administradores parametrizan el calendario oficial
+      roles: ["Gerente", "Ingeniero"],
     },
     {
       icon: <Users className="w-5 h-5" />,
@@ -73,7 +74,8 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <aside className="w-64 bg-primary text-surface flex flex-col justify-between shadow-md z-10">
+      {/* Sidebar - Panel Lateral */}
+      <aside className="w-64 bg-primary text-surface flex flex-col justify-between shadow-md z-10 flex-shrink-0">
         <div>
           <div className="p-6 border-b border-surface/10">
             <h2 className="text-xl font-title font-semibold text-surface tracking-wide">
@@ -128,8 +130,15 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </aside>
 
-      <main className="flex-1 p-8 overflow-y-auto max-h-screen">
-        <div className="max-w-7xl mx-auto">{children}</div>
+      {/* Contenedor Principal con scroll independiente y Footer pegado abajo */}
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-background">
+        {/* Contenido dinámico expandible */}
+        <div className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto w-full">{children}</div>
+        </div>
+
+        {/* Footer global inyectado al final del flujo vertical */}
+        <Footer />
       </main>
     </div>
   );
