@@ -14,21 +14,21 @@ import {
 } from "lucide-react";
 import { ClienteForm } from "./ClienteForm";
 import { FichaObligaciones } from "./FichaObligaciones";
-import { DetalleClienteModal } from "./DetalleClienteModal"; // <-- Importación del nuevo modal informativo
+import { DetalleClientePage } from "./DetalleClientePage"; // <-- Importamos como Página Independiente
 
 export const ClientesPage = () => {
   const { perfil } = useAuth();
   const [clientes, setClientes] = useState<ClienteConContador[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Control de Modales
+  // Control de Modales y Sub-vistas páginas
   const [showForm, setShowForm] = useState(false);
   const [clienteEditando, setClienteEditando] =
     useState<ClienteConContador | null>(null);
   const [clienteObligaciones, setClienteObligaciones] =
     useState<ClienteConContador | null>(null);
   const [clienteSeleccionado, setClienteSeleccionado] =
-    useState<ClienteConContador | null>(null); // <-- Estado para el detalle
+    useState<ClienteConContador | null>(null); // Sub-página
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -104,6 +104,16 @@ export const ClientesPage = () => {
     startIndex,
     startIndex + ITEMS_PER_PAGE,
   );
+
+  // EVALUACIÓN DE CONTROL DE FLUJO SÓLIDO: Si hay cliente seleccionado, renderizamos la página de detalle
+  if (clienteSeleccionado) {
+    return (
+      <DetalleClientePage
+        cliente={clienteSeleccionado}
+        onBack={() => setClienteSeleccionado(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -184,7 +194,7 @@ export const ClientesPage = () => {
                     className="hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      {/* Trigger interactivo en la celda del nombre */}
+                      {/* Evento clic linkeado a renderizar la vista de sub-página completa */}
                       <div
                         onClick={() => setClienteSeleccionado(cliente)}
                         className="flex items-center gap-3 cursor-pointer group"
@@ -333,14 +343,6 @@ export const ClientesPage = () => {
         <FichaObligaciones
           cliente={clienteObligaciones}
           onClose={() => setClienteObligaciones(null)}
-        />
-      )}
-
-      {/* MODAL DE DETALLE DE CLIENTE EXCLUSIVO */}
-      {clienteSeleccionado && (
-        <DetalleClienteModal
-          cliente={clienteSeleccionado}
-          onClose={() => setClienteSeleccionado(null)}
         />
       )}
     </div>
