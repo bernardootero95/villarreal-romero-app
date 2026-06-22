@@ -14,21 +14,20 @@ import {
 } from "lucide-react";
 import { ClienteForm } from "./ClienteForm";
 import { FichaObligaciones } from "./FichaObligaciones";
-import { DetalleClientePage } from "./DetalleClientePage"; // <-- Importamos como Página Independiente
+import { useNavigate } from "react-router-dom"; // <-- Importamos el hook nativo de navegación
 
 export const ClientesPage = () => {
   const { perfil } = useAuth();
   const [clientes, setClientes] = useState<ClienteConContador[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate(); // <-- Instanciamos el navegador
 
-  // Control de Modales y Sub-vistas páginas
+  // Control de Modales
   const [showForm, setShowForm] = useState(false);
   const [clienteEditando, setClienteEditando] =
     useState<ClienteConContador | null>(null);
   const [clienteObligaciones, setClienteObligaciones] =
     useState<ClienteConContador | null>(null);
-  const [clienteSeleccionado, setClienteSeleccionado] =
-    useState<ClienteConContador | null>(null); // Sub-página
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -104,16 +103,6 @@ export const ClientesPage = () => {
     startIndex,
     startIndex + ITEMS_PER_PAGE,
   );
-
-  // EVALUACIÓN DE CONTROL DE FLUJO SÓLIDO: Si hay cliente seleccionado, renderizamos la página de detalle
-  if (clienteSeleccionado) {
-    return (
-      <DetalleClientePage
-        cliente={clienteSeleccionado}
-        onBack={() => setClienteSeleccionado(null)}
-      />
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -194,9 +183,9 @@ export const ClientesPage = () => {
                     className="hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      {/* Evento clic linkeado a renderizar la vista de sub-página completa */}
+                      {/* Lógica SOLID: Navegación real por URL dinámica */}
                       <div
-                        onClick={() => setClienteSeleccionado(cliente)}
+                        onClick={() => navigate(`/clientes/${cliente.id}`)}
                         className="flex items-center gap-3 cursor-pointer group"
                       >
                         <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 group-hover:bg-primary group-hover:text-surface transition-all">

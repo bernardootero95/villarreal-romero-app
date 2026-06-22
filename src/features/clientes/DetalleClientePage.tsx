@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom"; // <-- Hooks de enrutamiento dinámico
 import {
   ArrowLeft,
   Building2,
@@ -17,52 +18,97 @@ import {
   vencimientosService,
   type Vencimiento,
 } from "../calendario/vencimientosService";
-import { FichaObligaciones } from "./FichaObligaciones"; // <-- Reutilizamos tu componente existente
+import { clientesService } from "./clientesService"; // <-- Consumo de base de datos
+import { FichaObligaciones } from "./FichaObligaciones";
 
-interface DetalleClientePageProps {
-  cliente: ClienteConContador;
-  onBack: () => void;
-}
+export const DetalleClientePage = () => {
+  const { id } = useParams<{ id: string }>(); // <-- Capturamos la URL dinámica /clientes/:id
+  const navigate = useNavigate();
 
-export const DetalleClientePage = ({
-  cliente,
-  onBack,
-}: DetalleClientePageProps) => {
+  const [cliente, setCliente] = useState<ClienteConContador | null>(null);
+  const [loadingCliente, setLoadingCliente] = useState(true);
   const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
   const [loadingVencimientos, setLoadingVencimientos] = useState(true);
-
-  // Estado para controlar la apertura del modal nativo de obligaciones
   const [showObligacionesModal, setShowObligacionesModal] = useState(false);
 
-  // ESTADOS PARA IMPUESTOS A CARGO (Simulado o mapeado desde las obligaciones del cliente)
+  // Todo: Mapear esto dinámicamente de tu tabla intermedia si es requerido a futuro
   const [impuestosCargo, setImpuestosCargo] = useState([
     { id: "1", nombre: "IVA - Cuatrimestral" },
     { id: "2", nombre: "Retención en la Fuente - Mensual" },
   ]);
 
-  const cargarVencimientosCliente = async () => {
-    try {
-      setLoadingVencimientos(true);
-      const hoy = new Date();
-      const data = await vencimientosService.getVencimientosMes(
-        hoy.getFullYear(),
-        hoy.getMonth(),
-        "",
-        "Gerente",
-      );
-
-      const filtrados = data.filter((v) => v.clientes.id === cliente.id);
-      setVencimientos(filtrados);
-    } catch (error) {
-      console.error("Error al cargar los vencimientos del cliente:", error);
-    } finally {
-      setLoadingVencimientos(false);
-    }
-  };
-
+  // Cargar información del cliente basándonos puramente en la ID de la URL (Deep linking)
   useEffect(() => {
+    const fetchClienteData = async () => {
+      if (!id) return;
+      try {
+        setLoadingCliente(true);
+        // Implementar getById o reusar mapeo sobre getAll filtrado para optimizar código existente
+        const data = await clientesService.getAll();
+        const encontrado = data.find((c) => c.id === id);
+        if (encontrado) {
+          setCliente(encontrado);
+        }
+      } catch (error) {
+        console.error("Error cargando metadatos de empresa:", error);
+      } finally {
+        setLoadingCliente(false);
+      }
+    };
+
+    fetchClienteData();
+  }, [id]);
+
+  // Cargar Vencimientos Tributarios asociados
+  useEffect(() => {
+    if (!id) return;
+    const cargarVencimientosCliente = async () => {
+      try {
+        setLoadingVencimientos(true);
+        const hoy = new Date();
+        const data = await vencimientosService.getVencimientosMes(
+          hoy.getFullYear(),
+          hoy.getMonth(),
+          "",
+          "Gerente",
+        );
+
+        const filtrados = data.filter((v) => v.clientes.id === id);
+        setVencimientos(filtrados);
+      } catch (error) {
+        console.error("Error al cargar los vencimientos del cliente:", error);
+      } finally {
+        setLoadingVencimientos(false);
+      }
+    };
+
     cargarVencimientosCliente();
-  }, [cliente.id]);
+  }, [id]);
+
+  if (loadingCliente) {
+    return (
+      <div className="text-center p-8 text-text-muted text-sm font-semibold font-mono uppercase">
+        Consultando bóveda de cliente...
+      </div>
+    );
+  }
+
+  if (!cliente) {
+    return (
+      <div className="text-center p-8 space-y-4">
+        <AlertCircle className="w-12 h-12 text-danger mx-auto" />
+        <h3 className="text-lg font-bold text-primary">
+          Error 404: Empresa No Encontrada
+        </h3>
+        <button
+          onClick={() => navigate("/clientes")}
+          className="bg-primary text-surface px-4 py-2 rounded-lg text-sm"
+        >
+          Regresar al Directorio
+        </button>
+      </div>
+    );
+  }
 
   const getBadgeStyles = (estado: string) => {
     switch (estado) {
@@ -79,9 +125,9 @@ export const DetalleClientePage = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Botón de Retorno de Flujo */}
+      {/* Retorno por Historial de Navegador de forma nativa */}
       <button
-        onClick={onBack}
+        onClick={() => navigate("/clientes")}
         className="flex items-center gap-2 text-sm font-medium text-text-muted hover:text-primary transition-colors group"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -119,7 +165,7 @@ export const DetalleClientePage = ({
 
       {/* Grid de Secciones */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Bloque Izquierdo: Información Base e Impuestos Asignados */}
+        {/* Bloque Izquierdo: Información Base */}
         <div className="lg:col-span-2 space-y-6">
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
             {/* Sección Legal */}
@@ -181,14 +227,14 @@ export const DetalleClientePage = ({
               </div>
             </div>
 
-            {/* Gestión Reutilizable de Impuestos a Cargo */}
+            {/* Impuestos a Cargo */}
             <div className="border-t border-gray-100 pt-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-title font-semibold text-primary">
                   Impuestos y Obligaciones a Cargo
                 </h3>
                 <button
-                  onClick={() => setShowObligacionesModal(true)} // <-- Abrimos el modal real
+                  onClick={() => setShowObligacionesModal(true)}
                   className="text-xs font-semibold bg-primary text-surface px-3 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5" /> Gestionar Obligaciones
@@ -275,14 +321,10 @@ export const DetalleClientePage = ({
         </div>
       </div>
 
-      {/* MODAL INYECTADO: Invocación directa y limpia a tu FichaObligaciones */}
       {showObligacionesModal && (
         <FichaObligaciones
           cliente={cliente}
-          onClose={() => {
-            setShowObligacionesModal(false);
-            cargarVencimientosCliente(); // Refrescamos el feed lateral tras el cierre por si cambiaron impuestos
-          }}
+          onClose={() => setShowObligacionesModal(false)}
         />
       )}
     </div>
