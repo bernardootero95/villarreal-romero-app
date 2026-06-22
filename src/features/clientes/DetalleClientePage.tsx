@@ -12,6 +12,7 @@ import {
   Clock,
   Plus,
   FileText,
+  Edit2, // <-- Ícono para el gatillo de edición
 } from "lucide-react";
 import type { ClienteConContador } from "./types";
 import {
@@ -19,8 +20,9 @@ import {
   type Vencimiento,
 } from "../calendario/vencimientosService";
 import { clientesService } from "./clientesService";
-import { clienteImpuestosService } from "./clienteImpuestosService"; // <-- Consumo del servicio real de obligaciones
+import { clienteImpuestosService } from "./clienteImpuestosService";
 import { FichaObligaciones } from "./FichaObligaciones";
+import { ClienteForm } from "./ClienteForm"; // <-- Reutilización limpia del formulario existente
 
 export const DetalleClientePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,47 +32,45 @@ export const DetalleClientePage = () => {
   const [loadingCliente, setLoadingCliente] = useState(true);
   const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
   const [loadingVencimientos, setLoadingVencimientos] = useState(true);
-  const [showObligacionesModal, setShowObligacionesModal] = useState(false);
 
-  // ESTADO CORREGIDO: Mapeará la estructura real devuelta por tu clienteImpuestosService
+  // Modales de Control
+  const [showObligacionesModal, setShowObligacionesModal] = useState(false);
+  const [showForm, setShowForm] = useState(false); // <-- Estado para abrir la edición
+
   const [impuestosCargo, setImpuestosCargo] = useState<any[]>([]);
   const [loadingImpuestos, setLoadingImpuestos] = useState(true);
 
   // 1. Cargar información base del cliente corporativo
-  useEffect(() => {
-    const fetchClienteData = async () => {
-      if (!id) return;
-      try {
-        setLoadingCliente(true);
-        const data = await clientesService.getAll();
-        const encontrado = data.find((c) => c.id === id);
-        if (encontrado) {
-          setCliente(encontrado);
-        }
-      } catch (error) {
-        console.error("Error cargando metadatos de empresa:", error);
-      } finally {
-        setLoadingCliente(false);
+  const fetchClienteData = async () => {
+    if (!id) return;
+    try {
+      setLoadingCliente(true);
+      const data = await clientesService.getAll();
+      const encontrado = data.find((c) => c.id === id);
+      if (encontrado) {
+        setCliente(encontrado);
       }
-    };
+    } catch (error) {
+      console.error("Error cargando metadatos de empresa:", error);
+    } finally {
+      setLoadingCliente(false);
+    }
+  };
 
+  useEffect(() => {
     fetchClienteData();
   }, [id]);
 
-  // 2. CORRECCIÓN PRINCIPAL: Consumo del servicio real de obligaciones activas
+  // 2. Cargar las obligaciones tributarias configuradas
   const cargarImpuestosA_Cargo = async () => {
     if (!id) return;
     try {
       setLoadingImpuestos(true);
-      // Usamos el mismo método que utiliza FichaObligaciones garantizando total fidelidad de datos
       const misObligaciones =
         await clienteImpuestosService.getImpuestosPorCliente(id);
       setImpuestosCargo(misObligaciones);
     } catch (error) {
-      console.error(
-        "Error cargando obligaciones reales desde clienteImpuestosService:",
-        error,
-      );
+      console.error("Error cargando obligaciones reales:", error);
     } finally {
       setLoadingImpuestos(false);
     }
@@ -146,13 +146,24 @@ export const DetalleClientePage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <button
-        onClick={() => navigate("/clientes")}
-        className="flex items-center gap-2 text-sm font-medium text-text-muted hover:text-primary transition-colors group"
-      >
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        Volver
-      </button>
+      <div className="flex justify-between items-center">
+        <button
+          onClick={() => navigate("/clientes")}
+          className="flex items-center gap-2 text-sm font-medium text-text-muted hover:text-primary transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Volver
+        </button>
+
+        {/* BOTÓN NUEVO: Permite editar toda la data (Contacto y Responsable) */}
+        <button
+          onClick={() => setShowForm(true)}
+          className="border border-gray-200 bg-surface hover:bg-gray-50 text-text-main text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-2xs"
+        >
+          <Edit2 className="w-3.5 h-3.5 text-text-muted" />
+          Editar Información
+        </button>
+      </div>
 
       {/* Encabezado Principal */}
       <div className="card-container flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -247,7 +258,7 @@ export const DetalleClientePage = () => {
               </div>
             </div>
 
-            {/* Impuestos a Cargo Sincronizados de Forma Fidedigna */}
+            {/* Impuestos a Cargo Sincronizados */}
             <div className="border-t border-gray-100 pt-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-title font-semibold text-primary">
@@ -353,12 +364,25 @@ export const DetalleClientePage = () => {
         </div>
       </div>
 
+      {/* MODAL GESTIÓN DE OBLIGACIONES */}
       {showObligacionesModal && (
         <FichaObligaciones
           cliente={cliente}
           onClose={() => {
             setShowObligacionesModal(false);
-            cargarImpuestosA_Cargo(); // <-- Sincronización fidedigna reactiva al cerrar el modal
+            cargarImpuestosA_Cargo();
+          }}
+        />
+      )}
+
+      {/* FORMULARIO DE EDICIÓN REUTILIZADO (S SOLID) */}
+      {showForm && (
+        <ClienteForm
+          clienteAEditar={cliente} // <-- Pasamos el cliente cargado actual para poblar campos
+          onClose={() => setShowForm(false)}
+          onSuccess={() => {
+            setShowForm(false);
+            fetchClienteData(); // <-- Refrescamos los datos inmediatamente para actualizar UI
           }}
         />
       )}
