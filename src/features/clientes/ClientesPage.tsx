@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ClienteForm } from "./ClienteForm";
 import { FichaObligaciones } from "./FichaObligaciones";
+import { DetalleClienteModal } from "./DetalleClienteModal"; // <-- Importación del nuevo modal informativo
 
 export const ClientesPage = () => {
   const { perfil } = useAuth();
@@ -26,12 +27,14 @@ export const ClientesPage = () => {
     useState<ClienteConContador | null>(null);
   const [clienteObligaciones, setClienteObligaciones] =
     useState<ClienteConContador | null>(null);
+  const [clienteSeleccionado, setClienteSeleccionado] =
+    useState<ClienteConContador | null>(null); // <-- Estado para el detalle
 
   const [searchTerm, setSearchTerm] = useState("");
 
   // ESTADOS Y CONSTANTES PARA PAGINACIÓN
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 5; // Cambia este número si quieres mostrar más filas por defecto
+  const ITEMS_PER_PAGE = 5;
 
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
@@ -52,7 +55,6 @@ export const ClientesPage = () => {
     fetchClientes();
   }, []);
 
-  // Volver a la página 1 cuando el usuario busca algo
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
@@ -182,12 +184,16 @@ export const ClientesPage = () => {
                     className="hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                      {/* Trigger interactivo en la celda del nombre */}
+                      <div
+                        onClick={() => setClienteSeleccionado(cliente)}
+                        className="flex items-center gap-3 cursor-pointer group"
+                      >
+                        <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 group-hover:bg-primary group-hover:text-surface transition-all">
                           <Building2 className="w-4 h-4" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-semibold text-primary">
+                          <span className="font-semibold text-primary group-hover:text-accent transition-colors">
                             {cliente.razon_social}
                           </span>
                           <span className="text-xs text-text-muted">
@@ -327,6 +333,14 @@ export const ClientesPage = () => {
         <FichaObligaciones
           cliente={clienteObligaciones}
           onClose={() => setClienteObligaciones(null)}
+        />
+      )}
+
+      {/* MODAL DE DETALLE DE CLIENTE EXCLUSIVO */}
+      {clienteSeleccionado && (
+        <DetalleClienteModal
+          cliente={clienteSeleccionado}
+          onClose={() => setClienteSeleccionado(null)}
         />
       )}
     </div>
