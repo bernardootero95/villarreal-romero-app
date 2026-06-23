@@ -28,6 +28,7 @@ export const DashboardPage = () => {
   const [diasSemana, setDiasSemana] = useState<any[]>([]);
   const [diaSeleccionado, setDiaSeleccionado] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [errorConexion, setErrorConexion] = useState<string | null>(null); // <-- Estado para alertar bloqueos de red
 
   const calcularSemanaActual = () => {
     const hoy = new Date();
@@ -74,8 +75,10 @@ export const DashboardPage = () => {
       if (!perfil || !session?.user?.id) return;
       try {
         setLoading(true);
+        setErrorConexion(null);
         const hoy = new Date();
 
+        // Ejecución controlada y blindada de las peticiones core a la base de datos
         const dataMetricas = await dashboardService.getMetricasContador(
           session.user.id,
           perfil.cargo,
@@ -89,8 +92,13 @@ export const DashboardPage = () => {
           perfil.cargo,
         );
         setVencimientosSemana(dataVencimientos);
-      } catch (error) {
-        console.error("Error al sincronizar datos:", error);
+      } catch (error: any) {
+        console.error("Error crítico de sincronización:", error);
+        // Capturamos el error de forma amigable para saber si el antivirus cortó la comunicación (ERR_BLOCKED_BY_CLIENT / ERR_CONNECTION_REFUSED)
+        setErrorConexion(
+          error?.message ||
+            "La conexión con el servidor de base de datos fue interceptada por la red local.",
+        );
       } finally {
         setLoading(false);
       }
@@ -110,6 +118,32 @@ export const DashboardPage = () => {
     return (
       <div className="text-center p-12 text-text-muted text-sm font-semibold font-mono uppercase tracking-wider animate-pulse">
         Sincronizando panel de control contable...
+      </div>
+    );
+  }
+
+  // Si hay un bloqueo físico de red en el equipo, pintamos una pantalla de rescate en vez del loader infinito
+  if (errorConexion) {
+    return (
+      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-gray-200 rounded-xl shadow-sm my-12 space-y-4">
+        <AlertTriangle className="w-12 h-12 text-danger mx-auto animate-bounce" />
+        <h2 className="text-lg font-bold text-primary font-title">
+          Error de Comunicación Web
+        </h2>
+        <p className="text-xs text-text-muted leading-relaxed">
+          La aplicación cargó el entorno visual, pero la red local o el
+          antivirus de este equipo bloqueó las consultas a la base de datos en
+          la nube.
+        </p>
+        <div className="p-3 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-mono text-danger text-left overflow-x-auto">
+          {errorConexion}
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-primary text-surface text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all shadow-xs"
+        >
+          Reintentar Sincronización
+        </button>
       </div>
     );
   }
@@ -203,7 +237,7 @@ export const DashboardPage = () => {
 
       {/* ÁREA COHESIVA CENTRAL DEL DASHBOARD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* BLOQUE IZQUIERDO: ALERTAS Y COMPORTAMIENTO (2/3 de la pantalla) */}
+        {/* BLOQUE IZQUIERDO */}
         <div className="lg:col-span-2 space-y-6">
           {/* SECCIÓN 1: Alertas Críticas */}
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
@@ -256,7 +290,7 @@ export const DashboardPage = () => {
             </div>
           </div>
 
-          {/* SECCIÓN 2: Top Clientes en Riesgo Operativo */}
+          {/* SECCIÓN 2: Top Clientes */}
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
             <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
               <Flame className="w-5 h-5 text-amber-500" />
@@ -289,7 +323,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* COMPONENTE: Mini-Calendario Operativo Semanal (1/3 de la pantalla) */}
+        {/* COMPONENTE: Agenda Semanal */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex flex-col space-y-4">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
