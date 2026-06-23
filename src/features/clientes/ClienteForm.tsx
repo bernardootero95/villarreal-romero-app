@@ -6,10 +6,11 @@ import {
   type ClienteFormData,
   type ClienteConContador,
 } from "./types";
-import { X, Save, Building2 } from "lucide-react";
+import { X, Save, Building2, ArrowRight } from "lucide-react";
 import { clientesService } from "./clientesService";
 import { usuariosService } from "../usuarios/usuariosService";
 import type { Usuario } from "../usuarios/types";
+import { FichaObligaciones } from "./FichaObligaciones"; // <-- Importamos tu componente existente
 
 interface ClienteFormProps {
   onClose: () => void;
@@ -42,6 +43,12 @@ export const ClienteForm = ({
   const [contadores, setContadores] = useState<Usuario[]>([]);
   const [loadingContadores, setLoadingContadores] = useState(true);
 
+  // --- ESTADOS PARA EL FLUJO SECUENCIAL (WIZARD) ---
+  const [clienteCreado, setClienteCreado] = useState<ClienteConContador | null>(
+    null,
+  );
+  const [mostrarPasoObligaciones, setMostrarPasoObligaciones] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -60,7 +67,6 @@ export const ClienteForm = ({
         nit: clienteAEditar.nit,
         dv: clienteAEditar.dv,
         razon_social: clienteAEditar.razon_social,
-        // Protegemos con un OR para que no intente cargar null en el input
         email: clienteAEditar.email || "",
         celular: clienteAEditar.celular || "",
         contador_id: clienteAEditar.contador_id,
@@ -99,7 +105,6 @@ export const ClienteForm = ({
 
   const onSubmit = async (data: ClienteFormData) => {
     try {
-      // Limpieza de datos: Si el usuario dejó los campos opcionales vacíos, los enviamos como null a la BD
       const datosLimpios = {
         ...data,
         email: data.email?.trim() || null,
@@ -107,11 +112,20 @@ export const ClienteForm = ({
       };
 
       if (clienteAEditar) {
+        // Modo Edición: Flujo normal estándar
         await clientesService.update(clienteAEditar.id, datosLimpios);
+        onSuccess();
       } else {
-        await clientesService.create(datosLimpios);
+        // Modo Creación: Guardamos y capturamos la entidad devuelta con su ID asignado por la BD
+        const nuevoCliente = await clientesService.create(datosLimpios);
+
+        if (nuevoCliente) {
+          setClienteCreado(nuevoCliente);
+          setMostrarPasoObligaciones(true); // <-- Saltamos al paso 2 (Ficha de Obligaciones)
+        } else {
+          onSuccess();
+        }
       }
-      onSuccess();
     } catch (error: any) {
       alert(error.message || "Error al guardar el cliente");
     }
@@ -119,6 +133,20 @@ export const ClienteForm = ({
 
   const isEditing = !!clienteAEditar;
 
+  // --- PASO 2: Si el cliente se acaba de crear, inyectamos tu FichaObligaciones nativa ---
+  if (mostrarPasoObligaciones && clienteCreado) {
+    return (
+      <FichaObligaciones
+        cliente={clienteCreado}
+        onClose={() => {
+          // Cuando cierren la ficha de obligaciones, disparamos el éxito global del directorio
+          onSuccess();
+        }}
+      />
+    );
+  }
+
+  // --- PASO 1: Formulario de Datos Básicos (Tu UI Original) ---
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-gray-200">
@@ -126,7 +154,7 @@ export const ClienteForm = ({
           <div className="flex items-center gap-2 text-surface">
             <Building2 className="w-5 h-5" />
             <h2 className="font-title font-semibold">
-              {isEditing ? "Editar Cliente" : "Registrar Cliente"}
+              {isEditing ? "Editar Cliente" : "Registrar Cliente — Paso 1 de 2"}
             </h2>
           </div>
           <button
@@ -263,12 +291,19 @@ export const ClienteForm = ({
               disabled={isSubmitting}
               className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <Save className="w-4 h-4" />
-              {isSubmitting
-                ? "Guardando..."
-                : isEditing
-                  ? "Actualizar Cliente"
-                  : "Guardar Cliente"}
+              {isSubmitting ? (
+                "Guardando..."
+              ) : isEditing ? (
+                <>
+                  <Save className="w-4 h-4" />
+                  Actualizar Cliente
+                </>
+              ) : (
+                <>
+                  Continuar a Impuestos
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </form>
