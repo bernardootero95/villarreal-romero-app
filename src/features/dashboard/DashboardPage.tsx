@@ -28,7 +28,7 @@ export const DashboardPage = () => {
   const [diasSemana, setDiasSemana] = useState<any[]>([]);
   const [diaSeleccionado, setDiaSeleccionado] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [errorConexion, setErrorConexion] = useState<string | null>(null); // <-- Estado para alertar bloqueos de red
+  const [errorConexion, setErrorConexion] = useState<string | null>(null);
 
   const calcularSemanaActual = () => {
     const hoy = new Date();
@@ -72,16 +72,26 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     const cargarDatosDashboard = async () => {
-      if (!perfil || !session?.user?.id) return;
+      // CORRECCIÓN: Si session o perfil aún no están listos en el primer render, no apagamos el loading,
+      // pero si ya pasaron unos segundos y siguen vacíos, liberamos la UI.
+      if (!session?.user?.id || !perfil) {
+        return;
+      }
+
       try {
         setLoading(true);
         setErrorConexion(null);
         const hoy = new Date();
 
-        // Ejecución controlada y blindada de las peticiones core a la base de datos
+        // Controlar si el cargo viene con problemas de formato
+        const cargoLimpio = perfil.cargo
+          ? String(perfil.cargo).trim()
+          : "Contador";
+
+        // Obtener datos de manera controlada
         const dataMetricas = await dashboardService.getMetricasContador(
           session.user.id,
-          perfil.cargo,
+          cargoLimpio,
         );
         setMetricas(dataMetricas);
 
@@ -89,23 +99,37 @@ export const DashboardPage = () => {
           hoy.getFullYear(),
           hoy.getMonth(),
           session.user.id,
-          perfil.cargo,
+          cargoLimpio,
         );
-        setVencimientosSemana(dataVencimientos);
+        setVencimientosSemana(dataVencimientos || []);
       } catch (error: any) {
-        console.error("Error crítico de sincronización:", error);
-        // Capturamos el error de forma amigable para saber si el antivirus cortó la comunicación (ERR_BLOCKED_BY_CLIENT / ERR_CONNECTION_REFUSED)
+        console.error("Error crítico de sincronización en Dashboard:", error);
         setErrorConexion(
           error?.message ||
-            "La conexión con el servidor de base de datos fue interceptada por la red local.",
+            "Ocurrió un retardo inesperado al jalar los datos desde Supabase.",
         );
       } finally {
-        setLoading(false);
+        setLoading(false); // <-- Garantizamos la liberación del loader sí o sí
       }
     };
 
     cargarDatosDashboard();
   }, [perfil, session]);
+
+  // Si el AuthContext tarda más de la cuenta en poblar el estado del perfil en ese equipo específico,
+  // agregamos un botón de rescate manual para forzar la lectura.
+  useEffect(() => {
+    const timeoutRescate = setTimeout(() => {
+      if (loading && (!perfil || !session)) {
+        setLoading(false);
+        setErrorConexion(
+          "El perfil de usuario está tardando demasiado en responder. Intenta recargar la sesión.",
+        );
+      }
+    }, 6000); // 6 segundos máximos de espera de sesión
+
+    return () => clearTimeout(timeoutRescate);
+  }, [loading, perfil, session]);
 
   const tareasDiaSeleccionado = vencimientosSemana.filter(
     (v) => v.fecha_limite === diaSeleccionado,
@@ -122,27 +146,22 @@ export const DashboardPage = () => {
     );
   }
 
-  // Si hay un bloqueo físico de red en el equipo, pintamos una pantalla de rescate en vez del loader infinito
-  if (errorConexion) {
+  if (errorConexion || !metricas) {
     return (
       <div className="max-w-md mx-auto text-center p-8 bg-surface border border-gray-200 rounded-xl shadow-sm my-12 space-y-4">
-        <AlertTriangle className="w-12 h-12 text-danger mx-auto animate-bounce" />
+        <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto stroke-[1.5]" />
         <h2 className="text-lg font-bold text-primary font-title">
-          Error de Comunicación Web
+          Sincronización Incompleta
         </h2>
         <p className="text-xs text-text-muted leading-relaxed">
-          La aplicación cargó el entorno visual, pero la red local o el
-          antivirus de este equipo bloqueó las consultas a la base de datos en
-          la nube.
+          El panel no pudo procesar las obligaciones asociadas al cargo actual:{" "}
+          <span className="font-bold">"{perfil?.cargo || "Indefinido"}"</span>.
         </p>
-        <div className="p-3 bg-gray-50 border border-gray-100 rounded-md text-[11px] font-mono text-danger text-left overflow-x-auto">
-          {errorConexion}
-        </div>
         <button
           onClick={() => window.location.reload()}
           className="bg-primary text-surface text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all shadow-xs"
         >
-          Reintentar Sincronización
+          Reintentar Cargar Dashboard
         </button>
       </div>
     );
@@ -172,7 +191,7 @@ export const DashboardPage = () => {
               Mis Empresas
             </span>
             <p className="text-3xl font-bold text-primary font-title">
-              {metricas?.totalClientes}
+              {metricas.totalClientes}
             </p>
             <p className="text-[11px] text-text-muted">
               Clientes bajo tu cargo
@@ -189,7 +208,7 @@ export const DashboardPage = () => {
               Vencimientos Mes
             </span>
             <p className="text-3xl font-bold text-primary font-title">
-              {metricas?.totalVencimientos}
+              {metricas.totalVencimientos}
             </p>
             <p className="text-[11px] text-text-muted">
               Obligaciones totales del periodo
@@ -206,7 +225,7 @@ export const DashboardPage = () => {
               Por Ejecutar
             </span>
             <p className="text-3xl font-bold text-amber-600 font-title">
-              {metricas?.tareasPendientes}
+              {metricas.tareasPendientes}
             </p>
             <p className="text-[11px] text-text-muted">
               Pendientes y en revisión
@@ -223,7 +242,7 @@ export const DashboardPage = () => {
               Cumplimiento
             </span>
             <p className="text-3xl font-bold text-success font-title">
-              {metricas?.porcentajeEfectividad}%
+              {metricas.porcentajeEfectividad}%
             </p>
             <p className="text-[11px] text-text-muted">
               Efectividad de presentación
@@ -249,7 +268,7 @@ export const DashboardPage = () => {
             </div>
 
             <div className="divide-y divide-gray-100">
-              {metricas?.alertasCriticas.length === 0 ? (
+              {metricas.alertasCriticas?.length === 0 ? (
                 <div className="text-center py-8 text-text-muted space-y-1">
                   <CheckCircle2 className="w-8 h-8 text-success/60 mx-auto" />
                   <p className="text-xs font-medium text-text-main">
@@ -260,7 +279,7 @@ export const DashboardPage = () => {
                   </p>
                 </div>
               ) : (
-                metricas?.alertasCriticas.map((alerta: any) => (
+                metricas.alertasCriticas?.map((alerta: any) => (
                   <div
                     key={alerta.id}
                     onClick={() => navigate(`/clientes/${alerta.clientes.id}`)}
@@ -268,10 +287,11 @@ export const DashboardPage = () => {
                   >
                     <div className="space-y-0.5 max-w-[70%]">
                       <p className="text-xs font-bold text-primary group-hover:text-accent transition-colors truncate">
-                        {alerta.clientes.razon_social}
+                        {alerta.clientes?.razon_social}
                       </p>
                       <p className="text-[11px] text-text-muted truncate">
-                        {alerta.impuestos.nombre} (Per: {alerta.periodo_fiscal})
+                        {alerta.impuestos?.nombre} (Per: {alerta.periodo_fiscal}
+                        )
                       </p>
                     </div>
                     <div className="text-right flex items-center gap-3">
@@ -299,13 +319,13 @@ export const DashboardPage = () => {
               </h3>
             </div>
 
-            {metricas?.topClientesCarga.length === 0 ? (
+            {metricas.topClientesCarga?.length === 0 ? (
               <p className="text-xs text-text-muted italic py-4 text-center">
                 Firma sin pendientes acumulados.
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {metricas?.topClientesCarga.map((item: any, idx: number) => (
+                {metricas.topClientesCarga?.map((item: any, idx: number) => (
                   <div
                     key={idx}
                     className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center"
@@ -399,15 +419,15 @@ export const DashboardPage = () => {
                 tareasDiaSeleccionado.map((t) => (
                   <div
                     key={t.id}
-                    onClick={() => navigate(`/clientes/${t.clientes.id}`)}
+                    onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
                     className="p-2 bg-gray-50 border border-gray-100 rounded-md flex justify-between items-center text-[11px] hover:shadow-2xs transition-all animate-in fade-in zoom-in-95 duration-100 cursor-pointer"
                   >
                     <div className="truncate space-y-0.5 max-w-[70%]">
                       <p className="font-bold text-primary truncate">
-                        {t.clientes.razon_social}
+                        {t.clientes?.razon_social}
                       </p>
                       <p className="text-text-muted truncate">
-                        {t.impuestos.nombre}
+                        {t.impuestos?.nombre}
                       </p>
                     </div>
                     <span
