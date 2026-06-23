@@ -7,36 +7,64 @@ export const dashboardService = {
     const anio = hoy.getFullYear();
     const mes = hoy.getMonth();
 
-    // Consultas concurrentes optimizadas con Promise.all para máxima velocidad
     const [todosLosClientes, todosLosVencimientos] = await Promise.all([
       clientesService.getAll(),
       vencimientosService.getVencimientosMes(anio, mes, usuarioId, cargo)
     ]);
 
-    // 1. Filtrar clientes bajo la responsabilidad de este usuario
     const clientesAsignados = todosLosClientes.filter(
       (c) => c.contador_id === usuarioId && c.estado === 'ACTIVO'
     );
 
-    // 2. Vencimientos del mes (ya filtrados por permisos de rol desde el vencimientosService)
     const totalVencimientosMes = todosLosVencimientos.length;
 
-    // 3. Segmentación operativa de tareas pendientes de ejecución
     const pendientes = todosLosVencimientos.filter(
       (v) => v.estado_tarea === 'PENDIENTE' || v.estado_tarea === 'REVISIÓN'
     ).length;
 
-    // 4. Cálculo matemático estricto del porcentaje de efectividad
     const presentados = todosLosVencimientos.filter((v) => v.estado_tarea === 'PRESENTADO').length;
     const efectividad = totalVencimientosMes > 0 
       ? Math.round((presentados / totalVencimientosMes) * 100) 
       : 100;
+
+    // --- NUEVA LÓGICA: ALERTAS CRÍTICAS (Próximos 5 días) ---
+    const fechaLimiteAlerta = new Date();
+    fechaLimiteAlerta.setDate(hoy.getDate() + 5);
+
+    const alertasCriticas = todosLosVencimientos
+      .filter((v) => {
+        if (v.estado_tarea === 'PRESENTADO') return false;
+        const fechaVencimiento = new Date(v.fecha_limite + "T00:00:00");
+        const fechaHoyPlana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+        return fechaVencimiento >= fechaHoyPlana && fechaVencimiento <= fechaLimiteAlerta;
+      })
+      .sort((a, b) => new Date(a.fecha_limite).getTime() - new Date(b.fecha_limite).getTime())
+      .slice(0, 5);
+
+    // --- NUEVA LÓGICA: TOP CLIENTES CON MAYOR CARGA PENDIENTE ---
+    const conteoPorCliente: { [key: string]: { nombre: string; pendientes: number } } = {};
+    
+    todosLosVencimientos.forEach((v) => {
+      if (v.estado_tarea !== 'PRESENTADO') {
+        const idCliente = v.clientes.id;
+        if (!conteoPorCliente[idCliente]) {
+          conteoPorCliente[idCliente] = { nombre: v.clientes.razon_social, pendientes: 0 };
+        }
+        conteoPorCliente[idCliente].pendientes += 1;
+      }
+    });
+
+    const topClientesCarga = Object.values(conteoPorCliente)
+      .sort((a, b) => b.pendientes - a.pendientes)
+      .slice(0, 5);
 
     return {
       totalClientes: clientesAsignados.length,
       totalVencimientos: totalVencimientosMes,
       tareasPendientes: pendientes,
       porcentajeEfectividad: efectividad,
+      alertasCriticas, // <-- Retornamos las alertas analizadas
+      topClientesCarga // <-- Retornamos el top de carga
     };
   }
 };
