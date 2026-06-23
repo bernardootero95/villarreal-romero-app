@@ -23,7 +23,7 @@ interface MetricasDashboard {
 
 interface DiaSemana {
   nombre: string;
-  fechaStr: string; // Formato AAAA-MM-DD para emparejar
+  fechaStr: string;
   numeroDia: number;
   esHoy: boolean;
 }
@@ -35,13 +35,13 @@ export const DashboardPage = () => {
     [],
   );
   const [diasSemana, setDiasSemana] = useState<DiaSemana[]>([]);
+  const [diaSeleccionado, setDiaSeleccionado] = useState<string>(""); // <-- Estado para el día seleccionado
   const [loading, setLoading] = useState(true);
 
-  // Calcular de forma matemática y estricta los días de la semana actual (Lunes a Viernes)
+  // Calcular días de la semana actual (Lunes a Viernes)
   const calcularSemanaActual = () => {
     const hoy = new Date();
     const diaActual = hoy.getDay();
-    // Ajustar para que la semana empiece el Lunes (1) en lugar de Domingo (0)
     const distanciaAlLunes = diaActual === 0 ? -6 : 1 - diaActual;
 
     const lunes = new Date(hoy);
@@ -49,25 +49,33 @@ export const DashboardPage = () => {
 
     const nombresDias = ["Lun", "Mar", "Mié", "Jue", "Vie"];
     const semana: DiaSemana[] = [];
+    let banderaDiaSeleccionado = "";
 
     for (let i = 0; i < 5; i++) {
       const diaParaCalcular = new Date(lunes);
       diaParaCalcular.setDate(lunes.getDate() + i);
 
-      // Formatear a formato local ISO plano (AAAA-MM-DD) mitigando desajustes horários
       const anio = diaParaCalcular.getFullYear();
       const mes = String(diaParaCalcular.getMonth() + 1).padStart(2, "0");
       const dia = String(diaParaCalcular.getDate()).padStart(2, "0");
       const fechaStr = `${anio}-${mes}-${dia}`;
 
+      const esHoy = hoy.toDateString() === diaParaCalcular.toDateString();
+      if (esHoy) {
+        banderaDiaSeleccionado = fechaStr;
+      }
+
       semana.push({
         nombre: nombresDias[i],
         fechaStr,
         numeroDia: diaParaCalcular.getDate(),
-        esHoy: hoy.toDateString() === diaParaCalcular.toDateString(),
+        esHoy,
       });
     }
+
     setDiasSemana(semana);
+    // Si hoy es fin de semana, seleccionamos por defecto el lunes de esta semana
+    setDiaSeleccionado(banderaDiaSeleccionado || semana[0].fechaStr);
   };
 
   useEffect(() => {
@@ -81,14 +89,12 @@ export const DashboardPage = () => {
         setLoading(true);
         const hoy = new Date();
 
-        // 1. Obtener métricas core concurrentes
         const dataMetricas = await dashboardService.getMetricasContador(
           session.user.id,
           perfil.cargo,
         );
         setMetricas(dataMetricas);
 
-        // 2. Obtener los vencimientos oficiales vigentes del mes para el cruce de la agenda semanal
         const dataVencimientos = await vencimientosService.getVencimientosMes(
           hoy.getFullYear(),
           hoy.getMonth(),
@@ -109,6 +115,14 @@ export const DashboardPage = () => {
     cargarDatosDashboard();
   }, [perfil, session]);
 
+  // Obtener las tareas del día seleccionado de forma reactiva
+  const tareasDiaSeleccionado = vencimientosSemana.filter(
+    (v) => v.fecha_limite === diaSeleccionado,
+  );
+  const infoDiaSeleccionado = diasSemana.find(
+    (d) => d.fechaStr === diaSeleccionado,
+  );
+
   if (loading) {
     return (
       <div className="text-center p-12 text-text-muted text-sm font-semibold font-mono uppercase tracking-wider animate-pulse">
@@ -119,7 +133,7 @@ export const DashboardPage = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
-      {/* Mensaje de Bienvenida Institucional */}
+      {/* Mensaje de Bienvenida */}
       <div>
         <h1 className="text-2xl font-title font-bold text-primary">
           Panel de Control Operativo
@@ -133,9 +147,8 @@ export const DashboardPage = () => {
         </p>
       </div>
 
-      {/* Grid Responsive de Tarjetas de Métricas Core */}
+      {/* Grid de Tarjetas Core */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Tarjeta 1: Clientes Asignados */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -153,7 +166,6 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Tarjeta 2: Vencimientos del Mes */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -171,7 +183,6 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Tarjeta 3: Tareas Pendientes */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -189,7 +200,6 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Tarjeta 4: Porcentaje de Efectividad */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -208,9 +218,8 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* ÁREA COHESIVA DE TRABAJO DIARIO */}
+      {/* ÁREA DE TRABAJO DIARIO */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna de Alertas Críticas (2/3 de pantalla) */}
         <div className="lg:col-span-2 border border-dashed border-gray-200 rounded-xl bg-gray-50 p-8 text-center flex flex-col items-center justify-center min-h-[240px]">
           <p className="text-sm font-semibold text-text-main">
             Próxima sección: Alertas críticas de vencimiento
@@ -221,7 +230,7 @@ export const DashboardPage = () => {
           </p>
         </div>
 
-        {/* COMPONENTE NUEVO: Mini-Calendario Operativo Semanal (1/3 de pantalla) */}
+        {/* Agenda Semanal de Trabajo Interactiva */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex flex-col space-y-4">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
@@ -230,30 +239,32 @@ export const DashboardPage = () => {
             </h3>
           </div>
 
-          {/* Grid de 5 Columnas, una por cada día laboral */}
+          {/* Grid de 5 Columnas (Días Laborales) */}
           <div className="grid grid-cols-5 gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
             {diasSemana.map((dia) => {
-              // Filtrar cuántas tareas de la firma coinciden con la fecha exacta de este casillero
               const tareasDelDia = vencimientosSemana.filter(
                 (v) => v.fecha_limite === dia.fechaStr,
               );
-
               const pendientesDelDia = tareasDelDia.filter(
                 (t) => t.estado_tarea !== "PRESENTADO",
               ).length;
+              const esSeleccionado = dia.fechaStr === diaSeleccionado;
 
               return (
-                <div
+                <button
                   key={dia.fechaStr}
-                  className={`flex flex-col items-center p-1.5 rounded-md transition-all ${
-                    dia.esHoy
-                      ? "bg-primary text-surface shadow-xs scale-105"
-                      : "hover:bg-gray-200/50"
+                  onClick={() => setDiaSeleccionado(dia.fechaStr)} // <-- Cambia el día al hacer clic
+                  className={`flex flex-col items-center p-1.5 rounded-md transition-all outline-none ${
+                    esSeleccionado
+                      ? "bg-primary text-surface shadow-md scale-105"
+                      : dia.esHoy
+                        ? "bg-primary/10 text-primary border border-primary/20"
+                        : "hover:bg-gray-200/70 text-text-main"
                   }`}
-                  title={`${tareasDelDia.length} obligaciones fijadas para este día`}
+                  title={`${tareasDelDia.length} obligaciones fijadas`}
                 >
                   <span
-                    className={`text-[10px] uppercase font-bold ${dia.esHoy ? "text-accent" : "text-text-muted"}`}
+                    className={`text-[9px] uppercase font-bold ${esSeleccionado ? "text-accent" : "text-text-muted"}`}
                   >
                     {dia.nombre}
                   </span>
@@ -261,65 +272,67 @@ export const DashboardPage = () => {
                     {dia.numeroDia}
                   </span>
 
-                  {/* Indicador de carga operativa del día mediante badges de color */}
+                  {/* Indicadores de carga */}
                   <div className="mt-1.5 flex gap-0.5 justify-center min-h-[6px]">
                     {tareasDelDia.length > 0 ? (
                       <span
-                        className={`w-2 h-2 rounded-full ${pendientesDelDia > 0 ? "bg-amber-500 animate-pulse" : "bg-success"}`}
+                        className={`w-1.5 h-1.5 rounded-full ${pendientesDelDia > 0 ? (esSeleccionado ? "bg-accent animate-pulse" : "bg-amber-500 animate-pulse") : "bg-success"}`}
                       />
                     ) : (
-                      <span className="w-1 h-1 rounded-full bg-gray-300" />
+                      <span className="w-1 h-1 rounded-full bg-gray-300/60" />
                     )}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
 
-          {/* Lista detallada rápida de vencimientos HOY */}
-          <div className="flex-1 overflow-y-auto max-h-[160px] space-y-2 pr-1">
-            {(() => {
-              const hoyStr = diasSemana.find((d) => d.esHoy)?.fechaStr;
-              const tareasHoy = vencimientosSemana.filter(
-                (v) => v.fecha_limite === hoyStr,
-              );
+          {/* Feed Dinámico según el día seleccionado */}
+          <div className="flex-1 flex flex-col space-y-2">
+            <div className="flex justify-between items-center text-[10px] text-text-muted font-mono uppercase tracking-wider px-0.5">
+              <span>Obligaciones para el día:</span>
+              <span className="font-bold text-primary bg-gray-100 px-1.5 py-0.5 rounded">
+                {infoDiaSeleccionado
+                  ? `${infoDiaSeleccionado.nombre} ${infoDiaSeleccionado.numeroDia}`
+                  : ""}
+              </span>
+            </div>
 
-              if (tareasHoy.length === 0) {
-                return (
-                  <div className="text-center py-6 text-text-muted space-y-1">
-                    <AlertCircle className="w-5 h-5 text-text-muted/50 mx-auto" />
-                    <p className="text-[11px] font-medium">
-                      No registras vencimientos para hoy.
-                    </p>
-                  </div>
-                );
-              }
-
-              return tareasHoy.map((t) => (
-                <div
-                  key={t.id}
-                  className="p-2 bg-gray-50 border border-gray-100 rounded-md flex justify-between items-center text-[11px]"
-                >
-                  <div className="truncate space-y-0.5 max-w-[70%]">
-                    <p className="font-bold text-primary truncate">
-                      {t.clientes.razon_social}
-                    </p>
-                    <p className="text-text-muted truncate">
-                      {t.impuestos.nombre}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase ${
-                      t.estado_tarea === "PRESENTADO"
-                        ? "bg-success/10 text-success border-success/20"
-                        : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                    }`}
-                  >
-                    {t.estado_tarea}
-                  </span>
+            <div className="overflow-y-auto max-h-[145px] space-y-2 pr-1 flex-1">
+              {tareasDiaSeleccionado.length === 0 ? (
+                <div className="text-center py-8 text-text-muted space-y-1">
+                  <AlertCircle className="w-5 h-5 text-text-muted/40 mx-auto" />
+                  <p className="text-[11px] font-medium">
+                    No registras vencimientos este día.
+                  </p>
                 </div>
-              ));
-            })()}
+              ) : (
+                tareasDiaSeleccionado.map((t) => (
+                  <div
+                    key={t.id}
+                    className="p-2 bg-gray-50 border border-gray-100 rounded-md flex justify-between items-center text-[11px] hover:shadow-2xs transition-all animate-in fade-in zoom-in-95 duration-100"
+                  >
+                    <div className="truncate space-y-0.5 max-w-[70%]">
+                      <p className="font-bold text-primary truncate">
+                        {t.clientes.razon_social}
+                      </p>
+                      <p className="text-text-muted truncate">
+                        {t.impuestos.nombre}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase ${
+                        t.estado_tarea === "PRESENTADO"
+                          ? "bg-success/10 text-success border-success/20"
+                          : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                      }`}
+                    >
+                      {t.estado_tarea}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
