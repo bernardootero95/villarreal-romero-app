@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { impuestosService } from "./impuestosService";
 import type { ImpuestoConEspecialista } from "./types";
-import { Search, Trash2, Plus, Edit2 } from "lucide-react";
+import { Search, Trash2, Plus, Edit2, Eye } from "lucide-react"; // Añadimos Eye
 import { ImpuestoForm } from "./ImpuestoForm";
+import { useNavigate } from "react-router-dom"; // <-- Importamos hook nativo
 
 export const ImpuestosPage = () => {
   const { perfil } = useAuth();
+  const navigate = useNavigate(); // <-- Instanciamos
   const [impuestos, setImpuestos] = useState<ImpuestoConEspecialista[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -110,18 +112,14 @@ export const ImpuestosPage = () => {
                   Especialista (Opcional)
                 </th>
                 <th className="px-6 py-4 font-semibold">Estado</th>
-                {puedeAdministrar && (
-                  <th className="px-6 py-4 font-semibold text-right">
-                    Acciones
-                  </th>
-                )}
+                <th className="px-6 py-4 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
                   <td
-                    colSpan={puedeAdministrar ? 5 : 4}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-text-muted"
                   >
                     Cargando catálogo...
@@ -130,7 +128,7 @@ export const ImpuestosPage = () => {
               ) : impuestosFiltrados.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={puedeAdministrar ? 5 : 4}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-text-muted"
                   >
                     No hay impuestos configurados.
@@ -143,8 +141,12 @@ export const ImpuestosPage = () => {
                     className="hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-primary">
+                      {/* Enfoque SOLID: Navegación semántica profunda */}
+                      <div
+                        onClick={() => navigate(`/impuestos/${impuesto.id}`)}
+                        className="flex flex-col cursor-pointer group"
+                      >
+                        <span className="font-semibold text-primary group-hover:text-accent transition-colors">
                           {impuesto.nombre}
                         </span>
                         <span className="text-xs text-text-muted font-mono bg-gray-100 w-fit px-1.5 rounded mt-1">
@@ -172,26 +174,36 @@ export const ImpuestosPage = () => {
                         {impuesto.estado}
                       </span>
                     </td>
-                    {puedeAdministrar && (
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleEdit(impuesto)}
-                            className="text-text-muted hover:text-accent p-2 transition-colors"
-                            title="Editar impuesto"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(impuesto.id)}
-                            className="text-text-muted hover:text-danger p-2 transition-colors"
-                            title="Desactivar impuesto"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    )}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => navigate(`/impuestos/${impuesto.id}`)}
+                          className="text-text-muted hover:text-accent p-2 transition-colors"
+                          title="Ver Calendario Base Completo"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
+                        {puedeAdministrar && (
+                          <>
+                            <button
+                              onClick={() => handleEdit(impuesto)}
+                              className="text-text-muted hover:text-accent p-2 transition-colors"
+                              title="Editar impuesto"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(impuesto.id)}
+                              className="text-text-muted hover:text-danger p-2 transition-colors"
+                              title="Desactivar impuesto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}

@@ -16,6 +16,7 @@ import { CalendarioBasePage } from "./features/calendario-base/CalendarioBasePag
 import { CalendarioPage } from "./features/calendario/CalendarioPage";
 import { PerfilPage } from "./features/perfil/PerfilPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
+import { DetalleImpuestoPage } from "./features/impuestos/DetalleImpuestoPage";
 
 function App() {
   return (
@@ -44,6 +45,10 @@ function App() {
                     />
 
                     <Route path="/impuestos" element={<ImpuestosPage />} />
+                    <Route
+                      path="/impuestos/:id"
+                      element={<DetalleImpuestoPage />}
+                    />
                     <Route path="perfil" element={<PerfilPage />} />
                     <Route
                       path="/calendario-base"
