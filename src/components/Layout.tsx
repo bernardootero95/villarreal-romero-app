@@ -44,12 +44,6 @@ export const Layout = ({ children }: LayoutProps) => {
       path: "/impuestos",
     },
     {
-      icon: <Calendar className="w-5 h-5" />,
-      label: "Calendario Base",
-      path: "/calendario-base",
-      roles: ["Gerente", "Ingeniero"],
-    },
-    {
       icon: <Users className="w-5 h-5" />,
       label: "Usuarios",
       path: "/usuarios",
@@ -74,7 +68,6 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="h-screen w-screen flex bg-background overflow-hidden">
-      {/* Sidebar - Panel Lateral Fijo */}
       <aside className="w-64 bg-primary text-surface flex flex-col justify-between shadow-md z-10 flex-shrink-0 h-full">
         <div>
           <div className="p-6 border-b border-surface/10">
@@ -130,14 +123,10 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </aside>
 
-      {/* Contenedor Derecho Completo (Ocupa el resto de la pantalla de forma rígida) */}
       <div className="flex-1 flex flex-col h-full min-w-0">
-        {/* Contenedor con Scroll - Únicamente para el contenido dinámico */}
         <main className="flex-1 overflow-y-auto p-8 focus:outline-none">
           <div className="max-w-7xl mx-auto w-full">{children}</div>
         </main>
-
-        {/* Footer Persistente (Siempre visible abajo, fuera del flujo del scroll) */}
         <Footer />
       </div>
     </div>
