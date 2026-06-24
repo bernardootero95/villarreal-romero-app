@@ -15,69 +15,69 @@ interface CalendarioBaseFormProps {
   onClose: () => void;
   onSuccess: () => void;
   fechaAEditar?: CalendarioBaseConImpuesto | null;
+  impuestoId: string; // <-- Prop obligatoria requerida
 }
 
 export const CalendarioBaseForm = ({
   onClose,
   onSuccess,
   fechaAEditar,
+  impuestoId,
 }: CalendarioBaseFormProps) => {
-  const [impuestos, setImpuestos] = useState<ImpuestoConEspecialista[]>([]);
-  const [loadingImpuestos, setLoadingImpuestos] = useState(true);
+  const [impuestoMeta, setImpuestoMeta] =
+    useState<ImpuestoConEspecialista | null>(null);
 
   const {
     register,
     handleSubmit,
-    watch,
+    setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<CalendarioBaseFormData>({
     resolver: zodResolver(calendarioBaseSchema),
-    defaultValues: { anio: new Date().getFullYear() },
+    defaultValues: {
+      anio: new Date().getFullYear(),
+      impuesto_id: impuestoId, // <-- Seteo por defecto limpio
+    },
   });
 
   const isEditing = !!fechaAEditar;
-  const selectedImpuestoId = watch("impuesto_id");
-  const impuestoSeleccionado = impuestos.find(
-    (i) => i.id === selectedImpuestoId,
-  );
 
   // Determinar si el campo dígito es necesario según la regla del impuesto
-  const requiereDigito =
-    impuestoSeleccionado?.regla_vencimiento !== "FECHA_FIJA";
+  const requiereDigito = impuestoMeta?.regla_vencimiento !== "FECHA_FIJA";
+
+  useEffect(() => {
+    // Forzar el ID del impuesto en el formulario de react-hook-form
+    setValue("impuesto_id", impuestoId);
+
+    // Obtener la regla del impuesto actual de manera aislada para validar el dígito
+    impuestosService.getAll().then((data) => {
+      const meta = data.find((i) => i.id === impuestoId);
+      if (meta) setImpuestoMeta(meta);
+    });
+  }, [impuestoId, setValue]);
 
   useEffect(() => {
     if (fechaAEditar) {
       reset({
-        impuesto_id: fechaAEditar.impuesto_id,
+        impuesto_id: impuestoId,
         anio: fechaAEditar.anio,
         periodo: fechaAEditar.periodo,
         digito: fechaAEditar.digito,
         fecha_vencimiento_oficial: fechaAEditar.fecha_vencimiento_oficial,
       });
     }
-  }, [fechaAEditar, reset]);
-
-  useEffect(() => {
-    const cargarImpuestos = async () => {
-      try {
-        const data = await impuestosService.getAll();
-        setImpuestos(data.filter((i) => i.estado === "ACTIVO"));
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoadingImpuestos(false);
-      }
-    };
-    cargarImpuestos();
-  }, []);
+  }, [fechaAEditar, reset, impuestoId]);
 
   const onSubmit = async (data: CalendarioBaseFormData) => {
     try {
+      // Forzar que vaya amarrado al impuesto del detalle
+      const payload = { ...data, impuesto_id: impuestoId };
+
       if (isEditing && fechaAEditar) {
-        await calendarioBaseService.update(fechaAEditar.id, data);
+        await calendarioBaseService.update(fechaAEditar.id, payload);
       } else {
-        await calendarioBaseService.create(data);
+        await calendarioBaseService.create(payload);
       }
       onSuccess();
     } catch (error: any) {
@@ -91,10 +91,10 @@ export const CalendarioBaseForm = ({
         <div className="bg-primary p-4 flex justify-between items-center">
           <div className="flex items-center gap-2 text-surface">
             <CalendarDays className="w-5 h-5" />
-            <h2 className="font-title font-semibold">
+            <h2 className="font-title font-semibold text-sm">
               {isEditing
                 ? "Editar Fecha Oficial"
-                : "Parametrizar Fecha Oficial"}
+                : `Parametrizar Periodo — ${impuestoMeta?.nombre || ""}`}
             </h2>
           </div>
           <button
@@ -106,29 +106,6 @@ export const CalendarioBaseForm = ({
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">
-              Impuesto / Obligación
-            </label>
-            <select
-              {...register("impuesto_id")}
-              disabled={isEditing || loadingImpuestos}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.impuesto_id ? "border-danger" : "border-gray-300"} ${isEditing ? "bg-gray-100" : ""}`}
-            >
-              <option value="">Seleccione un impuesto...</option>
-              {impuestos.map((imp) => (
-                <option key={imp.id} value={imp.id}>
-                  {imp.nombre} ({imp.periodicidad})
-                </option>
-              ))}
-            </select>
-            {errors.impuesto_id && (
-              <p className="text-danger text-xs mt-1">
-                {errors.impuesto_id.message}
-              </p>
-            )}
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
@@ -137,7 +114,7 @@ export const CalendarioBaseForm = ({
               <input
                 type="number"
                 {...register("anio", { valueAsNumber: true })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
               />
               {errors.anio && (
                 <p className="text-danger text-xs mt-1">
@@ -152,7 +129,7 @@ export const CalendarioBaseForm = ({
               </label>
               <input
                 {...register("periodo")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
                 placeholder="Ej. 01, B1, ANUAL"
               />
               {errors.periodo && (
@@ -178,8 +155,8 @@ export const CalendarioBaseForm = ({
                     v === "" || v === null ? null : Number(v),
                 })}
                 disabled={!requiereDigito}
-                placeholder={requiereDigito ? "0-9 o 00-99" : "No aplica"}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${!requiereDigito ? "bg-gray-100 cursor-not-allowed" : "bg-surface border-gray-300"}`}
+                placeholder={requiereDigito ? "0-9" : "Fecha fija"}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm ${!requiereDigito ? "bg-gray-100 cursor-not-allowed" : "bg-surface border-gray-300"}`}
               />
               {errors.digito && (
                 <p className="text-danger text-xs mt-1">
@@ -195,7 +172,7 @@ export const CalendarioBaseForm = ({
               <input
                 type="date"
                 {...register("fecha_vencimiento_oficial")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
               />
               {errors.fecha_vencimiento_oficial && (
                 <p className="text-danger text-xs mt-1">
@@ -207,10 +184,9 @@ export const CalendarioBaseForm = ({
 
           <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
             <p className="text-[11px] text-amber-800 leading-relaxed">
-              <strong>Nota Importante:</strong> Esta es la fecha oficial del
-              decreto. Al guardarla, el sistema la usará para calcular
-              automáticamente el calendario de todos los clientes que tengan
-              este impuesto asignado.
+              <strong>Nota:</strong> Al guardar, el sistema actualizará
+              dinámicamente el cronograma de todas las empresas vinculadas a
+              este impuesto.
             </p>
           </div>
 
@@ -218,14 +194,14 @@ export const CalendarioBaseForm = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors"
+              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70"
+              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 text-sm"
             >
               <Save className="w-4 h-4" />
               {isSubmitting ? "Guardando..." : "Guardar Fecha"}

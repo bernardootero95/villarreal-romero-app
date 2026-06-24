@@ -1,30 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, Upload, FileSpreadsheet, FileUp } from "lucide-react";
 import { calendarioBaseService } from "./calendarioBaseService";
-import { impuestosService } from "../impuestos/impuestosService";
-import type { ImpuestoConEspecialista } from "../impuestos/types";
 import * as XLSX from "xlsx";
 
 interface CalendarioCargaMasivaProps {
   onClose: () => void;
   onSuccess: () => void;
+  impuestoId: string; // <-- Prop requerida heredada del padre
 }
 
 export const CalendarioCargaMasiva = ({
   onClose,
   onSuccess,
+  impuestoId,
 }: CalendarioCargaMasivaProps) => {
-  const [impuestos, setImpuestos] = useState<ImpuestoConEspecialista[]>([]);
-  const [selectedImpuesto, setSelectedImpuesto] = useState("");
   const [anio, setAnio] = useState(new Date().getFullYear());
   const [archivo, setArchivo] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    impuestosService
-      .getAll()
-      .then((data) => setImpuestos(data.filter((i) => i.estado === "ACTIVO")));
-  }, []);
 
   const procesarFechaExcel = (fechaStr: any) => {
     if (!fechaStr) return "";
@@ -32,20 +24,18 @@ export const CalendarioCargaMasiva = ({
     if (parts.length === 3) {
       const [p1, p2, p3] = parts;
       if (p1.length === 4)
-        return `${p1}-${p2.padStart(2, "0")}-${p3.padStart(2, "0")}`; // AAAA-MM-DD
+        return `${p1}-${p2.padStart(2, "0")}-${p3.padStart(2, "0")}`;
       if (p3.length === 4)
-        return `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`; // DD-MM-AAAA
+        return `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`;
     }
     return String(fechaStr).trim();
   };
 
   const handleCargaMasiva = async () => {
-    if (!selectedImpuesto) return alert("Debes seleccionar un impuesto");
     if (!archivo) return alert("Debes seleccionar un archivo de Excel");
 
     try {
       setIsSubmitting(true);
-
       const reader = new FileReader();
 
       reader.onload = async (e) => {
@@ -78,7 +68,7 @@ export const CalendarioCargaMasiva = ({
             }
 
             registrosValidos.push({
-              impuesto_id: selectedImpuesto,
+              impuesto_id: impuestoId, // <-- Fijado automáticamente por contexto
               anio: anio,
               periodo: periodo,
               digito:
@@ -97,18 +87,13 @@ export const CalendarioCargaMasiva = ({
 
           await calendarioBaseService.createBulk(registrosValidos as any);
           alert(
-            `¡Éxito! Se cargaron ${registrosValidos.length} fechas correctamente desde el archivo Excel.`,
+            `¡Éxito! Se cargaron ${registrosValidos.length} fechas correctamente.`,
           );
           onSuccess();
         } catch (error: any) {
           alert(error.message);
           setIsSubmitting(false);
         }
-      };
-
-      reader.onerror = () => {
-        alert("Error leyendo el archivo Excel");
-        setIsSubmitting(false);
       };
 
       reader.readAsBinaryString(archivo);
@@ -124,8 +109,8 @@ export const CalendarioCargaMasiva = ({
         <div className="bg-primary p-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2 text-surface">
             <FileSpreadsheet className="w-5 h-5" />
-            <h2 className="font-title font-semibold">
-              Subir Archivo Excel de Vencimientos
+            <h2 className="font-title font-semibold text-sm">
+              Carga Masiva de Fechas Oficiales
             </h2>
           </div>
           <button
@@ -137,66 +122,39 @@ export const CalendarioCargaMasiva = ({
         </div>
 
         <div className="p-6 overflow-y-auto space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1">
-                1. Impuesto a cargar
-              </label>
-              <select
-                value={selectedImpuesto}
-                onChange={(e) => setSelectedImpuesto(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface text-sm"
-              >
-                <option value="">Seleccione...</option>
-                {/* CORRECCIÓN VISUAL: Añadimos la periodicidad explícita en las opciones para diferenciar tipos de IVA */}
-                {impuestos.map((imp) => (
-                  <option key={imp.id} value={imp.id}>
-                    {imp.nombre}{" "}
-                    {imp.periodicidad ? `- (${imp.periodicidad})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1">
-                2. Año Fiscal
-              </label>
-              <input
-                type="number"
-                value={anio}
-                onChange={(e) => setAnio(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none"
-              />
-            </div>
+          <div className="max-w-xs">
+            <label className="block text-xs font-bold text-text-muted uppercase mb-1">
+              Año Fiscal del Reporte
+            </label>
+            <input
+              type="number"
+              value={anio}
+              onChange={(e) => setAnio(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
+            />
           </div>
 
           <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg">
-            <h3 className="text-sm font-bold text-blue-800 mb-2">
+            <h3 className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">
               Estructura obligatoria del Excel
             </h3>
-            <p className="text-xs text-blue-700 mb-2">
-              Tu archivo <b>.xlsx</b> debe tener encabezados en la primera fila
-              (los ignoraremos) y los datos a partir de la segunda fila,
-              estrictamente en las columnas A, B y C:
-            </p>
             <ul className="text-xs text-blue-700 list-disc list-inside space-y-1">
               <li>
-                <b>Columna A:</b> Periodo (Ej. B1, 01, ANUAL)
+                <b>Columna A:</b> Periodo (Ej. 01, B1, ANUAL)
               </li>
               <li>
-                <b>Columna B:</b> Dígito (Ej. 0, 1, 99. Dejar vacío si no
-                aplica)
+                <b>Columna B:</b> Dígito NIT (0-9. Dejar vacío o N/A si es Fecha
+                Fija)
               </li>
               <li>
-                <b>Columna C:</b> Fecha de Vencimiento (Formato AAAA-MM-DD
-                preferiblemente)
+                <b>Columna C:</b> Fecha de Vencimiento (Formato AAAA-MM-DD)
               </li>
             </ul>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
-              3. Selecciona tu archivo Excel (.xlsx, .xls)
+              Selecciona tu archivo Excel (.xlsx, .xls)
             </label>
             <label
               className={`mt-2 flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-accent hover:bg-gray-50 focus:outline-none ${archivo ? "border-accent bg-blue-50/30" : ""}`}
@@ -205,7 +163,7 @@ export const CalendarioCargaMasiva = ({
                 <FileUp
                   className={`w-8 h-8 ${archivo ? "text-accent" : "text-gray-400"}`}
                 />
-                <span className="font-medium text-gray-600">
+                <span className="font-medium text-xs text-gray-600">
                   {archivo
                     ? archivo.name
                     : "Haz clic para explorar o arrastra el archivo aquí"}
@@ -213,9 +171,8 @@ export const CalendarioCargaMasiva = ({
               </span>
               <input
                 type="file"
-                name="file_upload"
                 className="hidden"
-                accept=".xlsx, .xls, .csv"
+                accept=".xlsx, .xls"
                 onChange={(e) => setArchivo(e.target.files?.[0] || null)}
               />
             </label>
@@ -226,14 +183,14 @@ export const CalendarioCargaMasiva = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md transition-colors"
+            className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md transition-colors text-sm"
           >
             Cancelar
           </button>
           <button
             onClick={handleCargaMasiva}
-            disabled={isSubmitting || !selectedImpuesto || !archivo}
-            className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+            disabled={isSubmitting || !archivo}
+            className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm"
           >
             <Upload className="w-4 h-4" />
             {isSubmitting ? "Procesando archivo..." : "Subir y Procesar"}

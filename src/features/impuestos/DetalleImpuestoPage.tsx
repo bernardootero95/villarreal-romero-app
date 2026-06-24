@@ -17,7 +17,6 @@ import { calendarioBaseService } from "../calendario-base/calendarioBaseService"
 import type { ImpuestoConEspecialista } from "./types";
 import type { CalendarioBaseConImpuesto } from "../calendario-base/types";
 
-// Importaciones de los formularios modales existentes
 import { CalendarioBaseForm } from "../calendario-base/CalendarioBaseForm";
 import { CalendarioCargaMasiva } from "../calendario-base/CalendarioCargaMasiva";
 
@@ -32,11 +31,9 @@ export const DetalleImpuestoPage = () => {
   const [fechasBase, setFechasBase] = useState<CalendarioBaseConImpuesto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filtros de UI
   const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
   const [periodoFiltro, setPeriodoFiltro] = useState<string>("TODOS");
 
-  // Control de Modales
   const [showForm, setShowForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [fechaEditando, setFechaEditando] =
@@ -180,7 +177,7 @@ export const DetalleImpuestoPage = () => {
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Barra Controladora de Filtros */}
       <div className="card-container bg-surface p-4 rounded-xl border border-gray-200 shadow-xs flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center gap-2 text-text-muted text-sm font-medium">
           <Filter className="w-4 h-4" />
@@ -228,7 +225,7 @@ export const DetalleImpuestoPage = () => {
         </div>
       </div>
 
-      {/* Tabla */}
+      {/* Tabla de Vencimientos */}
       <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs">
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider border-b border-gray-100">
@@ -326,6 +323,7 @@ export const DetalleImpuestoPage = () => {
       {showForm && (
         <CalendarioBaseForm
           fechaAEditar={fechaEditando}
+          impuestoId={id!}
           onClose={() => {
             setShowForm(false);
             setFechaEditando(null);
@@ -341,6 +339,7 @@ export const DetalleImpuestoPage = () => {
       {/* Modal Carga Masiva */}
       {showBulkForm && (
         <CalendarioCargaMasiva
+          impuestoId={id!}
           onClose={() => setShowBulkForm(false)}
           onSuccess={() => {
             setShowBulkForm(false);
