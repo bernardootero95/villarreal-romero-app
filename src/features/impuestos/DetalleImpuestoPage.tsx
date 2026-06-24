@@ -11,6 +11,8 @@ import {
   Upload,
   Trash2,
   Edit2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { impuestosService } from "./impuestosService";
 import { calendarioBaseService } from "../calendario-base/calendarioBaseService";
@@ -19,6 +21,8 @@ import type { CalendarioBaseConImpuesto } from "../calendario-base/types";
 
 import { CalendarioBaseForm } from "../calendario-base/CalendarioBaseForm";
 import { CalendarioCargaMasiva } from "../calendario-base/CalendarioCargaMasiva";
+
+const REGISTROS_POR_PAGINA = 10;
 
 export const DetalleImpuestoPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,9 +35,14 @@ export const DetalleImpuestoPage = () => {
   const [fechasBase, setFechasBase] = useState<CalendarioBaseConImpuesto[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Filtros de UI
   const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
   const [periodoFiltro, setPeriodoFiltro] = useState<string>("TODOS");
 
+  // Estado de Paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+
+  // Control de Modales
   const [showForm, setShowForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [fechaEditando, setFechaEditando] =
@@ -60,6 +69,7 @@ export const DetalleImpuestoPage = () => {
       const data = await calendarioBaseService.getAll(anioFiltro);
       const filtradasPorImpuesto = data.filter((f) => f.impuesto_id === id);
       setFechasBase(filtradasPorImpuesto);
+      setPaginaActual(1); // Reiniciar a la primera página al cambiar año
     } catch (error) {
       console.error("Error cargando matriz de fechas:", error);
     } finally {
@@ -94,10 +104,27 @@ export const DetalleImpuestoPage = () => {
     new Set(fechasBase.map((f) => f.periodo)),
   ).sort();
 
+  // 1. Aplicar filtros primero
   const fechasFiltradas = fechasBase.filter((f) => {
     if (periodoFiltro === "TODOS") return true;
     return f.periodo === periodoFiltro;
   });
+
+  // 2. Calcular datos de paginación basados en el resultado filtrado
+  const totalRegistros = fechasFiltradas.length;
+  const totalPaginas = Math.ceil(totalRegistros / REGISTROS_POR_PAGINA);
+
+  const indiceInicial = (paginaActual - 1) * REGISTROS_POR_PAGINA;
+  const indiceFinal = indiceInicial + REGISTROS_POR_PAGINA;
+
+  // 3. Segmentar la lista para mostrar solo la página activa
+  const fechasPaginadas = fechasFiltradas.slice(indiceInicial, indiceFinal);
+
+  // Reiniciar paginación si cambia el filtro de periodo
+  const handlePeriodoChange = (valor: string) => {
+    setPeriodoFiltro(valor);
+    setPaginaActual(1);
+  };
 
   if (!impuesto) {
     return (
@@ -193,7 +220,6 @@ export const DetalleImpuestoPage = () => {
               value={anioFiltro}
               onChange={(e) => {
                 setAnioFiltro(Number(e.target.value));
-                setPeriodoFiltro("TODOS");
               }}
               className="border border-gray-200 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main"
             >
@@ -211,7 +237,7 @@ export const DetalleImpuestoPage = () => {
             </span>
             <select
               value={periodoFiltro}
-              onChange={(e) => setPeriodoFiltro(e.target.value)}
+              onChange={(e) => handlePeriodoChange(e.target.value)}
               className="border border-gray-200 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main"
             >
               <option value="TODOS">Todos los periodos</option>
@@ -225,7 +251,7 @@ export const DetalleImpuestoPage = () => {
         </div>
       </div>
 
-      {/* Tabla de Vencimientos */}
+      {/* Tabla de Vencimientos con Bloque de Paginación */}
       <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs">
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider border-b border-gray-100">
@@ -250,7 +276,7 @@ export const DetalleImpuestoPage = () => {
                   Consultando matriz de vencimientos...
                 </td>
               </tr>
-            ) : fechasFiltradas.length === 0 ? (
+            ) : fechasPaginadas.length === 0 ? (
               <tr>
                 <td
                   colSpan={puedeAdministrar ? 4 : 3}
@@ -260,7 +286,7 @@ export const DetalleImpuestoPage = () => {
                 </td>
               </tr>
             ) : (
-              fechasFiltradas.map((f) => (
+              fechasPaginadas.map((f) => (
                 <tr
                   key={f.id}
                   className="hover:bg-gray-50/40 transition-colors"
@@ -317,6 +343,55 @@ export const DetalleImpuestoPage = () => {
             )}
           </tbody>
         </table>
+
+        {/* Footer de Paginación Controlada */}
+        {!loading && totalRegistros > 0 && (
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <div className="text-xs text-text-muted font-medium">
+              Mostrando{" "}
+              <span className="font-semibold text-text-main">
+                {indiceInitial + 1}
+              </span>{" "}
+              al{" "}
+              <span className="font-semibold text-text-main">
+                {Math.min(indiceFinal, totalRegistros)}
+              </span>{" "}
+              de{" "}
+              <span className="font-semibold text-text-main">
+                {totalRegistros}
+              </span>{" "}
+              fechas base
+            </div>
+
+            {totalPaginas > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    setPaginaActual((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={paginaActual === 1}
+                  className="p-1.5 rounded-md border border-gray-200 bg-white text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <span className="text-xs font-semibold text-text-main px-2">
+                  Página {paginaActual} de {totalPaginas}
+                </span>
+
+                <button
+                  onClick={() =>
+                    setPaginaActual((prev) => Math.min(prev + 1, totalPaginas))
+                  }
+                  disabled={paginaActual === totalPaginas}
+                  className="p-1.5 rounded-md border border-gray-200 bg-white text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modal Carga Individual / Edición */}
