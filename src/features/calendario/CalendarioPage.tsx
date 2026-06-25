@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { vencimientosService, type Vencimiento } from "./vencimientosService";
+import { Loader } from "../../components/Loader"; // <-- Importación del Loader Corporativo
 import {
   ChevronLeft,
   ChevronRight,
@@ -81,7 +82,6 @@ export const CalendarioPage = () => {
   ];
   const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-  // Función para procesar el cambio de estado de una tarea
   const handleMarcarPresentado = async (tareaId: string) => {
     const observacionText = radicados[tareaId] || "";
     try {
@@ -92,14 +92,12 @@ export const CalendarioPage = () => {
         observacionText,
       );
 
-      // Limpiar el input de ese ID específico
       setRadicados((prev) => {
         const copia = { ...prev };
         delete copia[tareaId];
         return copia;
       });
 
-      // Refrescar los datos del calendario al vuelo
       await fetchDatos();
     } catch (error) {
       alert("Error al actualizar el estado del vencimiento");
@@ -169,7 +167,6 @@ export const CalendarioPage = () => {
                           </span>
                         </div>
 
-                        {/* Mostrar observaciones o radicado si ya está presentado */}
                         {!esPendiente && tarea.observaciones && (
                           <p className="text-xs text-success bg-success/5 border border-success/10 px-2 py-1 rounded mt-2 font-medium">
                             <b>Radicado / Notas:</b> {tarea.observaciones}
@@ -177,7 +174,6 @@ export const CalendarioPage = () => {
                         )}
                       </div>
 
-                      {/* PANEL DE ACCIÓN TRIBUTARIA */}
                       <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
                         {tarea.estado_tarea === "PRESENTADO" ? (
                           <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full">
@@ -221,8 +217,15 @@ export const CalendarioPage = () => {
     );
   };
 
+  // CONTROL DE RENDERIZADO ASÍNCRONO:
+  // Implementación de tu Loader corporativo con el Isotipo en tamaño real
+  // para sustituir las paredes de carga estáticas.
+  if (loading) {
+    return <Loader texto="Sincronizando calendario..." fullScreen={false} />;
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-200">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-title font-bold text-primary">
@@ -283,7 +286,6 @@ export const CalendarioPage = () => {
             const tareasDelDia = vencimientosPorDia[dateStr] || [];
             const isToday = new Date().toISOString().split("T")[0] === dateStr;
 
-            // Contar pendientes reales del día para cambiar el color del puntito
             const pendientes = tareasDelDia.filter(
               (t) => t.estado_tarea === "PENDIENTE",
             ).length;
@@ -303,7 +305,7 @@ export const CalendarioPage = () => {
                 </div>
 
                 <div className="mt-2 flex-1 overflow-hidden flex flex-col gap-1">
-                  {!loading && tareasDelDia.length > 0 ? (
+                  {tareasDelDia.length > 0 ? (
                     <>
                       <div className="flex flex-wrap gap-1">
                         {tareasDelDia.slice(0, 4).map((t, i) => (
