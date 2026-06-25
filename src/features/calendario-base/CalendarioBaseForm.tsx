@@ -10,6 +10,7 @@ import { X, Save, CalendarDays } from "lucide-react";
 import { calendarioBaseService } from "./calendarioBaseService";
 import { impuestosService } from "../impuestos/impuestosService";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
+import { Loader } from "../../components/Loader"; // <-- Importación de tu Loader corporativo
 
 interface CalendarioBaseFormProps {
   onClose: () => void;
@@ -26,6 +27,7 @@ export const CalendarioBaseForm = ({
 }: CalendarioBaseFormProps) => {
   const [impuestoMeta, setImpuestoMeta] =
     useState<ImpuestoConEspecialista | null>(null);
+  const [loadingMeta, setLoadingMeta] = useState(true); // <-- Estado para el Loader
 
   const {
     register,
@@ -51,10 +53,15 @@ export const CalendarioBaseForm = ({
     setValue("impuesto_id", impuestoId);
 
     // Obtener la regla del impuesto actual de manera aislada para validar el dígito
-    impuestosService.getAll().then((data) => {
-      const meta = data.find((i) => i.id === impuestoId);
-      if (meta) setImpuestoMeta(meta);
-    });
+    setLoadingMeta(true);
+    impuestosService
+      .getAll()
+      .then((data) => {
+        const meta = data.find((i) => i.id === impuestoId);
+        if (meta) setImpuestoMeta(meta);
+      })
+      .catch((err) => console.error("Error al recuperar metadatos:", err))
+      .finally(() => setLoadingMeta(false));
   }, [impuestoId, setValue]);
 
   useEffect(() => {
@@ -105,109 +112,119 @@ export const CalendarioBaseForm = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1">
-                Año Fiscal
-              </label>
-              <input
-                type="number"
-                {...register("anio", { valueAsNumber: true })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
-              />
-              {errors.anio && (
-                <p className="text-danger text-xs mt-1">
-                  {errors.anio.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1">
-                Periodo (Mes/Bim/Cuat)
-              </label>
-              <input
-                {...register("periodo")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
-                placeholder="Ej. 01, B1, ANUAL"
-              />
-              {errors.periodo && (
-                <p className="text-danger text-xs mt-1">
-                  {errors.periodo.message}
-                </p>
-              )}
-            </div>
+        {loadingMeta ? (
+          // Implementación del Loader adaptado al contenedor del modal
+          <div className="bg-surface p-12">
+            <Loader
+              texto="Sincronizando reglas fiscales..."
+              fullScreen={false}
+            />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1">
-                Dígito NIT{" "}
-                {!requiereDigito && (
-                  <span className="text-text-muted font-normal">(N/A)</span>
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-1">
+                  Año Fiscal
+                </label>
+                <input
+                  type="number"
+                  {...register("anio", { valueAsNumber: true })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
+                />
+                {errors.anio && (
+                  <p className="text-danger text-xs mt-1">
+                    {errors.anio.message}
+                  </p>
                 )}
-              </label>
-              <input
-                type="number"
-                {...register("digito", {
-                  setValueAs: (v) =>
-                    v === "" || v === null ? null : Number(v),
-                })}
-                disabled={!requiereDigito}
-                placeholder={requiereDigito ? "0-9" : "Fecha fija"}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm ${!requiereDigito ? "bg-gray-100 cursor-not-allowed" : "bg-surface border-gray-300"}`}
-              />
-              {errors.digito && (
-                <p className="text-danger text-xs mt-1">
-                  {errors.digito.message}
-                </p>
-              )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-1">
+                  Periodo (Mes/Bim/Cuat)
+                </label>
+                <input
+                  {...register("periodo")}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
+                  placeholder="Ej. 01, B1, ANUAL"
+                />
+                {errors.periodo && (
+                  <p className="text-danger text-xs mt-1">
+                    {errors.periodo.message}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1">
-                Fecha Límite Oficial
-              </label>
-              <input
-                type="date"
-                {...register("fecha_vencimiento_oficial")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
-              />
-              {errors.fecha_vencimiento_oficial && (
-                <p className="text-danger text-xs mt-1">
-                  {errors.fecha_vencimiento_oficial.message}
-                </p>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-1">
+                  Dígito NIT{" "}
+                  {!requiereDigito && (
+                    <span className="text-text-muted font-normal">(N/A)</span>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  {...register("digito", {
+                    setValueAs: (v) =>
+                      v === "" || v === null ? null : Number(v),
+                  })}
+                  disabled={!requiereDigito}
+                  placeholder={requiereDigito ? "0-9" : "Fecha fija"}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm ${!requiereDigito ? "bg-gray-100 cursor-not-allowed" : "bg-surface border-gray-300"}`}
+                />
+                {errors.digito && (
+                  <p className="text-danger text-xs mt-1">
+                    {errors.digito.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-1">
+                  Fecha Límite Oficial
+                </label>
+                <input
+                  type="date"
+                  {...register("fecha_vencimiento_oficial")}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
+                />
+                {errors.fecha_vencimiento_oficial && (
+                  <p className="text-danger text-xs mt-1">
+                    {errors.fecha_vencimiento_oficial.message}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
-            <p className="text-[11px] text-amber-800 leading-relaxed">
-              <strong>Nota:</strong> Al guardar, el sistema actualizará
-              dinámicamente el cronograma de todas las empresas vinculadas a
-              este impuesto.
-            </p>
-          </div>
+            <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                <strong>Nota:</strong> Al guardar, el sistema actualizará
+                dinámicamente el cronograma de todas las empresas vinculadas a
+                este impuesto.
+              </p>
+            </div>
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 text-sm"
-            >
-              <Save className="w-4 h-4" />
-              {isSubmitting ? "Guardando..." : "Guardar Fecha"}
-            </button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 text-sm"
+              >
+                <Save className="w-4 h-4" />
+                {isSubmitting ? "Guardando..." : "Guardar Fecha"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
