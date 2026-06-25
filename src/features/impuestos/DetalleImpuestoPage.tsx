@@ -344,13 +344,13 @@ export const DetalleImpuestoPage = () => {
           </tbody>
         </table>
 
-        {/* Footer de Paginación Controlada */}
+        {/* Footer de Paginación Controlada Corregido */}
         {!loading && totalRegistros > 0 && (
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex items-center justify-between">
             <div className="text-xs text-text-muted font-medium">
               Mostrando{" "}
               <span className="font-semibold text-text-main">
-                {indiceInitial + 1}
+                {indiceInicial + 1}
               </span>{" "}
               al{" "}
               <span className="font-semibold text-text-main">
