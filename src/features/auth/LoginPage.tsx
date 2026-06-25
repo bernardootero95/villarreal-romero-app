@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabase";
 import { Lock, User as UserIcon, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-// Importamos el logo de la empresa
+import { Loader } from "../../components/Loader"; // <-- Importamos tu componente Loader corporativo
 import logo from "../../assets/LOGO-2.png";
 
 // Esquema de validación estricto
@@ -20,12 +20,11 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export const LoginPage = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // Estado para alternar visibilidad de clave
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
   const { session } = useAuth();
 
-  // Si el usuario ya está logueado, lo sacamos del login y lo llevamos al Dashboard
   useEffect(() => {
     if (session) {
       navigate("/", { replace: true });
@@ -44,7 +43,6 @@ export const LoginPage = () => {
     setIsLoading(true);
     setAuthError(null);
 
-    // Transformamos el username al formato de correo interno (Actualizado a tu dominio)
     const internalEmail = `${data.username.toLowerCase().trim()}@villarreal-romero.local`;
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -58,11 +56,21 @@ export const LoginPage = () => {
       );
       setIsLoading(false);
     }
-    // Si no hay error, el useEffect de arriba detectará la sesión y hará la redirección
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      {/* Inyección del Loader Reutilizable: 
+        Cuando 'isLoading' es verdadero, renderiza el Loader en pantalla completa 
+        bloqueando accesos duplicados de forma elegante.
+      */}
+      {isLoading && (
+        <Loader
+          texto="Verificando credenciales de acceso..."
+          fullScreen={true}
+        />
+      )}
+
       <div className="card-container w-full max-w-md">
         {/* Cabecera con Logo */}
         <div className="text-center mb-8 flex flex-col items-center">
@@ -119,7 +127,6 @@ export const LoginPage = () => {
                 type={showPassword ? "text" : "password"}
                 {...register("password")}
                 disabled={isLoading}
-                // pr-10 asegura que el texto no se superponga con el botón del ojo
                 className={`block w-full pl-10 pr-10 py-2 border ${
                   errors.password ? "border-danger" : "border-gray-300"
                 } rounded-md focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm transition-colors bg-surface`}
@@ -162,32 +169,7 @@ export const LoginPage = () => {
             disabled={isLoading}
             className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-surface bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70 disabled:cursor-not-allowed transition-all"
           >
-            {isLoading ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-surface"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Iniciando sesión...
-              </>
-            ) : (
-              "Ingresar al sistema"
-            )}
+            {isLoading ? "Iniciando sesión..." : "Ingresar al sistema"}
           </button>
         </form>
       </div>
