@@ -1,4 +1,6 @@
 import { Loader2 } from "lucide-react";
+// Importamos el logo oficial desde tus assets
+import logoCorporativo from "../assets/LOGO-2.png";
 
 interface LoaderProps {
   texto?: string;
@@ -16,47 +18,30 @@ export const Loader = ({
 
   return (
     <div className={containerClass}>
-      <div className="relative flex items-center justify-center w-16 h-16 mb-4">
-        {/* Anillo exterior giratorio en color acento */}
-        <Loader2 className="w-full h-full text-accent animate-spin absolute inset-0" />
+      {/* Aumentamos el tamaño del marco general de 24x24 a 28x28 para dar más espacio */}
+      <div className="relative flex items-center justify-center w-28 h-28 mb-5">
+        {/* Anillo exterior giratorio (más visible, subimos la opacidad a text-accent/60) */}
+        <Loader2 className="w-full h-full text-accent/60 animate-spin absolute inset-0" />
 
-        {/* ÍCONO CORPORATIVO PERSONALIZADO: Silueta exacta del templete de Villarreal-Romero */}
-        <div className="w-7 h-7 flex items-center justify-center text-primary mt-[-2px]">
-          <svg
-            viewBox="0 0 100 100"
-            fill="currentColor"
-            className="w-full h-full"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Cúpula / Esfera superior */}
-            <circle cx="50" cy="14" r="3.5" />
-
-            {/* Techo superior chico */}
-            <path d="M40 22h20v3H40z" rx="1" />
-
-            {/* Techo principal curvo del templete */}
-            <path d="M22 36.5 C 24 25, 76 25, 78 36.5 Z" />
-            <path d="M20 36h60v3.5H20z" rx="1.5" />
-
-            {/* Arquitrabe / Viga superior interna */}
-            <path d="M26 42.5h48v3H26z" />
-
-            {/* Columnas (4 soportes verticales estilizados) */}
-            <rect x="29" y="48.5" width="4" height="27" rx="0.5" />
-            <rect x="42" y="48.5" width="4.5" height="27" rx="0.5" />
-            <rect x="53.5" y="48.5" width="4.5" height="27" rx="0.5" />
-            <rect x="67" y="48.5" width="4" height="27" rx="0.5" />
-
-            {/* Base / Escalinata del templete (Tres niveles decrecientes) */}
-            <path d="M21 78.5h58v3.5H21z" rx="1" />
-            <path d="M16 84.5h68v3.5H16z" rx="1" />
-            <path d="M24 91h4l2.5-3h39l2.5 3h4V91z" />
-          </svg>
+        {/* CONTENEDOR DEL LOGO EXPANDIDO:
+            - Subimos de w-14 a w-16 para que se acerque más al borde del anillo.
+        */}
+        <div className="w-16 h-16 flex items-center justify-center overflow-hidden relative rounded-full bg-transparent">
+          <img
+            src={logoCorporativo}
+            alt="Isotipo Villarreal-Romero"
+            className="w-full h-full object-contain transform scale-[2.5] select-none"
+            /* AQUÍ EL CAMBIO CLAVE: 'scale-[2.5]' duplica y media el tamaño interno de la imagen.
+              Esto recorta agresivamente todo el aire/espacio vacío exterior del archivo PNG,
+              haciendo que el templete dorado del centro explote en tamaño y ocupe casi todo el círculo.
+              (Si aún lo quieres más grande, puedes probar con scale-[2.8] o scale-[3.0])
+            */
+          />
         </div>
       </div>
 
       {/* Texto con efecto de latido (pulse) */}
-      <p className="text-sm font-mono font-semibold text-primary/70 animate-pulse tracking-wide uppercase">
+      <p className="text-xs font-mono font-bold text-primary/80 animate-pulse tracking-widest uppercase">
         {texto}
       </p>
     </div>
