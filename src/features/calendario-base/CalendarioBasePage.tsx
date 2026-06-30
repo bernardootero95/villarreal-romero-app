@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+/*import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { calendarioBaseService } from "./calendarioBaseService";
 import type { CalendarioBaseConImpuesto } from "./types";
@@ -131,7 +131,7 @@ export const CalendarioBasePage = () => {
       </div>
 
       <div className="card-container !p-0 overflow-hidden flex flex-col justify-between">
-        {/* Barra de Filtros */}
+        {/* Barra de Filtros */ /*}
         <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-wrap gap-4 justify-between items-center">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -160,7 +160,7 @@ export const CalendarioBasePage = () => {
           </div>
         </div>
 
-        {/* Tabla */}
+        {/* Tabla */ /*}
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -256,7 +256,7 @@ export const CalendarioBasePage = () => {
           </table>
         </div>
 
-        {/* CONTROLES DE INTERFAZ DE PAGINACIÓN */}
+        {/* CONTROLES DE INTERFAZ DE PAGINACIÓN */ /*}
         {!loading && totalPaginas > 1 && (
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
             <div className="text-xs text-text-muted">
@@ -328,3 +328,4 @@ export const CalendarioBasePage = () => {
     </div>
   );
 };
+*/

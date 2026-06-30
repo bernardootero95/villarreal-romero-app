@@ -12,7 +12,7 @@ import { UsersPage } from "./features/usuarios/UsersPage";
 import { ClientesPage } from "./features/clientes/ClientesPage";
 import { DetalleClientePage } from "./features/clientes/DetalleClientePage"; // <-- Importación de la página autónoma de detalle
 import { ImpuestosPage } from "./features/impuestos/ImpuestosPage";
-import { CalendarioBasePage } from "./features/calendario-base/CalendarioBasePage";
+
 import { CalendarioPage } from "./features/calendario/CalendarioPage";
 import { PerfilPage } from "./features/perfil/PerfilPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
@@ -50,16 +50,7 @@ function App() {
                       element={<DetalleImpuestoPage />}
                     />
                     <Route path="perfil" element={<PerfilPage />} />
-                    <Route
-                      path="/calendario-base"
-                      element={
-                        <ProtectedRoute
-                          cargosPermitidos={["Gerente", "Ingeniero"]}
-                        >
-                          <CalendarioBasePage />
-                        </ProtectedRoute>
-                      }
-                    />
+
                     <Route path="/calendario" element={<CalendarioPage />} />
                     <Route
                       path="/usuarios"
