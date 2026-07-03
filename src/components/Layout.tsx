@@ -3,7 +3,6 @@ import { useAuth } from "../contexts/AuthContext";
 import {
   Users,
   Calendar,
-  CheckSquare,
   LogOut,
   BarChart2,
   Building2,
