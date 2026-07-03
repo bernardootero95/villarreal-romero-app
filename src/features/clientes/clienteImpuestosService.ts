@@ -22,19 +22,45 @@ export const clienteImpuestosService = {
     return data;
   },
 
-  // 2. ASIGNAR IMPUESTO Y GENERAR EL CALENDARIO AUTOMÁTICO
+  // 2. ASIGNAR IMPUESTO Y GENERAR EL CALENDARIO AUTOMÁTICO (CORREGIDO PARA ADMITIR RE-ACTIVACIONES)
   async asignarImpuesto(clienteId: string, impuestoId: string, ultimoDigitoNit: number) {
-    const { data: asignacion, error: errorAsignacion } = await supabase
+    // A. SOLID: Verificar si el registro ya existía previamente inactivo (Soft Deleted)
+    const { data: existenciaPrevia } = await supabase
       .from('cliente_impuestos')
-      .insert([{ cliente_id: clienteId, impuesto_id: impuestoId, estado: 'ACTIVO' }])
-      .select()
+      .select('*')
+      .eq('cliente_id', clienteId)
+      .eq('impuesto_id', impuestoId)
       .single();
 
-    if (errorAsignacion) {
-      if (errorAsignacion.code === '23505') throw new Error('El cliente ya tiene asignada esta obligación.');
-      throw errorAsignacion;
+    let asignacion;
+
+    if (existenciaPrevia) {
+      // Si ya existía, lo reactivamos limpiando la marca de borrado
+      const { data: reactivado, error: errorReactivar } = await supabase
+        .from('cliente_impuestos')
+        .update({ estado: 'ACTIVO', eliminado: null })
+        .eq('id', existenciaPrevia.id)
+        .select()
+        .single();
+
+      if (errorReactivar) throw errorReactivar;
+      asignacion = reactivado;
+    } else {
+      // Si es completamente nuevo, procedemos con el flujo de inserción estándar
+      const { data: nuevaAsignacion, error: errorAsignacion } = await supabase
+        .from('cliente_impuestos')
+        .insert([{ cliente_id: clienteId, impuesto_id: impuestoId, estado: 'ACTIVO' }])
+        .select()
+        .single();
+
+      if (errorAsignacion) {
+        if (errorAsignacion.code === '23505') throw new Error('El cliente ya tiene asignada esta obligación.');
+        throw errorAsignacion;
+      }
+      asignacion = nuevaAsignacion;
     }
 
+    // B. AUTOMATIZACIÓN: Buscar las fechas oficiales en el Calendario Base
     const anioActual = new Date().getFullYear();
     
     let queryBase = supabase
@@ -55,21 +81,36 @@ export const clienteImpuestosService = {
 
     if (errorCalendario) throw errorCalendario;
 
+    // C. Si hay fechas oficializadas por el gobierno, le sembramos la agenda al cliente (Evitando duplicar tareas existentes)
     if (fechasOficiales && fechasOficiales.length > 0) {
-      const vencimientosPayload = fechasOficiales.map(fechaBase => ({
-        cliente_id: clienteId,
-        impuesto_id: impuestoId,
-        calendario_base_id: fechaBase.id,
-        fecha_limite: fechaBase.fecha_vencimiento_oficial,
-        periodo_fiscal: `${fechaBase.anio}-${fechaBase.periodo}`,
-        estado_tarea: 'PENDIENTE'
-      }));
-
-      const { error: errorVencimientos } = await supabase
+      // Consultamos qué vencimientos ya existen para este cliente e impuesto
+      const { data: existentes } = await supabase
         .from('vencimientos')
-        .insert(vencimientosPayload);
+        .select('calendario_base_id')
+        .eq('cliente_id', clienteId)
+        .eq('impuesto_id', impuestoId);
 
-      if (errorVencimientos) console.error('Error generando agenda automática:', errorVencimientos);
+      const idsExistentes = existentes?.map(v => v.calendario_base_id) || [];
+
+      // Filtramos para inyectar únicamente los que hagan falta
+      const vencimientosPayload = fechasOficiales
+        .filter(fechaBase => !idsExistentes.includes(fechaBase.id))
+        .map(fechaBase => ({
+          cliente_id: clienteId,
+          impuesto_id: impuestoId,
+          calendario_base_id: fechaBase.id,
+          fecha_limite: fechaBase.fecha_vencimiento_oficial,
+          periodo_fiscal: `${fechaBase.anio}-${fechaBase.periodo}`,
+          estado_tarea: 'PENDIENTE'
+        }));
+
+      if (vencimientosPayload.length > 0) {
+        const { error: errorVencimientos } = await supabase
+          .from('vencimientos')
+          .insert(vencimientosPayload);
+
+        if (errorVencimientos) console.error('Error generando agenda automática:', errorVencimientos);
+      }
     }
 
     return asignacion;
@@ -97,7 +138,6 @@ export const clienteImpuestosService = {
   },
 
   // 4. Operación SOLID Masiva: Procesa en lote un set estructurado de obligaciones tributarias
-  // CORREGIDO: Renombrado de 'assignImpuestosBulk' a 'asignarImpuestosBulk' para consistencia idiomática
   async asignarImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>, ultimoDigitoMapa: Record<string, number>) {
     if (obligaciones.length === 0) return;
 
@@ -111,7 +151,6 @@ export const clienteImpuestosService = {
       throw new Error('No se pudieron vincular las obligaciones en lote.');
     }
 
-    // Traer la base completa de calendarios del año actual para resolver el cruce en memoria (Rendimiento O(N))
     const anioActual = new Date().getFullYear();
     const { data: calendarios } = await supabase
       .from('calendario_base_impuestos')
@@ -120,7 +159,6 @@ export const clienteImpuestosService = {
 
     if (!calendarios || calendarios.length === 0) return;
 
-    // Generar la agenda de vencimientos cruzando reglas
     const vencimientosPayload: any[] = [];
 
     for (const ob of obligaciones) {
