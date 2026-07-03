@@ -97,10 +97,10 @@ export const clienteImpuestosService = {
   },
 
   // 4. Operación SOLID Masiva: Procesa en lote un set estructurado de obligaciones tributarias
-  async assignImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>, ultimoDigitoMapa: Record<string, number>) {
+  // CORREGIDO: Renombrado de 'assignImpuestosBulk' a 'asignarImpuestosBulk' para consistencia idiomática
+  async asignarImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>, ultimoDigitoMapa: Record<string, number>) {
     if (obligaciones.length === 0) return;
 
-    // CORRECCIÓN SOLID: Eliminamos la constante 'insertadas' que generaba código muerto
     const { error } = await supabase
       .from('cliente_impuestos')
       .insert(obligaciones)

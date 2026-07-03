@@ -216,17 +216,16 @@ export const ClienteCargaMasiva = ({
               "No se hallaron registros legibles en la hoja de Clientes.",
             );
 
-          // --- PASO 2: INSERCIÓN EFECTIVA DE CLIENTES (Asegurar persistencia en BD) ---
+          // --- PASO 2: INSERCIÓN EFECTIVA DE CLIENTES ---
           const clientesCreados =
             await clientesService.createBulk(clientesPayload);
 
-          // Construimos el mapa de mapeo definitivo usando lo retornado de forma real por la BD
           const nitToIdMapa: Record<string, string> = {};
           clientesCreados.forEach((c) => {
             nitToIdMapa[c.nit] = c.id;
           });
 
-          // --- PASO 3: PROCESAR HOJA DE OBLIGACIONES ASOCIANDO LOS IDS VERDADEROS ---
+          // --- PASO 3: PROCESAR HOJA DE OBLIGACIONES ---
           const obligacionesPayload: any[] = [];
           const idToUltimoDigitoMapeado: Record<string, number> = {};
 
@@ -252,7 +251,7 @@ export const ClienteCargaMasiva = ({
             const llaveBusqueda = `${impuestoStr}|${periodicidadStr}`;
             const impuestoId = impuestosSistema[llaveBusqueda];
 
-            if (!clienteId) continue; // Si el cliente falló o fue omitido, salta la obligación de manera segura
+            if (!clienteId) continue;
             if (!impuestoId) {
               throw new Error(
                 `Hoja 'Obligaciones' - Fila ${j + 1}: No existe un impuesto parametrizado con el nombre '${impuestoStr}' y periodicidad '${periodicidadStr}'.`,
@@ -269,8 +268,9 @@ export const ClienteCargaMasiva = ({
               nitToUltimoDigitoMapa[nitBusqueda];
           }
 
-          // --- PASO 4: AGREGAR OBLIGACIONES E INYECTAR CALENDARIOS AUTOMÁTICOS ---
+          // --- PASO 4: AGREGAR OBLIGACIONES E INYECTAR CALENDARIOS ---
           if (obligacionesPayload.length > 0) {
+            // CORREGIDO: Invocación sincronizada con el nuevo nombre en español del servicio
             await clienteImpuestosService.asignarImpuestosBulk(
               obligacionesPayload,
               idToUltimoDigitoMapeado,
