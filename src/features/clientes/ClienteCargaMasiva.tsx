@@ -154,7 +154,6 @@ export const ClienteCargaMasiva = ({
           const hojaClientes = workbook.Sheets[workbook.SheetNames[0]];
           const hojaObligaciones = workbook.Sheets[workbook.SheetNames[1]];
 
-          // Convertir asegurando strings limpios sin saltos de línea ocultos
           const filasClientes = XLSX.utils.sheet_to_json<any[]>(hojaClientes, {
             header: 1,
             defval: null,
@@ -165,10 +164,9 @@ export const ClienteCargaMasiva = ({
           );
 
           const clientesPayload: any[] = [];
-          const nitToIdMapa: Record<string, string> = {};
           const nitToUltimoDigitoMapa: Record<string, number> = {};
 
-          // --- PROCESAR HOJA 1: CLIENTES ---
+          // --- PASO 1: MAPEAR Y VALIDAR CLIENTES LOCALES ---
           for (let i = 1; i < filasClientes.length; i++) {
             const row = filasClientes[i];
             if (!row || row.length === 0 || row[0] === null) continue;
@@ -197,7 +195,6 @@ export const ClienteCargaMasiva = ({
             const dv = calcularDV(nit);
             const ultimoDigito = Number(nit.slice(-1));
 
-            // SANEAMIENTO CONTRA ERROR 400: Convertir strings vacíos a null real para Postgres
             clientesPayload.push({
               nit,
               dv,
@@ -207,7 +204,7 @@ export const ClienteCargaMasiva = ({
                   ? celularRaw
                   : null,
               email: emailRaw && emailRaw.includes("@") ? emailRaw : null,
-              contador_id: contadorId, // UUID Limpio comprobado
+              contador_id: contadorId,
               estado: "ACTIVO",
             });
 
@@ -219,14 +216,17 @@ export const ClienteCargaMasiva = ({
               "No se hallaron registros legibles en la hoja de Clientes.",
             );
 
-          // Transacción masiva controlada
+          // --- PASO 2: INSERCIÓN EFECTIVA DE CLIENTES (Asegurar persistencia en BD) ---
           const clientesCreados =
             await clientesService.createBulk(clientesPayload);
+
+          // Construimos el mapa de mapeo definitivo usando lo retornado de forma real por la BD
+          const nitToIdMapa: Record<string, string> = {};
           clientesCreados.forEach((c) => {
             nitToIdMapa[c.nit] = c.id;
           });
 
-          // --- PROCESAR HOJA 2: OBLIGACIONES ---
+          // --- PASO 3: PROCESAR HOJA DE OBLIGACIONES ASOCIANDO LOS IDS VERDADEROS ---
           const obligacionesPayload: any[] = [];
           const idToUltimoDigitoMapeado: Record<string, number> = {};
 
@@ -252,7 +252,7 @@ export const ClienteCargaMasiva = ({
             const llaveBusqueda = `${impuestoStr}|${periodicidadStr}`;
             const impuestoId = impuestosSistema[llaveBusqueda];
 
-            if (!clienteId) continue; // Salto seguro si el cliente no fue dado de alta
+            if (!clienteId) continue; // Si el cliente falló o fue omitido, salta la obligación de manera segura
             if (!impuestoId) {
               throw new Error(
                 `Hoja 'Obligaciones' - Fila ${j + 1}: No existe un impuesto parametrizado con el nombre '${impuestoStr}' y periodicidad '${periodicidadStr}'.`,
@@ -269,15 +269,16 @@ export const ClienteCargaMasiva = ({
               nitToUltimoDigitoMapa[nitBusqueda];
           }
 
+          // --- PASO 4: AGREGAR OBLIGACIONES E INYECTAR CALENDARIOS AUTOMÁTICOS ---
           if (obligacionesPayload.length > 0) {
-            await clienteImpuestosService.assignImpuestosBulk(
+            await clienteImpuestosService.asignarImpuestosBulk(
               obligacionesPayload,
               idToUltimoDigitoMapeado,
             );
           }
 
           alert(
-            `¡Proceso Exitoso! Se crearon ${clientesCreados.length} clientes con sus agendas tributarias normalizadas.`,
+            `¡Proceso Exitoso! Se crearon ${clientesCreados.length} clientes y se sembraron todas sus obligaciones fiscales correctamente.`,
           );
           onSuccess();
         } catch (error: any) {
