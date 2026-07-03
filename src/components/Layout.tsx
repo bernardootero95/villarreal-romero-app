@@ -54,11 +54,6 @@ export const Layout = ({ children }: LayoutProps) => {
       label: "Calendario",
       path: "/calendario",
     },
-    {
-      icon: <CheckSquare className="w-5 h-5" />,
-      label: "Vencimientos",
-      path: "/vencimientos",
-    },
   ];
 
   const filteredMenu = menuItems.filter((item) => {
