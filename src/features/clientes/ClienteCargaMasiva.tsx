@@ -44,6 +44,9 @@ export const ClienteCargaMasiva = ({
   const [impuestosSistema, setImpuestosSistema] = useState<
     Record<string, string>
   >({});
+  const [listaImpuestosRaw, setListaImpuestosRaw] = useState<
+    Array<{ nombre: string; periodicidad: string }>
+  >([]);
 
   useEffect(() => {
     const cargarDiccionarios = async () => {
@@ -53,7 +56,14 @@ export const ClienteCargaMasiva = ({
           impuestosService.getAll(),
         ]);
 
-        // Mapeos indexados O(1) para evitar consultas anidadas
+        setListaImpuestosRaw(
+          taxes.map((t) => ({
+            nombre: t.nombre,
+            periodicidad: t.periodicidad,
+          })),
+        );
+
+        // Mapeo indexado por nombre de usuario
         const userMap = users.reduce(
           (acc, u) => ({
             ...acc,
@@ -61,10 +71,12 @@ export const ClienteCargaMasiva = ({
           }),
           {},
         );
-        const taxMap = taxes.reduce(
-          (acc, i) => ({ ...acc, [i.nombre.toUpperCase().trim()]: i.id }),
-          {},
-        );
+
+        // OPTIMIZACIÓN SOLID: Indexación mediante llave compuesta 'NOMBRE|PERIODICIDAD' para resolver ambigüedades
+        const taxMap = taxes.reduce((acc, i) => {
+          const llaveCompuesta = `${i.nombre.toUpperCase().trim()}|${i.periodicidad.toUpperCase().trim()}`;
+          return { ...acc, [llaveCompuesta]: i.id };
+        }, {});
 
         setUsuariosSistema(userMap);
         setImpuestosSistema(taxMap);
@@ -75,10 +87,10 @@ export const ClienteCargaMasiva = ({
     cargarDiccionarios();
   }, []);
 
-  // FUNCIÓN SOLID: Generación dinámica del archivo plantilla modelo
+  // FUNCIÓN SOLID: Generación del archivo modelo con la nueva columna de Periodicidad
   const handleDescargarModelo = () => {
     try {
-      // 1. Definición de estructuras y datos demo guía
+      // Hoja 1: Datos básicos del cliente
       const estructuraClientes = [
         ["NIT", "Razón Social", "Celular", "Correo", "Persona a Cargo"],
         [
@@ -90,28 +102,41 @@ export const ClienteCargaMasiva = ({
         ],
       ];
 
+      // Hoja 2: Nueva estructura con columna explícita de Periodicidad
       const estructuraObligaciones = [
-        ["NIT del Cliente", "Nombre del Impuesto"],
-        ["900123456", "IVA - BIMESTRAL"],
-        ["900123456", "RETENCION EN LA FUENTE"],
+        ["NIT del Cliente", "Nombre del Impuesto", "Periodicidad"],
+        ["900123456", "IVA", "BIMESTRAL"],
+        ["900123456", "IVA", "CUATRIMESTRAL"],
+        ["900123456", "RETENCION EN LA FUENTE", "MENSUAL"],
       ];
 
-      // 2. Creación del libro de trabajo (Workbook)
-      const wb = XLSX.utils.book_new();
+      // Hoja 3: Pestaña informativa de consulta rápida para el usuario
+      const estructuraGuiaImpuestos = [
+        ["Nombre del Impuesto", "Periodicidad Permitida"],
+        ...listaImpuestosRaw.map((t) => [
+          t.nombre.toUpperCase(),
+          t.periodicidad.toUpperCase(),
+        ]),
+      ];
 
-      // 3. Conversión de matrices a hojas de cálculo
+      if (estructuraGuiaImpuestos.length === 1) {
+        estructuraGuiaImpuestos.push(["IVA", "BIMESTRAL"]);
+        estructuraGuiaImpuestos.push(["IVA", "CUATRIMESTRAL"]);
+      }
+
+      const wb = XLSX.book_new();
       const wsClientes = XLSX.utils.aoa_to_sheet(estructuraClientes);
       const wsObligaciones = XLSX.utils.aoa_to_sheet(estructuraObligaciones);
+      const wsGuia = XLSX.utils.aoa_to_sheet(estructuraGuiaImpuestos);
 
-      // 4. Inyección de las hojas respetando el orden estricto esperado
-      XLSX.utils.book_append_sheet(wb, wsClientes, "Clientes");
-      XLSX.utils.book_append_sheet(wb, wsObligaciones, "Obligaciones");
+      XLSX.book_append_sheet(wb, wsClientes, "Clientes");
+      XLSX.book_append_sheet(wb, wsObligaciones, "Obligaciones");
+      XLSX.book_append_sheet(wb, wsGuia, "Impuestos y Periodicidades");
 
-      // 5. Compilación del binario y disparo de la descarga local
-      XLSX.writeFile(wb, "Plantilla_Carga_Masiva_Clientes.xlsx");
+      XLSX.writeFile(wb, "Plantilla_Carga_Masiva_VR.xlsx");
     } catch (error) {
       console.error("Error generando plantilla modelo:", error);
-      alert("No se pudo generar la plantilla en este momento.");
+      alert("No se pudo generar la plantilla.");
     }
   };
 
@@ -127,17 +152,15 @@ export const ClienteCargaMasiva = ({
           const data = e.target?.result;
           const workbook = XLSX.read(data, { type: "binary" });
 
-          // --- VALIDACIÓN DE HOJAS ---
           if (workbook.SheetNames.length < 2) {
             throw new Error(
-              "El archivo debe contener exactamente 2 hojas: 'Clientes' y 'Obligaciones'.",
+              "El archivo debe contener al menos las hojas: 'Clientes' y 'Obligaciones'.",
             );
           }
 
           const hojaClientes = workbook.Sheets[workbook.SheetNames[0]];
           const hojaObligaciones = workbook.Sheets[workbook.SheetNames[1]];
 
-          // Convertir matrices crudas
           const filasClientes = XLSX.utils.sheet_to_json<any[]>(hojaClientes, {
             header: 1,
           });
@@ -197,7 +220,6 @@ export const ClienteCargaMasiva = ({
               "No se encontraron registros válidos en la hoja de Clientes.",
             );
 
-          // Insertar clientes y recuperar IDs autogenerados por Supabase
           const clientesCreados =
             await clientesService.createBulk(clientesPayload);
           clientesCreados.forEach((c) => {
@@ -216,20 +238,26 @@ export const ClienteCargaMasiva = ({
             const impuestoStr = String(rowOb[1] || "")
               .toUpperCase()
               .trim();
+            const periodicidadStr = String(rowOb[2] || "")
+              .toUpperCase()
+              .trim(); // <-- Captura de la nueva columna
 
-            if (!nitBusqueda || !impuestoStr) {
+            if (!nitBusqueda || !impuestoStr || !periodicidadStr) {
               throw new Error(
-                `Hoja 'Obligaciones' - Fila ${j + 1}: El NIT y el nombre de Impuesto son requeridos.`,
+                `Hoja 'Obligaciones' - Fila ${j + 1}: El NIT, nombre del Impuesto y su Periodicidad son obligatorios.`,
               );
             }
 
             const clienteId = nitToIdMapa[nitBusqueda];
-            const impuestoId = impuestosSistema[impuestoStr];
+
+            // Reconstrucción de la llave compuesta para validación cruzada instantánea
+            const llaveBusqueda = `${impuestoStr}|${periodicidadStr}`;
+            const impuestoId = impuestosSistema[llaveBusqueda];
 
             if (!clienteId) continue;
             if (!impuestoId) {
               throw new Error(
-                `Hoja 'Obligaciones' - Fila ${j + 1}: El impuesto '${rowOb[1]}' no existe parametrizado en la plataforma.`,
+                `Hoja 'Obligaciones' - Fila ${j + 1}: No se encontró un impuesto parametrizado que coincida con '${impuestoStr}' bajo la periodicidad '${periodicidadStr}'.`,
               );
             }
 
@@ -251,7 +279,7 @@ export const ClienteCargaMasiva = ({
           }
 
           alert(
-            `¡Proceso Exitoso! Se crearon ${clientesCreados.length} clientes con sus respectivas agendas tributarias.`,
+            `¡Proceso Exitoso! Se crearon ${clientesCreados.length} clientes con sus respectivas agendas tributarias normalizadas.`,
           );
           onSuccess();
         } catch (error: any) {
@@ -294,15 +322,14 @@ export const ClienteCargaMasiva = ({
           </div>
         ) : (
           <div className="p-6 overflow-y-auto space-y-6">
-            {/* Botón de Descarga de Plantilla Modelo */}
             <div className="flex justify-between items-center p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
               <div className="space-y-0.5">
                 <span className="text-xs font-bold text-primary block uppercase tracking-wide">
                   ¿No tienes el formato de carga?
                 </span>
                 <p className="text-xs text-text-muted">
-                  Descarga un libro de ejemplo estructurado listo para
-                  diligenciar.
+                  Descarga el nuevo formato con columnas independientes para
+                  Impuesto y Periodicidad.
                 </p>
               </div>
               <button
@@ -319,17 +346,16 @@ export const ClienteCargaMasiva = ({
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="text-xs text-amber-800 space-y-1">
                 <span className="font-bold uppercase block">
-                  Requisitos del Libro de Excel:
+                  Formato de las Columnas de Obligación:
                 </span>
                 <p>
-                  <b>Hoja 1 (Clientes):</b> Columnas: NIT | Razón Social |
-                  Celular | Correo | Persona a Cargo (Debe coincidir con el
-                  nombre exacto del contador en el sistema).
+                  <b>Hoja 1 (Clientes):</b> NIT | Razón Social | Celular |
+                  Correo | Persona a Cargo
                 </p>
                 <p>
-                  <b>Hoja 2 (Obligaciones):</b> Columnas: NIT del Cliente |
-                  Nombre del Impuesto (Debe coincidir con los nombres del
-                  catálogo).
+                  <b>Hoja 2 (Obligaciones):</b> NIT del Cliente | Nombre del
+                  Impuesto (Ej. <i>IVA</i>) | Periodicidad (Ej. <i>BIMESTRAL</i>{" "}
+                  o <i>CUATRIMESTRAL</i>).
                 </p>
               </div>
             </div>
