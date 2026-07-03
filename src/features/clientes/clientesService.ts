@@ -65,19 +65,18 @@ export const clientesService = {
     await usuariosService.registrarAuditoria('ELIMINAR', 'CLIENTES', id, previo, { eliminado: true });
   },
 
-  // Operación SOLID: Inserta clientes en bloque mapeando los datos validados
+  // OPTIMIZACIÓN SOLID: Forzar el retorno completo del set de datos mediante select('*') explícito
   async createBulk(clientes: Array<ClienteFormData & { dv: number }>) {
     const { data, error } = await supabase
       .from('clientes')
       .insert(clientes)
-      .select();
+      .select('*'); // <-- Asegura el retorno íntegro de los registros con sus UUIDs autogenerados
 
     if (error) {
-      console.error('Error en carga masiva de clientes:', error);
-      throw new Error('Error al insertar los clientes en lote. Verifique duplicados de NIT.');
+      console.error('Error crítico en createBulk (Postgres 400):', error);
+      throw new Error(`Error de base de datos al importar lote: ${error.message} (Código: ${error.code})`);
     }
 
-    // Auditoría masiva simplificada por rendimiento
     if (data && data.length > 0) {
       await usuariosService.registrarAuditoria('CREAR', 'CLIENTES', data[0].id, null, { cantidad_cargada: data.length });
     }

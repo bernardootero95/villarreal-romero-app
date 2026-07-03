@@ -19,7 +19,6 @@ interface ClienteCargaMasivaProps {
   onSuccess: () => void;
 }
 
-// Algoritmo nativo Dian para validación/generación del dígito de verificación
 const calcularDV = (nit: string): number => {
   const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
   let x = 0;
@@ -63,7 +62,6 @@ export const ClienteCargaMasiva = ({
           })),
         );
 
-        // Mapeo indexado por nombre de usuario
         const userMap = users.reduce(
           (acc, u) => ({
             ...acc,
@@ -72,7 +70,6 @@ export const ClienteCargaMasiva = ({
           {},
         );
 
-        // OPTIMIZACIÓN SOLID: Indexación mediante llave compuesta 'NOMBRE|PERIODICIDAD' para resolver ambigüedades
         const taxMap = taxes.reduce((acc, i) => {
           const llaveCompuesta = `${i.nombre.toUpperCase().trim()}|${i.periodicidad.toUpperCase().trim()}`;
           return { ...acc, [llaveCompuesta]: i.id };
@@ -87,10 +84,8 @@ export const ClienteCargaMasiva = ({
     cargarDiccionarios();
   }, []);
 
-  // FUNCIÓN SOLID: Generación del archivo modelo con la nueva columna de Periodicidad
   const handleDescargarModelo = () => {
     try {
-      // Hoja 1: Datos básicos del cliente
       const estructuraClientes = [
         ["NIT", "Razón Social", "Celular", "Correo", "Persona a Cargo"],
         [
@@ -102,7 +97,6 @@ export const ClienteCargaMasiva = ({
         ],
       ];
 
-      // Hoja 2: Nueva estructura con columna explícita de Periodicidad
       const estructuraObligaciones = [
         ["NIT del Cliente", "Nombre del Impuesto", "Periodicidad"],
         ["900123456", "IVA", "BIMESTRAL"],
@@ -110,7 +104,6 @@ export const ClienteCargaMasiva = ({
         ["900123456", "RETENCION EN LA FUENTE", "MENSUAL"],
       ];
 
-      // Hoja 3: Pestaña informativa de consulta rápida para el usuario
       const estructuraGuiaImpuestos = [
         ["Nombre del Impuesto", "Periodicidad Permitida"],
         ...listaImpuestosRaw.map((t) => [
@@ -124,14 +117,14 @@ export const ClienteCargaMasiva = ({
         estructuraGuiaImpuestos.push(["IVA", "CUATRIMESTRAL"]);
       }
 
-      const wb = XLSX.book_new();
+      const wb = XLSX.utils.book_new();
       const wsClientes = XLSX.utils.aoa_to_sheet(estructuraClientes);
       const wsObligaciones = XLSX.utils.aoa_to_sheet(estructuraObligaciones);
       const wsGuia = XLSX.utils.aoa_to_sheet(estructuraGuiaImpuestos);
 
-      XLSX.book_append_sheet(wb, wsClientes, "Clientes");
-      XLSX.book_append_sheet(wb, wsObligaciones, "Obligaciones");
-      XLSX.book_append_sheet(wb, wsGuia, "Impuestos y Periodicidades");
+      XLSX.utils.book_append_sheet(wb, wsClientes, "Clientes");
+      XLSX.utils.book_append_sheet(wb, wsObligaciones, "Obligaciones");
+      XLSX.utils.book_append_sheet(wb, wsGuia, "Impuestos y Periodicidades");
 
       XLSX.writeFile(wb, "Plantilla_Carga_Masiva_VR.xlsx");
     } catch (error) {
@@ -161,12 +154,14 @@ export const ClienteCargaMasiva = ({
           const hojaClientes = workbook.Sheets[workbook.SheetNames[0]];
           const hojaObligaciones = workbook.Sheets[workbook.SheetNames[1]];
 
+          // Convertir asegurando strings limpios sin saltos de línea ocultos
           const filasClientes = XLSX.utils.sheet_to_json<any[]>(hojaClientes, {
             header: 1,
+            defval: null,
           });
           const filasObligaciones = XLSX.utils.sheet_to_json<any[]>(
             hojaObligaciones,
-            { header: 1 },
+            { header: 1, defval: null },
           );
 
           const clientesPayload: any[] = [];
@@ -176,39 +171,43 @@ export const ClienteCargaMasiva = ({
           // --- PROCESAR HOJA 1: CLIENTES ---
           for (let i = 1; i < filasClientes.length; i++) {
             const row = filasClientes[i];
-            if (!row || row.length === 0 || !row[0]) continue;
+            if (!row || row.length === 0 || row[0] === null) continue;
 
             const nit = String(row[0]).trim();
-            const razonSocial = String(row[1] || "").trim();
-            const celular = row[2] ? String(row[2]).trim() : null;
-            const email = row[3] ? String(row[3]).trim() : null;
-            const responsableStr = String(row[4] || "")
-              .toLowerCase()
-              .trim();
+            const razonSocial = row[1] ? String(row[1]).trim() : null;
+            const celularRaw = row[2] ? String(row[2]).trim() : null;
+            const emailRaw = row[3] ? String(row[3]).trim() : null;
+            const responsableStr = row[4]
+              ? String(row[4]).toLowerCase().trim()
+              : null;
 
             if (!nit || !razonSocial || !responsableStr) {
               throw new Error(
-                `Hoja 'Clientes' - Fila ${i + 1}: NIT, Razón Social y Responsable son obligatorios.`,
+                `Hoja 'Clientes' - Fila ${i + 1}: El NIT, la Razón Social y el Responsable son obligatorios.`,
               );
             }
 
             const contadorId = usuariosSistema[responsableStr];
             if (!contadorId) {
               throw new Error(
-                `Hoja 'Clientes' - Fila ${i + 1}: El responsable '${row[4]}' no existe en el sistema.`,
+                `Hoja 'Clientes' - Fila ${i + 1}: El responsable '${row[4]}' no se encuentra registrado o activo en la base de datos.`,
               );
             }
 
             const dv = calcularDV(nit);
             const ultimoDigito = Number(nit.slice(-1));
 
+            // SANEAMIENTO CONTRA ERROR 400: Convertir strings vacíos a null real para Postgres
             clientesPayload.push({
               nit,
               dv,
               razon_social: razonSocial,
-              celular: celular && /^3[0-9]{9}$/.test(celular) ? celular : null,
-              email: email && email.includes("@") ? email : null,
-              contador_id: contadorId,
+              celular:
+                celularRaw && /^3[0-9]{9}$/.test(celularRaw)
+                  ? celularRaw
+                  : null,
+              email: emailRaw && emailRaw.includes("@") ? emailRaw : null,
+              contador_id: contadorId, // UUID Limpio comprobado
               estado: "ACTIVO",
             });
 
@@ -217,9 +216,10 @@ export const ClienteCargaMasiva = ({
 
           if (clientesPayload.length === 0)
             throw new Error(
-              "No se encontraron registros válidos en la hoja de Clientes.",
+              "No se hallaron registros legibles en la hoja de Clientes.",
             );
 
+          // Transacción masiva controlada
           const clientesCreados =
             await clientesService.createBulk(clientesPayload);
           clientesCreados.forEach((c) => {
@@ -232,32 +232,30 @@ export const ClienteCargaMasiva = ({
 
           for (let j = 1; j < filasObligaciones.length; j++) {
             const rowOb = filasObligaciones[j];
-            if (!rowOb || rowOb.length === 0 || !rowOb[0]) continue;
+            if (!rowOb || rowOb.length === 0 || rowOb[0] === null) continue;
 
             const nitBusqueda = String(rowOb[0]).trim();
-            const impuestoStr = String(rowOb[1] || "")
-              .toUpperCase()
-              .trim();
-            const periodicidadStr = String(rowOb[2] || "")
-              .toUpperCase()
-              .trim(); // <-- Captura de la nueva columna
+            const impuestoStr = rowOb[1]
+              ? String(rowOb[1]).toUpperCase().trim()
+              : null;
+            const periodicidadStr = rowOb[2]
+              ? String(rowOb[2]).toUpperCase().trim()
+              : null;
 
             if (!nitBusqueda || !impuestoStr || !periodicidadStr) {
               throw new Error(
-                `Hoja 'Obligaciones' - Fila ${j + 1}: El NIT, nombre del Impuesto y su Periodicidad son obligatorios.`,
+                `Hoja 'Obligaciones' - Fila ${j + 1}: El NIT, nombre del Impuesto y su Periodicidad son requeridos.`,
               );
             }
 
             const clienteId = nitToIdMapa[nitBusqueda];
-
-            // Reconstrucción de la llave compuesta para validación cruzada instantánea
             const llaveBusqueda = `${impuestoStr}|${periodicidadStr}`;
             const impuestoId = impuestosSistema[llaveBusqueda];
 
-            if (!clienteId) continue;
+            if (!clienteId) continue; // Salto seguro si el cliente no fue dado de alta
             if (!impuestoId) {
               throw new Error(
-                `Hoja 'Obligaciones' - Fila ${j + 1}: No se encontró un impuesto parametrizado que coincida con '${impuestoStr}' bajo la periodicidad '${periodicidadStr}'.`,
+                `Hoja 'Obligaciones' - Fila ${j + 1}: No existe un impuesto parametrizado con el nombre '${impuestoStr}' y periodicidad '${periodicidadStr}'.`,
               );
             }
 
@@ -279,7 +277,7 @@ export const ClienteCargaMasiva = ({
           }
 
           alert(
-            `¡Proceso Exitoso! Se crearon ${clientesCreados.length} clientes con sus respectivas agendas tributarias normalizadas.`,
+            `¡Proceso Exitoso! Se crearon ${clientesCreados.length} clientes con sus agendas tributarias normalizadas.`,
           );
           onSuccess();
         } catch (error: any) {
