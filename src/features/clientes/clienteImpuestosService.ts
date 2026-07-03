@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase';
 
 export const clienteImpuestosService = {
+  // 1. Obtener los impuestos activos de un cliente específico
   async getImpuestosPorCliente(clienteId: string) {
     const { data, error } = await supabase
       .from('cliente_impuestos')
@@ -21,6 +22,7 @@ export const clienteImpuestosService = {
     return data;
   },
 
+  // 2. ASIGNAR IMPUESTO Y GENERAR EL CALENDARIO AUTOMÁTICO
   async asignarImpuesto(clienteId: string, impuestoId: string, ultimoDigitoNit: number) {
     const { data: asignacion, error: errorAsignacion } = await supabase
       .from('cliente_impuestos')
@@ -73,6 +75,7 @@ export const clienteImpuestosService = {
     return asignacion;
   },
 
+  // 3. DESASIGNAR / QUITAR RESPONSABILIDAD (Con limpieza de agenda pendiente)
   async desasignarImpuesto(asignacionId: string, clienteId: string, impuestoId: string) {
     const ahora = new Date().toISOString();
 
@@ -93,12 +96,12 @@ export const clienteImpuestosService = {
     if (errorClean) console.error('Error limpiando agenda pendiente:', errorClean);
   },
 
-  // Operación SOLID Masiva: Procesa en lote un set estructurado de obligaciones tributarias
-  async asignarImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>, ultimoDigitoMapa: Record<string, number>) {
+  // 4. Operación SOLID Masiva: Procesa en lote un set estructurado de obligaciones tributarias
+  async assignImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>, ultimoDigitoMapa: Record<string, number>) {
     if (obligaciones.length === 0) return;
 
-    // 1. Insertar obligaciones masivamente ignorando duplicados si ya existen
-    const { data: insertadas, error } = await supabase
+    // CORRECCIÓN SOLID: Eliminamos la constante 'insertadas' que generaba código muerto
+    const { error } = await supabase
       .from('cliente_impuestos')
       .insert(obligaciones)
       .select();
@@ -108,7 +111,7 @@ export const clienteImpuestosService = {
       throw new Error('No se pudieron vincular las obligaciones en lote.');
     }
 
-    // 2. Traer la base completa de calendarios del año actual para resolver el cruce en memoria (Rendimiento O(N))
+    // Traer la base completa de calendarios del año actual para resolver el cruce en memoria (Rendimiento O(N))
     const anioActual = new Date().getFullYear();
     const { data: calendarios } = await supabase
       .from('calendario_base_impuestos')
@@ -117,7 +120,7 @@ export const clienteImpuestosService = {
 
     if (!calendarios || calendarios.length === 0) return;
 
-    // 3. Generar la agenda de vencimientos cruzando reglas
+    // Generar la agenda de vencimientos cruzando reglas
     const vencimientosPayload: any[] = [];
 
     for (const ob of obligaciones) {
