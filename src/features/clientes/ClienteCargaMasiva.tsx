@@ -5,6 +5,7 @@ import {
   FileSpreadsheet,
   FileUp,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 import { clientesService } from "./clientesService";
@@ -74,14 +75,54 @@ export const ClienteCargaMasiva = ({
     cargarDiccionarios();
   }, []);
 
+  // FUNCIÓN SOLID: Generación dinámica del archivo plantilla modelo
+  const handleDescargarModelo = () => {
+    try {
+      // 1. Definición de estructuras y datos demo guía
+      const estructuraClientes = [
+        ["NIT", "Razón Social", "Celular", "Correo", "Persona a Cargo"],
+        [
+          "900123456",
+          "Inversiones Villarreal Romero S.A.S.",
+          "3151234567",
+          "contacto@villarreal.com",
+          "Juan Perez",
+        ],
+      ];
+
+      const estructuraObligaciones = [
+        ["NIT del Cliente", "Nombre del Impuesto"],
+        ["900123456", "IVA - BIMESTRAL"],
+        ["900123456", "RETENCION EN LA FUENTE"],
+      ];
+
+      // 2. Creación del libro de trabajo (Workbook)
+      const wb = XLSX.utils.book_new();
+
+      // 3. Conversión de matrices a hojas de cálculo
+      const wsClientes = XLSX.utils.aoa_to_sheet(estructuraClientes);
+      const wsObligaciones = XLSX.utils.aoa_to_sheet(estructuraObligaciones);
+
+      // 4. Inyección de las hojas respetando el orden estricto esperado
+      XLSX.utils.book_append_sheet(wb, wsClientes, "Clientes");
+      XLSX.utils.book_append_sheet(wb, wsObligaciones, "Obligaciones");
+
+      // 5. Compilación del binario y disparo de la descarga local
+      XLSX.writeFile(wb, "Plantilla_Carga_Masiva_Clientes.xlsx");
+    } catch (error) {
+      console.error("Error generando plantilla modelo:", error);
+      alert("No se pudo generar la plantilla en este momento.");
+    }
+  };
+
   const handleProcesarExcel = async () => {
     if (!archivo) return alert("Por favor seleccione un archivo Excel.");
 
     try {
       setIsSubmitting(true);
-      const reader = new FileReader();
+      const windowReader = new FileReader();
 
-      reader.onload = async (e) => {
+      windowReader.onload = async (e) => {
         try {
           const data = e.target?.result;
           const workbook = XLSX.read(data, { type: "binary" });
@@ -185,7 +226,7 @@ export const ClienteCargaMasiva = ({
             const clienteId = nitToIdMapa[nitBusqueda];
             const impuestoId = impuestosSistema[impuestoStr];
 
-            if (!clienteId) continue; // Si el cliente no se creó, omitir la asignación de impuesto de forma segura
+            if (!clienteId) continue;
             if (!impuestoId) {
               throw new Error(
                 `Hoja 'Obligaciones' - Fila ${j + 1}: El impuesto '${rowOb[1]}' no existe parametrizado en la plataforma.`,
@@ -202,7 +243,6 @@ export const ClienteCargaMasiva = ({
               nitToUltimoDigitoMapa[nitBusqueda];
           }
 
-          // Inyectar obligaciones y automatizar calendarios
           if (obligacionesPayload.length > 0) {
             await clienteImpuestosService.assignImpuestosBulk(
               obligacionesPayload,
@@ -220,7 +260,7 @@ export const ClienteCargaMasiva = ({
         }
       };
 
-      reader.readAsBinaryString(archivo);
+      windowReader.readAsBinaryString(archivo);
     } catch (error: any) {
       alert(error.message);
       setIsSubmitting(false);
@@ -254,6 +294,27 @@ export const ClienteCargaMasiva = ({
           </div>
         ) : (
           <div className="p-6 overflow-y-auto space-y-6">
+            {/* Botón de Descarga de Plantilla Modelo */}
+            <div className="flex justify-between items-center p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-primary block uppercase tracking-wide">
+                  ¿No tienes el formato de carga?
+                </span>
+                <p className="text-xs text-text-muted">
+                  Descarga un libro de ejemplo estructurado listo para
+                  diligenciar.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleDescargarModelo}
+                className="bg-white border border-gray-300 hover:border-primary text-text-main hover:text-primary px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-bold transition-all shadow-2xs"
+              >
+                <Download className="w-3.5 h-3.5 text-accent" />
+                Descargar Plantilla Excel
+              </button>
+            </div>
+
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="text-xs text-amber-800 space-y-1">
