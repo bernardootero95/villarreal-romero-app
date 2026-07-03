@@ -33,12 +33,9 @@ export const clientesService = {
     return data as Cliente;
   },
 
-  // NUEVA FUNCIÓN DE ACTUALIZACIÓN
   async update(id: string, formData: ClienteFormData) {
-    // 1. Obtenemos el dato previo para la auditoría
     const { data: previo } = await supabase.from('clientes').select('*').eq('id', id).single();
 
-    // 2. Actualizamos el registro (incluyendo la fecha de actualización)
     const { data, error } = await supabase
       .from('clientes')
       .update({ ...formData, actualizado: new Date().toISOString() })
@@ -51,7 +48,6 @@ export const clientesService = {
       throw new Error('No se pudo actualizar el cliente.');
     }
 
-    // 3. Registramos la auditoría
     await usuariosService.registrarAuditoria('MODIFICAR', 'CLIENTES', id, previo, data);
     return data as Cliente;
   },
@@ -67,5 +63,25 @@ export const clientesService = {
     if (error) throw error;
 
     await usuariosService.registrarAuditoria('ELIMINAR', 'CLIENTES', id, previo, { eliminado: true });
+  },
+
+  // Operación SOLID: Inserta clientes en bloque mapeando los datos validados
+  async createBulk(clientes: Array<ClienteFormData & { dv: number }>) {
+    const { data, error } = await supabase
+      .from('clientes')
+      .insert(clientes)
+      .select();
+
+    if (error) {
+      console.error('Error en carga masiva de clientes:', error);
+      throw new Error('Error al insertar los clientes en lote. Verifique duplicados de NIT.');
+    }
+
+    // Auditoría masiva simplificada por rendimiento
+    if (data && data.length > 0) {
+      await usuariosService.registrarAuditoria('CREAR', 'CLIENTES', data[0].id, null, { cantidad_cargada: data.length });
+    }
+
+    return data as Cliente[];
   }
 };
