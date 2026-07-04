@@ -30,19 +30,23 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [errorConexion, setErrorConexion] = useState<string | null>(null);
 
+  // LÓGICA SOLID: Extensión del cálculo del mini-calendario a 7 días (Lunes a Domingo)
   const calcularSemanaActual = () => {
     const hoy = new Date();
     const diaActual = hoy.getDay();
+    // Ajuste de rango si hoy es Domingo (0), la distancia debe ser -6 para volver al Lunes
     const distanciaAlLunes = diaActual === 0 ? -6 : 1 - diaActual;
 
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() + distanciaAlLunes);
 
-    const nombresDias = ["Lun", "Mar", "Mié", "Jue", "Vie"];
+    // Agregamos Sábado y Domingo al diccionario de renderizado
+    const nombresDias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const semana: any[] = [];
     let banderaDiaSeleccionado = "";
 
-    for (let i = 0; i < 5; i++) {
+    // Modificado de 5 a 7 para mapear la semana contable completa
+    for (let i = 0; i < 7; i++) {
       const diaParaCalcular = new Date(lunes);
       diaParaCalcular.setDate(lunes.getDate() + i);
 
@@ -72,8 +76,6 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     const cargarDatosDashboard = async () => {
-      // CORRECCIÓN: Si session o perfil aún no están listos en el primer render, no apagamos el loading,
-      // pero si ya pasaron unos segundos y siguen vacíos, liberamos la UI.
       if (!session?.user?.id || !perfil) {
         return;
       }
@@ -83,12 +85,10 @@ export const DashboardPage = () => {
         setErrorConexion(null);
         const hoy = new Date();
 
-        // Controlar si el cargo viene con problemas de formato
         const cargoLimpio = perfil.cargo
           ? String(perfil.cargo).trim()
           : "Contador";
 
-        // Obtener datos de manera controlada
         const dataMetricas = await dashboardService.getMetricasContador(
           session.user.id,
           cargoLimpio,
@@ -109,15 +109,13 @@ export const DashboardPage = () => {
             "Ocurrió un retardo inesperado al jalar los datos desde Supabase.",
         );
       } finally {
-        setLoading(false); // <-- Garantizamos la liberación del loader sí o sí
+        setLoading(false);
       }
     };
 
     cargarDatosDashboard();
   }, [perfil, session]);
 
-  // Si el AuthContext tarda más de la cuenta en poblar el estado del perfil en ese equipo específico,
-  // agregamos un botón de rescate manual para forzar la lectura.
   useEffect(() => {
     const timeoutRescate = setTimeout(() => {
       if (loading && (!perfil || !session)) {
@@ -126,7 +124,7 @@ export const DashboardPage = () => {
           "El perfil de usuario está tardando demasiado en responder. Intenta recargar la sesión.",
         );
       }
-    }, 6000); // 6 segundos máximos de espera de sesión
+    }, 6000);
 
     return () => clearTimeout(timeoutRescate);
   }, [loading, perfil, session]);
@@ -245,7 +243,7 @@ export const DashboardPage = () => {
               {metricas.porcentajeEfectividad}%
             </p>
             <p className="text-[11px] text-text-muted">
-              Efectividad de presentación
+              Efectividad de presentation
             </p>
           </div>
           <div className="w-12 h-12 bg-success/10 text-success rounded-xl flex items-center justify-center">
@@ -254,11 +252,10 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* ÁREA COHESIVA CENTRAL DEL DASHBOARD */}
+      {/* ÁREA CENTRAL DEL DASHBOARD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* BLOQUE IZQUIERDO */}
         <div className="lg:col-span-2 space-y-6">
-          {/* SECCIÓN 1: Alertas Críticas */}
+          {/* Sección Alertas Críticas */}
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
             <div className="flex items-center gap-2 text-danger border-b border-gray-100 pb-3">
               <AlertTriangle className="w-5 h-5" />
@@ -310,7 +307,7 @@ export const DashboardPage = () => {
             </div>
           </div>
 
-          {/* SECCIÓN 2: Top Clientes */}
+          {/* Sección Top Clientes */}
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
             <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
               <Flame className="w-5 h-5 text-amber-500" />
@@ -343,8 +340,8 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* COMPONENTE: Agenda Semanal */}
-        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex flex-col space-y-4">
+        {/* COMPONENTE: Agenda Semanal Completa */}
+        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4 flex flex-col">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-title font-bold text-primary uppercase tracking-wide">
@@ -352,7 +349,8 @@ export const DashboardPage = () => {
             </h3>
           </div>
 
-          <div className="grid grid-cols-5 gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+          {/* CORREGIDO: Modificado grid-cols-5 a grid-cols-7 para dar espacio al fin de semana */}
+          <div className="grid grid-cols-7 gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
             {diasSemana.map((dia) => {
               const tareasDelDia = vencimientosSemana.filter(
                 (v) => v.fecha_limite === dia.fechaStr,
@@ -386,7 +384,7 @@ export const DashboardPage = () => {
                   <div className="mt-1.5 flex gap-0.5 justify-center min-h-[6px]">
                     {tareasDelDia.length > 0 ? (
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${pendientesDelDia > 0 ? (esSeleccionado ? "bg-accent animate-pulse" : "bg-amber-500 animate-pulse") : "bg-success"}`}
+                        className={`w-1.5 h-1.5 rounded-full ${pendientesDelDia > 0 ? (esSeleccionado ? "bg-accent" : "bg-amber-500") : "bg-success"}`}
                       />
                     ) : (
                       <span className="w-1 h-1 rounded-full bg-gray-300/60" />
