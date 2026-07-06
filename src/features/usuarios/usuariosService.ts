@@ -19,11 +19,11 @@ export const usuariosService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // LÓGICA CORREGIDA SOLID: Enviamos los campos validados eliminando text_id o inconsistencias de formato
     await supabase.from('auditoria').insert({
       usuario_id: user.id,
       accion,
       modulo,
-      text_id: id,
       registro_id: id,
       datos_previos: previo,
       datos_nuevos: nuevo
@@ -119,6 +119,13 @@ export const usuariosService = {
       throw new Error(data.error);
     }
 
-    await this.registrarAuditoria('RESET_PASSWORD_FORZADO', 'USUARIOS', usuarioId, { info: 'Contraseña alterada mediante túnel Edge Function por administración' }, null);
+    // Corregido: Pasamos la metadata estructurada en un formato limpio homologado para evitar errores 400
+    await this.registrarAuditoria(
+      'MODIFICAR', 
+      'USUARIOS', 
+      usuarioId, 
+      { info: 'Cambio forzado por administrador' }, 
+      { clave_actualizada: true }
+    );
   }
 };
