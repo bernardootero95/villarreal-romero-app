@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { dashboardService } from "./dashboardService";
-import { impuestosService } from "../impuestos/impuestosService";
-import { clientesService } from "../clientes/clientesService";
-import { clienteImpuestosService } from "../clientes/clienteImpuestosService";
 import {
   vencimientosService,
   type Vencimiento,
@@ -18,8 +15,6 @@ import {
   AlertTriangle,
   ChevronRight,
   Flame,
-  FileText,
-  Percent,
   ListFilter,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -36,7 +31,7 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [errorConexion, setErrorConexion] = useState<string | null>(null);
 
-  // Estados para el resumen del catálogo de impuestos (Exclusivo Ingeniero/Admin)
+  // Estado para el resumen analítico de impuestos (Exclusivo Ingeniero/Admin)
   const [resumenImpuestos, setResumenImpuestos] = useState<
     Array<{
       id: string;
@@ -101,12 +96,8 @@ export const DashboardPage = () => {
           ? String(perfil.cargo).trim()
           : "Contador";
 
-        const [
-          dataMetricas,
-          dataVencimientos,
-          listaImpuestos,
-          todosLosClientes,
-        ] = await Promise.all([
+        // Carga paralela desacoplada de Supabase en la Vista (SOLID - SRP)
+        const [dataMetricas, dataVencimientos] = await Promise.all([
           dashboardService.getMetricasContador(session.user.id, cargoLimpio),
           vencimientosService.getVencimientosMes(
             hoy.getFullYear(),
@@ -114,40 +105,21 @@ export const DashboardPage = () => {
             session.user.id,
             cargoLimpio,
           ),
-          impuestosService.getAll(),
-          clientesService.getAll(),
         ]);
 
         setMetricas(dataMetricas);
         setVencimientosSemana(dataVencimientos || []);
 
-        // Si es Ingeniero, construimos un cruce analítico en memoria O(N+M) de obligaciones por impuesto
+        // Si es Ingeniero, consumimos la analítica encapsulada desde el servicio
         if (cargoLimpio === "Ingeniero") {
-          const promesasAsignaciones = listaImpuestos.map(async (imp) => {
-            const { count } = await supabase
-              .from("cliente_impuestos")
-              .select("*", { count: "exact", head: true })
-              .eq("impuesto_id", imp.id)
-              .eq("estado", "ACTIVO")
-              .is("eliminado", null);
-
-            return {
-              id: imp.id,
-              nombre: imp.nombre,
-              periodicidad: imp.periodicidad,
-              empresasContadas: count || 0,
-            };
-          });
-
-          const resImpuestosCalculados =
-            await Promise.all(promesasAsignaciones);
-          setResumenImpuestos(resImpuestosCalculados);
+          const distribucionData =
+            await dashboardService.getDistribucionImpuestos();
+          setResumenImpuestos(distribucionData);
         }
       } catch (error: any) {
         console.error("Error crítico de sincronización en Dashboard:", error);
         setErrorConexion(
-          error?.message ||
-            "Ocurrió un retardo inesperado al jalar los datos desde Supabase.",
+          error?.message || "Ocurrió un retardo inesperado al jalar los datos.",
         );
       } finally {
         setLoading(false);
@@ -224,7 +196,7 @@ export const DashboardPage = () => {
         </p>
       </div>
 
-      {/* RECUADROS SUPERIORES CORE: Estructura original restablecida con etiquetas dinámicas */}
+      {/* RECUADROS SUPERIORES CORE */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Tarjeta 1: Empresas */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
@@ -310,7 +282,7 @@ export const DashboardPage = () => {
       {/* ÁREA CENTRAL DEL DASHBOARD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
-          {/* CONTROL INYECTADO: Si es Ingeniero muestra el cuadro estadístico de Impuestos, si no, Alertas Críticas */}
+          {/* CONTROL INYECTADO */}
           {esIngeniero ? (
             <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
@@ -498,7 +470,7 @@ export const DashboardPage = () => {
                 <div className="text-center py-12 text-text-muted space-y-2 border border-dashed border-gray-100 rounded-xl bg-gray-50/30">
                   <AlertCircle className="w-5 h-5 text-text-muted/40 mx-auto" />
                   <p className="text-[11px] font-medium">
-                    No se registras tareas corporativas para este día.
+                    No se registran tareas corporativas para este día.
                   </p>
                 </div>
               ) : (
