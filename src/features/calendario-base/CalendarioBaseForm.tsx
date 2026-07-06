@@ -10,13 +10,13 @@ import { X, Save, CalendarDays } from "lucide-react";
 import { calendarioBaseService } from "./calendarioBaseService";
 import { impuestosService } from "../impuestos/impuestosService";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
-import { Loader } from "../../components/Loader"; // <-- Importación de tu Loader corporativo
+import { Loader } from "../../components/Loader";
 
 interface CalendarioBaseFormProps {
   onClose: () => void;
   onSuccess: () => void;
   fechaAEditar?: CalendarioBaseConImpuesto | null;
-  impuestoId: string; // <-- Prop obligatoria requerida
+  impuestoId: string;
 }
 
 export const CalendarioBaseForm = ({
@@ -27,7 +27,7 @@ export const CalendarioBaseForm = ({
 }: CalendarioBaseFormProps) => {
   const [impuestoMeta, setImpuestoMeta] =
     useState<ImpuestoConEspecialista | null>(null);
-  const [loadingMeta, setLoadingMeta] = useState(true); // <-- Estado para el Loader
+  const [loadingMeta, setLoadingMeta] = useState(true);
 
   const {
     register,
@@ -39,20 +39,17 @@ export const CalendarioBaseForm = ({
     resolver: zodResolver(calendarioBaseSchema),
     defaultValues: {
       anio: new Date().getFullYear(),
-      impuesto_id: impuestoId, // <-- Seteo por defecto limpio
+      impuesto_id: impuestoId,
     },
   });
 
   const isEditing = !!fechaAEditar;
 
-  // Determinar si el campo dígito es necesario según la regla del impuesto
   const requiereDigito = impuestoMeta?.regla_vencimiento !== "FECHA_FIJA";
 
   useEffect(() => {
-    // Forzar el ID del impuesto en el formulario de react-hook-form
     setValue("impuesto_id", impuestoId);
 
-    // Obtener la regla del impuesto actual de manera aislada para validar el dígito
     setLoadingMeta(true);
     impuestosService
       .getAll()
@@ -78,7 +75,6 @@ export const CalendarioBaseForm = ({
 
   const onSubmit = async (data: CalendarioBaseFormData) => {
     try {
-      // Forzar que vaya amarrado al impuesto del detalle
       const payload = { ...data, impuesto_id: impuestoId };
 
       if (isEditing && fechaAEditar) {
@@ -113,7 +109,6 @@ export const CalendarioBaseForm = ({
         </div>
 
         {loadingMeta ? (
-          // Implementación del Loader adaptado al contenedor del modal
           <div className="bg-surface p-12">
             <Loader
               texto="Sincronizando reglas fiscales..."

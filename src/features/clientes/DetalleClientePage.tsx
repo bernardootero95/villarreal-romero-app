@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext"; // <-- Importación del contexto de autenticación
+import { useAuth } from "../../contexts/AuthContext";
 import {
   ArrowLeft,
   Building2,
@@ -28,25 +28,22 @@ import { ClienteForm } from "./ClienteForm";
 export const DetalleClientePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { perfil } = useAuth(); // <-- Acceso a los metadatos de sesión del usuario contable
+  const { perfil } = useAuth();
 
   const [cliente, setCliente] = useState<ClienteConContador | null>(null);
   const [loadingCliente, setLoadingCliente] = useState(true);
   const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
   const [loadingVencimientos, setLoadingVencimientos] = useState(true);
 
-  // Modales de Control
   const [showObligacionesModal, setShowObligacionesModal] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   const [impuestosCargo, setImpuestosCargo] = useState<any[]>([]);
   const [loadingImpuestos, setLoadingImpuestos] = useState(true);
 
-  // LÓGICA SOLID: Validación de permisos centralizada e inequívoca para Villarreal-Romero
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
-  // 1. Cargar información base del cliente corporativo
   const fetchClienteData = async () => {
     if (!id) return;
     try {
@@ -67,7 +64,6 @@ export const DetalleClientePage = () => {
     fetchClienteData();
   }, [id]);
 
-  // 2. Cargar las obligaciones tributarias configuradas
   const cargarImpuestosA_Cargo = async () => {
     if (!id) return;
     try {
@@ -86,7 +82,6 @@ export const DetalleClientePage = () => {
     cargarImpuestosA_Cargo();
   }, [id]);
 
-  // 3. Cargar Vencimientos Tributarios del mes actual
   useEffect(() => {
     if (!id) return;
     const cargarVencimientosCliente = async () => {
@@ -161,7 +156,6 @@ export const DetalleClientePage = () => {
           Volver
         </button>
 
-        {/* RESTRICCIÓN SOLID: Renderizado condicional del botón de edición física */}
         {puedeAdministrar && (
           <button
             onClick={() => setShowForm(true)}
@@ -173,7 +167,6 @@ export const DetalleClientePage = () => {
         )}
       </div>
 
-      {/* Encabezado Principal */}
       <div className="card-container flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface p-6 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 border border-primary/5">
@@ -202,12 +195,9 @@ export const DetalleClientePage = () => {
         </div>
       </div>
 
-      {/* Grid de Secciones */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Bloque Izquierdo */}
         <div className="lg:col-span-2 space-y-6">
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
-            {/* Sección Legal */}
             <div>
               <h3 className="text-lg font-title font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
                 Información Legal y Tributaria
@@ -233,7 +223,6 @@ export const DetalleClientePage = () => {
               </div>
             </div>
 
-            {/* Sección Contacto */}
             <div>
               <h3 className="text-lg font-title font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
                 Canales Oficiales de Contacto
@@ -266,13 +255,11 @@ export const DetalleClientePage = () => {
               </div>
             </div>
 
-            {/* Impuestos a Cargo Sincronizados */}
             <div className="border-t border-gray-100 pt-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-title font-semibold text-primary">
                   Impuestos y Obligaciones a Cargo
                 </h3>
-                {/* RESTRICCIÓN SOLID: Renderizado condicional del botón de gestión masiva de obligaciones */}
                 {puedeAdministrar && (
                   <button
                     onClick={() => setShowObligacionesModal(true)}
@@ -318,7 +305,6 @@ export const DetalleClientePage = () => {
           </div>
         </div>
 
-        {/* Bloque Derecho: Vencimientos */}
         <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <Clock className="w-5 h-5 text-primary" />
@@ -375,7 +361,6 @@ export const DetalleClientePage = () => {
         </div>
       </div>
 
-      {/* MODAL GESTIÓN DE OBLIGACIONES (Bajo validación de seguridad perimetral) */}
       {showObligacionesModal && puedeAdministrar && (
         <FichaObligaciones
           cliente={cliente}
@@ -386,7 +371,6 @@ export const DetalleClientePage = () => {
         />
       )}
 
-      {/* FORMULARIO DE EDICIÓN REUTILIZADO (Bajo validación de seguridad perimetral) */}
       {showForm && puedeAdministrar && (
         <ClienteForm
           clienteAEditar={cliente}

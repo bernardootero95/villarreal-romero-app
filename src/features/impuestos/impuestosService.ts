@@ -18,7 +18,7 @@ export const impuestosService = {
   },
 
   async create(formData: ImpuestoFormData) {
-    // Evitamos enviar strings vacíos a una columna UUID
+    
     const payload = {
       ...formData,
       especialista_id: formData.especialista_id || null 

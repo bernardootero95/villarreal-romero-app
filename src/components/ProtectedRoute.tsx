@@ -13,7 +13,6 @@ export const ProtectedRoute = ({
 }: ProtectedRouteProps) => {
   const { session, perfil, isLoading } = useAuth();
 
-  // Spinner de carga mientras valida sesión y perfil
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -22,12 +21,10 @@ export const ProtectedRoute = ({
     );
   }
 
-  // Si no hay sesión activa, al login
   if (!session) {
     return <Navigate to="/login" replace />;
   }
 
-  // Si la ruta es restringida y el cargo del usuario no está permitido, redirige al Dashboard
   if (cargosPermitidos && perfil && !cargosPermitidos.includes(perfil.cargo)) {
     return <Navigate to="/" replace />;
   }

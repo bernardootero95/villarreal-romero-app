@@ -65,7 +65,6 @@ export const clientesService = {
     await usuariosService.registrarAuditoria('ELIMINAR', 'CLIENTES', id, previo, { eliminado: true });
   },
 
-  // OPTIMIZACIÓN SOLID: Forzar el retorno completo del set de datos mediante select('*') explícito
   async createBulk(clientes: Array<ClienteFormData & { dv: number }>) {
     const { data, error } = await supabase
       .from('clientes')

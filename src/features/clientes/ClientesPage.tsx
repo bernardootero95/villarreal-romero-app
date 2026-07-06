@@ -18,7 +18,6 @@ import { ClienteForm } from "./ClienteForm";
 import { FichaObligaciones } from "./FichaObligaciones";
 import { useNavigate } from "react-router-dom";
 
-// OPTIMIZACIÓN SOLID: Carga dinámica (Dynamic Import) del componente pesado de Excel
 const ClienteCargaMasiva = lazy(() =>
   import("./ClienteCargaMasiva").then((module) => ({
     default: module.ClienteCargaMasiva,
@@ -31,7 +30,6 @@ export const ClientesPage = () => {
   const [clientes, setClientes] = useState<ClienteConContador[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Control de Modales
   const [showForm, setShowForm] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
   const [clienteEditando, setClienteEditando] =
@@ -39,11 +37,9 @@ export const ClientesPage = () => {
   const [clienteObligaciones, setClienteObligaciones] =
     useState<ClienteConContador | null>(null);
 
-  // Estados de Búsqueda y Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResponsable, setSelectedResponsable] = useState("");
 
-  // ESTADOS Y CONSTANTES PARA PAGINACIÓN
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
@@ -368,7 +364,6 @@ export const ClientesPage = () => {
         />
       )}
 
-      {/* RENDERIZADO CON SUSPENSE: Se descarga el chunk 'vendor-excel' únicamente si showBulk es verdadero */}
       {showBulk && (
         <Suspense
           fallback={

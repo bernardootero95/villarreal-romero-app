@@ -3,7 +3,7 @@ import type { CalendarioBase, CalendarioBaseFormData, CalendarioBaseConImpuesto 
 import { usuariosService } from '../usuarios/usuariosService';
 
 export const calendarioBaseService = {
-  // Obtener las fechas configuradas, idealmente filtradas por año
+  
   async getAll(anio: number) {
     const { data, error } = await supabase
       .from('calendario_base_impuestos')
@@ -41,7 +41,6 @@ export const calendarioBaseService = {
 
     await usuariosService.registrarAuditoria('CREAR', 'CALENDARIO_BASE', data.id, null, data);
     
-    // Automatización SOLID: Sincronizar de inmediato las agendas de los clientes vinculados
     await this.sincronizarVencimientosConCalendarioBase(data as CalendarioBase);
     
     return data as CalendarioBase;
@@ -72,7 +71,6 @@ export const calendarioBaseService = {
 
     await usuariosService.registrarAuditoria('MODIFICAR', 'CALENDARIO_BASE', id, previo, data);
     
-    // Automatización SOLID: Sincronizar de inmediato las agendas de los clientes vinculados
     await this.sincronizarVencimientosConCalendarioBase(data as CalendarioBase);
     
     return data as CalendarioBase;
@@ -119,7 +117,7 @@ export const calendarioBaseService = {
 
     await usuariosService.registrarAuditoria('CREAR_MASIVO', 'CALENDARIO_BASE', 'bulk', null, { cantidad: payloads.length });
 
-    // Automatización SOLID Masiva: Procesar en bloque la actualización de agendas para el lote cargado
+    
     if (data && data.length > 0) {
       for (const registro of data) {
         await this.sincronizarVencimientosConCalendarioBase(registro as CalendarioBase);
@@ -129,10 +127,10 @@ export const calendarioBaseService = {
     return data;
   },
 
-  // MOTOR DE SINCRONIZACIÓN REACTIVA CONTABLE (Mapeo Inteligente)
+  
   async sincronizarVencimientosConCalendarioBase(calendario: CalendarioBase) {
     try {
-      // 1. Obtener los clientes que tienen asignado activamente este impuesto
+      
       const { data: asignaciones, error: errAsig } = await supabase
         .from('cliente_impuestos')
         .select(`
@@ -145,9 +143,9 @@ export const calendarioBaseService = {
 
       if (errAsig || !asignaciones || asignaciones.length === 0) return;
 
-      // 2. Filtrar clientes en memoria que cumplan con la regla del dígito
+      
       const clientesAfectados = asignaciones.filter((asig: any) => {
-        if (calendario.digito === null) return true; // Impuesto de fecha fija aplica a todos
+        if (calendario.digito === null) return true; 
         const ultimoDigitoCliente = Number(String(asig.clientes.nit).slice(-1));
         return ultimoDigitoCliente === calendario.digito;
       });
@@ -157,7 +155,7 @@ export const calendarioBaseService = {
       const periodoFiscalStr = `${calendario.anio}-${calendario.periodo}`;
 
       for (const asig of clientesAfectados) {
-        // 3. Verificar si el vencimiento ya existe en la agenda del cliente
+        
         const { data: vtoExistente } = await supabase
           .from('vencimientos')
           .select('id, estado_tarea')
@@ -166,7 +164,7 @@ export const calendarioBaseService = {
           .maybeSingle();
 
         if (vtoExistente) {
-          // Si existe y no está presentado, actualizamos la fecha límite de manera proactiva
+          
           if (vtoExistente.estado_tarea !== 'PRESENTADO') {
             await supabase
               .from('vencimientos')
@@ -177,7 +175,7 @@ export const calendarioBaseService = {
               .eq('id', vtoExistente.id);
           }
         } else {
-          // Caso IVA Cuatrimestral: Si la obligación se asignó antes, sembramos el vencimiento faltante
+          
           await supabase
             .from('vencimientos')
             .insert([{

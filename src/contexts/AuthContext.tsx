@@ -26,7 +26,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [perfil, setPerfil] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Función para obtener el perfil de la tabla pública
   const cargarPerfil = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -44,7 +43,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Obtener la sesión inicial
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -54,7 +52,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     });
 
-    // Escuchar cambios de autenticación
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {

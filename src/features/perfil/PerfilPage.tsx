@@ -138,9 +138,7 @@ export const PerfilPage = () => {
         </p>
       </div>
 
-      {/* CUADRÍCULA BIEN BALANCEADA EN DOS COLUMNAS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-        {/* COLUMNA IZQUIERDA: TARJETA DE USUARIO CENTRADA */}
         <div className="bg-surface rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col justify-between">
           <div className="bg-primary/5 p-8 flex flex-col items-center justify-center text-center flex-1">
             <div className="w-24 h-24 bg-primary text-surface rounded-full flex items-center justify-center mb-4 shadow-md ring-4 ring-surface">
@@ -182,9 +180,7 @@ export const PerfilPage = () => {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: NOTIFICACIONES Y SEGURIDAD AGRUPADOS VERTICALMENTE */}
         <div className="space-y-6 flex flex-col justify-between">
-          {/* TARJETA: CANAL DE NOTIFICACIONES */}
           <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6 flex-1 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -237,7 +233,6 @@ export const PerfilPage = () => {
             </div>
           </div>
 
-          {/* TARJETA: CAMBIO DE CONTRASEÑA */}
           <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6 flex-1 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -288,7 +283,6 @@ export const PerfilPage = () => {
         </div>
       </div>
 
-      {/* SECCIÓN INFERIOR: PORTAFOLIO CON SCROLL ASILADO A 4 RENGLONES MÁXIMO */}
       <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center gap-2 mb-4 border-b border-gray-50 pb-3">
           <FolderOpen className="w-5 h-5 text-accent" />
@@ -318,7 +312,6 @@ export const PerfilPage = () => {
             </p>
           </div>
         ) : (
-          /* OPTIMIZACIÓN DE SCROLL COMPACTO: max-h-[296px] restringe a exactamente 4 filas visibles (cada una de 74px) */
           <div className="max-h-[296px] overflow-y-auto pr-1 space-y-3 scrollbar-thin">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {misClientes.map((cliente) => (

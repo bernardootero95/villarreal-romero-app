@@ -22,7 +22,6 @@ export const FichaObligaciones = ({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Extraer el último dígito del NIT para la automatización
   const ultimoDigito = Number(cliente.nit.slice(-1));
 
   const cargarDatos = async () => {
@@ -83,7 +82,6 @@ export const FichaObligaciones = ({
     }
   };
 
-  // Filtrar el catálogo para no mostrar impuestos que ya tiene asignados
   const impuestosDisponibles = catImpuestos.filter(
     (cat) => !obligaciones.some((obl) => obl.impuestos?.id === cat.id),
   );
@@ -112,7 +110,6 @@ export const FichaObligaciones = ({
         </div>
 
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          {/* SECCIÓN 1: ASIGNAR NUEVA OBLIGACIÓN */}
           <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl space-y-3">
             <h3 className="text-xs uppercase font-bold tracking-wider text-text-main flex items-center gap-1.5">
               <Plus className="w-4 h-4 text-accent" /> Registrar Nueva
@@ -148,7 +145,6 @@ export const FichaObligaciones = ({
             </p>
           </div>
 
-          {/* SECCIÓN 2: TABLA DE OBLIGACIONES ACTUALES */}
           <div className="space-y-2">
             <h3 className="text-xs uppercase font-bold tracking-wider text-text-muted">
               Obligaciones Activas de la Empresa

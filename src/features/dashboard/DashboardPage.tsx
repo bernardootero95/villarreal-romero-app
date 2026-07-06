@@ -31,7 +31,6 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [errorConexion, setErrorConexion] = useState<string | null>(null);
 
-  // Estado para el resumen analítico de impuestos (Exclusivo Ingeniero/Admin)
   const [resumenImpuestos, setResumenImpuestos] = useState<
     Array<{
       id: string;
@@ -96,7 +95,6 @@ export const DashboardPage = () => {
           ? String(perfil.cargo).trim()
           : "Contador";
 
-        // Carga paralela desacoplada de Supabase en la Vista (SOLID - SRP)
         const [dataMetricas, dataVencimientos] = await Promise.all([
           dashboardService.getMetricasContador(session.user.id, cargoLimpio),
           vencimientosService.getVencimientosMes(
@@ -110,7 +108,6 @@ export const DashboardPage = () => {
         setMetricas(dataMetricas);
         setVencimientosSemana(dataVencimientos || []);
 
-        // Si es Ingeniero, consumimos la analítica encapsulada desde el servicio
         if (cargoLimpio === "Ingeniero") {
           const distribucionData =
             await dashboardService.getDistribucionImpuestos();
@@ -182,7 +179,6 @@ export const DashboardPage = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
-      {/* Mensaje de Bienvenida */}
       <div>
         <h1 className="text-2xl font-title font-bold text-primary">
           Panel de Control Operativo
@@ -196,9 +192,7 @@ export const DashboardPage = () => {
         </p>
       </div>
 
-      {/* RECUADROS SUPERIORES CORE */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Tarjeta 1: Empresas */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -218,7 +212,6 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Tarjeta 2: Vencimientos Totales */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -238,7 +231,6 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Tarjeta 3: Pendientes */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -258,7 +250,6 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Tarjeta 4: Efectividad */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -279,10 +270,8 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* ÁREA CENTRAL DEL DASHBOARD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
-          {/* CONTROL INYECTADO */}
           {esIngeniero ? (
             <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
@@ -366,7 +355,6 @@ export const DashboardPage = () => {
             </div>
           )}
 
-          {/* Sección Top Clientes */}
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
             <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
               <Flame className="w-5 h-5 text-amber-500" />
@@ -399,7 +387,6 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* COMPONENTE: Agenda Semanal de Control */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4 flex flex-col h-full">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />

@@ -166,7 +166,6 @@ export const ClienteCargaMasiva = ({
           const clientesPayload: any[] = [];
           const nitToUltimoDigitoMapa: Record<string, number> = {};
 
-          // --- PASO 1: MAPEAR Y VALIDAR CLIENTES LOCALES ---
           for (let i = 1; i < filasClientes.length; i++) {
             const row = filasClientes[i];
             if (!row || row.length === 0 || row[0] === null) continue;
@@ -216,7 +215,6 @@ export const ClienteCargaMasiva = ({
               "No se hallaron registros legibles en la hoja de Clientes.",
             );
 
-          // --- PASO 2: INSERCIÓN EFECTIVA DE CLIENTES ---
           const clientesCreados =
             await clientesService.createBulk(clientesPayload);
 
@@ -225,7 +223,6 @@ export const ClienteCargaMasiva = ({
             nitToIdMapa[c.nit] = c.id;
           });
 
-          // --- PASO 3: PROCESAR HOJA DE OBLIGACIONES ---
           const obligacionesPayload: any[] = [];
           const idToUltimoDigitoMapeado: Record<string, number> = {};
 
@@ -268,7 +265,6 @@ export const ClienteCargaMasiva = ({
               nitToUltimoDigitoMapa[nitBusqueda];
           }
 
-          // --- PASO 4: AGREGAR OBLIGACIONES E INYECTAR CALENDARIOS ---
           if (obligacionesPayload.length > 0) {
             // CORREGIDO: Invocación sincronizada con el nuevo nombre en español del servicio
             await clienteImpuestosService.asignarImpuestosBulk(

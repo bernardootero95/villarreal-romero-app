@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 interface CalendarioCargaMasivaProps {
   onClose: () => void;
   onSuccess: () => void;
-  impuestoId: string; // <-- Prop requerida heredada del padre
+  impuestoId: string;
 }
 
 export const CalendarioCargaMasiva = ({
@@ -68,7 +68,7 @@ export const CalendarioCargaMasiva = ({
             }
 
             registrosValidos.push({
-              impuesto_id: impuestoId, // <-- Fijado automáticamente por contexto
+              impuesto_id: impuestoId,
               anio: anio,
               periodo: periodo,
               digito:

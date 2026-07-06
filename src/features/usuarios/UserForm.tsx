@@ -50,15 +50,13 @@ export const UserForm = ({
   const onSubmit = async (data: UsuarioFormData) => {
     try {
       if (isEditing && usuarioAEditar) {
-        // Modo Edición
         await usuariosService.update(usuarioAEditar.id, data);
       } else {
-        // MODO CREACIÓN: Inyectamos el correo generado automáticamente
         const generatedEmail = `${data.username.toLowerCase().trim()}@villarreal-romero.local`;
         const dataAEnviar = {
           ...data,
           email: generatedEmail,
-          // Si el correo de notificación viene vacío, lo mandamos como null para la BD
+
           correo_notificacion: data.correo_notificacion?.trim() || null,
         };
         await usuariosService.create(dataAEnviar as UsuarioFormData);
@@ -143,7 +141,6 @@ export const UserForm = ({
             )}
           </div>
 
-          {/* Email de Notificaciones (Opcional) */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Email para Alertas{" "}

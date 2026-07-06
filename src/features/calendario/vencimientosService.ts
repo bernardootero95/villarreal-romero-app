@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import { usuariosService } from '../usuarios/usuariosService'; // <-- Importamos para la auditoría
+import { usuariosService } from '../usuarios/usuariosService'; 
 
 export interface Vencimiento {
   id: string;
@@ -13,7 +13,7 @@ export interface Vencimiento {
     nit: string;
     dv: number;
     contador_id: string;
-    estado?: string; // Lo traemos para verificar, aunque supabase hace el filtro interno
+    estado?: string; 
   };
   impuestos: {
     id: string;
@@ -27,7 +27,7 @@ export const vencimientosService = {
     const startDate = new Date(anio, mes, 1).toISOString().split('T')[0];
     const endDate = new Date(anio, mes + 1, 0).toISOString().split('T')[0];
 
-    // SOLUCIÓN: Agregamos el filtro (!inner) para obligar a que el cliente relacionado esté ACTIVO
+    
     const { data, error } = await supabase
       .from('vencimientos')
       .select(`
@@ -41,7 +41,7 @@ export const vencimientosService = {
       `)
       .gte('fecha_limite', startDate)
       .lte('fecha_limite', endDate)
-      .eq('clientes.estado', 'ACTIVO') // <-- ESTE ES EL FILTRO MAGICO
+      .eq('clientes.estado', 'ACTIVO') 
       .order('fecha_limite', { ascending: true });
 
     if (error) throw error;
@@ -56,12 +56,12 @@ export const vencimientosService = {
     return vencimientosPermitidos as Vencimiento[];
   },
 
-  // MÉTODO: CAMBIAR ESTADO DE LA OBLIGACIÓN
+  
   async actualizarEstado(id: string, nuevoEstado: string, observaciones: string = '') {
-    // A. Capturar estado previo para auditoría
+    
     const { data: previo } = await supabase.from('vencimientos').select('*').eq('id', id).single();
 
-    // B. Realizar la actualización en Supabase
+    
     const { data, error } = await supabase
       .from('vencimientos')
       .update({ 
@@ -75,7 +75,7 @@ export const vencimientosService = {
 
     if (error) throw error;
 
-    // C. Registrar auditoría con el radicado u observaciones adjuntas
+    
     await usuariosService.registrarAuditoria('GESTIONAR_TAREA', 'VENCIMIENTOS', id, previo, data);
     return data;
   }

@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase';
 
 export const clienteImpuestosService = {
-  // 1. Obtener los impuestos activos de un cliente específico
+  
   async getImpuestosPorCliente(clienteId: string) {
     const { data, error } = await supabase
       .from('cliente_impuestos')
@@ -22,9 +22,9 @@ export const clienteImpuestosService = {
     return data;
   },
 
-  // 2. ASIGNAR IMPUESTO Y GENERAR EL CALENDARIO AUTOMÁTICO (CORREGIDO PARA ADMITIR RE-ACTIVACIONES)
+  
   async asignarImpuesto(clienteId: string, impuestoId: string, ultimoDigitoNit: number) {
-    // A. SOLID: Verificar si el registro ya existía previamente inactivo (Soft Deleted)
+    
     const { data: existenciaPrevia } = await supabase
       .from('cliente_impuestos')
       .select('*')
@@ -35,7 +35,7 @@ export const clienteImpuestosService = {
     let asignacion;
 
     if (existenciaPrevia) {
-      // Si ya existía, lo reactivamos limpiando la marca de borrado
+      
       const { data: reactivado, error: errorReactivar } = await supabase
         .from('cliente_impuestos')
         .update({ estado: 'ACTIVO', eliminado: null })
@@ -46,7 +46,7 @@ export const clienteImpuestosService = {
       if (errorReactivar) throw errorReactivar;
       asignacion = reactivado;
     } else {
-      // Si es completamente nuevo, procedemos con el flujo de inserción estándar
+      
       const { data: nuevaAsignacion, error: errorAsignacion } = await supabase
         .from('cliente_impuestos')
         .insert([{ cliente_id: clienteId, impuesto_id: impuestoId, estado: 'ACTIVO' }])
@@ -60,7 +60,7 @@ export const clienteImpuestosService = {
       asignacion = nuevaAsignacion;
     }
 
-    // B. AUTOMATIZACIÓN: Buscar las fechas oficiales en el Calendario Base
+    
     const anioActual = new Date().getFullYear();
     
     let queryBase = supabase
@@ -81,7 +81,7 @@ export const clienteImpuestosService = {
 
     if (errorCalendario) throw errorCalendario;
 
-    // C. Si hay fechas oficializadas por el gobierno, le sembramos la agenda al cliente (Evitando duplicar tareas existentes)
+    
     if (fechasOficiales && fechasOficiales.length > 0) {
       // Consultamos qué vencimientos ya existen para este cliente e impuesto
       const { data: existentes } = await supabase
@@ -92,7 +92,7 @@ export const clienteImpuestosService = {
 
       const idsExistentes = existentes?.map(v => v.calendario_base_id) || [];
 
-      // Filtramos para inyectar únicamente los que hagan falta
+      
       const vencimientosPayload = fechasOficiales
         .filter(fechaBase => !idsExistentes.includes(fechaBase.id))
         .map(fechaBase => ({
@@ -116,7 +116,7 @@ export const clienteImpuestosService = {
     return asignacion;
   },
 
-  // 3. DESASIGNAR / QUITAR RESPONSABILIDAD (Con limpieza de agenda pendiente)
+  
   async desasignarImpuesto(asignacionId: string, clienteId: string, impuestoId: string) {
     const ahora = new Date().toISOString();
 
@@ -137,7 +137,7 @@ export const clienteImpuestosService = {
     if (errorClean) console.error('Error limpiando agenda pendiente:', errorClean);
   },
 
-  // 4. Operación SOLID Masiva: Procesa en lote un set estructurado de obligaciones tributarias
+  
   async asignarImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>, ultimoDigitoMapa: Record<string, number>) {
     if (obligaciones.length === 0) return;
 

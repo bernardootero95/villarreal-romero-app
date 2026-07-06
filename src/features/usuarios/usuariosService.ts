@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase';
 import type { Usuario, UsuarioFormData } from './types';
 
 export const usuariosService = {
-  // Obtener todos los usuarios no eliminados
+  
   async getAll() {
     const { data, error } = await supabase
       .from('usuarios')
@@ -14,12 +14,12 @@ export const usuariosService = {
     return data as Usuario[];
   },
 
-  // Registrar auditoría de forma genérica
+  
   async registrarAuditoria(accion: string, modulo: string, id: string, previo: any = null, nuevo: any = null) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // LÓGICA CORREGIDA SOLID: Enviamos los campos validados eliminando text_id o inconsistencias de formato
+    
     await supabase.from('auditoria').insert({
       usuario_id: user.id,
       accion,
@@ -30,7 +30,7 @@ export const usuariosService = {
     });
   },
 
-  // Crear Usuario mediante la Edge Function
+  
   async create(formData: UsuarioFormData) {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -53,7 +53,7 @@ export const usuariosService = {
     return data;
   },
 
-  // Actualización básica de metadatos
+  
   async update(id: string, formData: UsuarioFormData) {
     const { data: previo } = await supabase.from('usuarios').select('*').eq('id', id).single();
 
@@ -76,7 +76,7 @@ export const usuariosService = {
     return data;
   },
 
-  // Soft Delete
+  
   async delete(id: string) {
     const { data: previo } = await supabase.from('usuarios').select('*').eq('id', id).single();
     
@@ -90,10 +90,6 @@ export const usuariosService = {
     await this.registrarAuditoria('ELIMINAR', 'USUARIOS', id, previo, { eliminado: true });
   },
 
-  /**
-   * REFACTOR SOLID (SRP & SEGURIDAD): Migrado de cliente directo a invocación de Edge Function segura.
-   * Evita la filtración de credenciales maestras y soluciona el error 401 de manera definitiva.
-   */
   async forzarCambioPassword(usuarioId: string, nuevaClave: string): Promise<void> {
     if (!usuarioId || nuevaClave.length < 6) {
       throw new Error("La nueva clave de acceso debe tener por lo menos 6 caracteres.");
@@ -101,7 +97,7 @@ export const usuariosService = {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Invocamos la Edge Function pasando las credenciales y el autorizador en el body seguro
+    
     const { data, error } = await supabase.functions.invoke('resetear-clave', {
       body: {
         usuario_id: usuarioId,
@@ -119,7 +115,7 @@ export const usuariosService = {
       throw new Error(data.error);
     }
 
-    // Corregido: Pasamos la metadata estructurada en un formato limpio homologado para evitar errores 400
+    
     await this.registrarAuditoria(
       'MODIFICAR', 
       'USUARIOS', 

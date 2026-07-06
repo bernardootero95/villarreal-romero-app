@@ -9,7 +9,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { Loader } from "../../components/Loader"; // <-- Importamos tu componente Loader corporativo
 import logo from "../../assets/LOGO-2.png";
 
-// Esquema de validación estricto
 const loginSchema = z.object({
   username: z.string().min(4, "El usuario es requerido"),
   password: z.string().min(6, "La contraseña es obligatoria"),
@@ -60,10 +59,6 @@ export const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {/* Inyección del Loader Reutilizable: 
-        Cuando 'isLoading' es verdadero, renderiza el Loader en pantalla completa 
-        bloqueando accesos duplicados de forma elegante.
-      */}
       {isLoading && (
         <Loader
           texto="Verificando credenciales de acceso..."
@@ -72,7 +67,6 @@ export const LoginPage = () => {
       )}
 
       <div className="card-container w-full max-w-md">
-        {/* Cabecera con Logo */}
         <div className="text-center mb-8 flex flex-col items-center">
           <img
             src={logo}
@@ -88,7 +82,6 @@ export const LoginPage = () => {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Campo Usuario */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Usuario
@@ -114,7 +107,6 @@ export const LoginPage = () => {
             )}
           </div>
 
-          {/* Campo Contraseña con Toggle de Visibilidad */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Contraseña
@@ -155,7 +147,6 @@ export const LoginPage = () => {
             )}
           </div>
 
-          {/* Mensaje de Error Global */}
           {authError && (
             <div className="flex items-center gap-2 text-danger bg-danger/10 p-3 rounded-md text-sm">
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
@@ -163,7 +154,6 @@ export const LoginPage = () => {
             </div>
           )}
 
-          {/* Botón de Submit */}
           <button
             type="submit"
             disabled={isLoading}

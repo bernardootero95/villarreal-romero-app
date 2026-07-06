@@ -10,7 +10,7 @@ import { X, Save, Building2, ArrowRight } from "lucide-react";
 import { clientesService } from "./clientesService";
 import { usuariosService } from "../usuarios/usuariosService";
 import type { Usuario } from "../usuarios/types";
-import { FichaObligaciones } from "./FichaObligaciones"; // <-- Importamos tu componente existente
+import { FichaObligaciones } from "./FichaObligaciones";
 
 interface ClienteFormProps {
   onClose: () => void;
@@ -43,7 +43,6 @@ export const ClienteForm = ({
   const [contadores, setContadores] = useState<Usuario[]>([]);
   const [loadingContadores, setLoadingContadores] = useState(true);
 
-  // --- ESTADOS PARA EL FLUJO SECUENCIAL (WIZARD) ---
   const [clienteCreado, setClienteCreado] = useState<ClienteConContador | null>(
     null,
   );
@@ -112,16 +111,14 @@ export const ClienteForm = ({
       };
 
       if (clienteAEditar) {
-        // Modo Edición: Flujo normal estándar
         await clientesService.update(clienteAEditar.id, datosLimpios);
         onSuccess();
       } else {
-        // Modo Creación: Guardamos y capturamos la entidad devuelta con su ID asignado por la BD
         const nuevoCliente = await clientesService.create(datosLimpios);
 
         if (nuevoCliente) {
           setClienteCreado(nuevoCliente);
-          setMostrarPasoObligaciones(true); // <-- Saltamos al paso 2 (Ficha de Obligaciones)
+          setMostrarPasoObligaciones(true);
         } else {
           onSuccess();
         }
@@ -133,20 +130,17 @@ export const ClienteForm = ({
 
   const isEditing = !!clienteAEditar;
 
-  // --- PASO 2: Si el cliente se acaba de crear, inyectamos tu FichaObligaciones nativa ---
   if (mostrarPasoObligaciones && clienteCreado) {
     return (
       <FichaObligaciones
         cliente={clienteCreado}
         onClose={() => {
-          // Cuando cierren la ficha de obligaciones, disparamos el éxito global del directorio
           onSuccess();
         }}
       />
     );
   }
 
-  // --- PASO 1: Formulario de Datos Básicos (Tu UI Original) ---
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-gray-200">

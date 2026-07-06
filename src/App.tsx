@@ -10,9 +10,8 @@ import { LoginPage } from "./features/auth/LoginPage";
 import { Layout } from "./components/Layout";
 import { UsersPage } from "./features/usuarios/UsersPage";
 import { ClientesPage } from "./features/clientes/ClientesPage";
-import { DetalleClientePage } from "./features/clientes/DetalleClientePage"; // <-- Importación de la página autónoma de detalle
+import { DetalleClientePage } from "./features/clientes/DetalleClientePage";
 import { ImpuestosPage } from "./features/impuestos/ImpuestosPage";
-
 import { CalendarioPage } from "./features/calendario/CalendarioPage";
 import { PerfilPage } from "./features/perfil/PerfilPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";

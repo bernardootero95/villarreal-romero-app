@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { vencimientosService, type Vencimiento } from "./vencimientosService";
-import { Loader } from "../../components/Loader"; // <-- Importación del Loader Corporativo
+import { Loader } from "../../components/Loader";
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,7 +18,6 @@ export const CalendarioPage = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  // Estados para controlar la acción de marcar como presentado
   const [radicados, setRadicados] = useState<Record<string, string>>({});
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
 
@@ -217,9 +216,6 @@ export const CalendarioPage = () => {
     );
   };
 
-  // CONTROL DE RENDERIZADO ASÍNCRONO:
-  // Implementación de tu Loader corporativo con el Isotipo en tamaño real
-  // para sustituir las paredes de carga estáticas.
   if (loading) {
     return <Loader texto="Sincronizando calendario..." fullScreen={false} />;
   }

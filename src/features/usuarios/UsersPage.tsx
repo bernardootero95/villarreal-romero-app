@@ -207,7 +207,6 @@ export const UsersPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* BOTÓN INYECTADO: Abre la sobreescritura administrativa de clave provisional */}
                         {puedeAdministrar && user.id !== perfil?.id && (
                           <button
                             onClick={() => setUsuarioClaveTarget(user)}
@@ -305,7 +304,6 @@ export const UsersPage = () => {
         />
       )}
 
-      {/* MODAL INYECTADO */}
       {usuarioClaveTarget && (
         <ResetPasswordModal
           usuario={usuarioClaveTarget}

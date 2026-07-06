@@ -35,14 +35,11 @@ export const DetalleImpuestoPage = () => {
   const [fechasBase, setFechasBase] = useState<CalendarioBaseConImpuesto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filtros de UI
   const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
   const [periodoFiltro, setPeriodoFiltro] = useState<string>("TODOS");
 
-  // Estado de Paginación
   const [paginaActual, setPaginaActual] = useState(1);
 
-  // Control de Modales
   const [showForm, setShowForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [fechaEditando, setFechaEditando] =
@@ -104,23 +101,19 @@ export const DetalleImpuestoPage = () => {
     new Set(fechasBase.map((f) => f.periodo)),
   ).sort();
 
-  // 1. Aplicar filtros primero
   const fechasFiltradas = fechasBase.filter((f) => {
     if (periodoFiltro === "TODOS") return true;
     return f.periodo === periodoFiltro;
   });
 
-  // 2. Calcular datos de paginación basados en el resultado filtrado
   const totalRegistros = fechasFiltradas.length;
   const totalPaginas = Math.ceil(totalRegistros / REGISTROS_POR_PAGINA);
 
   const indiceInicial = (paginaActual - 1) * REGISTROS_POR_PAGINA;
   const indiceFinal = indiceInicial + REGISTROS_POR_PAGINA;
 
-  // 3. Segmentar la lista para mostrar solo la página activa
   const fechasPaginadas = fechasFiltradas.slice(indiceInicial, indiceFinal);
 
-  // Reiniciar paginación si cambia el filtro de periodo
   const handlePeriodoChange = (valor: string) => {
     setPeriodoFiltro(valor);
     setPaginaActual(1);
@@ -177,7 +170,6 @@ export const DetalleImpuestoPage = () => {
         )}
       </div>
 
-      {/* Encabezado Principal */}
       <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
@@ -204,7 +196,6 @@ export const DetalleImpuestoPage = () => {
         </div>
       </div>
 
-      {/* Barra Controladora de Filtros */}
       <div className="card-container bg-surface p-4 rounded-xl border border-gray-200 shadow-xs flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center gap-2 text-text-muted text-sm font-medium">
           <Filter className="w-4 h-4" />
@@ -251,7 +242,6 @@ export const DetalleImpuestoPage = () => {
         </div>
       </div>
 
-      {/* Tabla de Vencimientos con Bloque de Paginación */}
       <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs">
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider border-b border-gray-100">
@@ -344,7 +334,6 @@ export const DetalleImpuestoPage = () => {
           </tbody>
         </table>
 
-        {/* Footer de Paginación Controlada Corregido */}
         {!loading && totalRegistros > 0 && (
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex items-center justify-between">
             <div className="text-xs text-text-muted font-medium">
@@ -394,7 +383,6 @@ export const DetalleImpuestoPage = () => {
         )}
       </div>
 
-      {/* Modal Carga Individual / Edición */}
       {showForm && (
         <CalendarioBaseForm
           fechaAEditar={fechaEditando}
@@ -411,7 +399,6 @@ export const DetalleImpuestoPage = () => {
         />
       )}
 
-      {/* Modal Carga Masiva */}
       {showBulkForm && (
         <CalendarioCargaMasiva
           impuestoId={id!}

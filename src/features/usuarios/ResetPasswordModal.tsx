@@ -21,7 +21,6 @@ export const ResetPasswordModal = ({
     e.preventDefault();
     setErrorValidation(null);
 
-    // Validación táctica e inmediata en caliente
     if (password.length < 6) {
       setErrorValidation(
         "La nueva contraseña provisional debe tener mínimo 6 caracteres.",
