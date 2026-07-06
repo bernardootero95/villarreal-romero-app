@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { dashboardService } from "./dashboardService";
+import { impuestosService } from "../impuestos/impuestosService"; // <-- Importación para estadísticas globales
 import {
   vencimientosService,
   type Vencimiento,
@@ -15,6 +16,8 @@ import {
   AlertTriangle,
   ChevronRight,
   Flame,
+  FileText,
+  Percent,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -29,6 +32,9 @@ export const DashboardPage = () => {
   const [diaSeleccionado, setDiaSeleccionado] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [errorConexion, setErrorConexion] = useState<string | null>(null);
+
+  // Estado para capturar el catálogo global si el usuario es Ingeniero/Administrador
+  const [totalImpuestosSistema, setTotalImpuestosSistema] = useState<number>(0);
 
   const calcularSemanaActual = () => {
     const hoy = new Date();
@@ -85,19 +91,22 @@ export const DashboardPage = () => {
           ? String(perfil.cargo).trim()
           : "Contador";
 
-        const dataMetricas = await dashboardService.getMetricasContador(
-          session.user.id,
-          cargoLimpio,
-        );
-        setMetricas(dataMetricas);
+        // Carga paralela de métricas core y catálogo fiscal para optimizar rendimiento
+        const [dataMetricas, dataVencimientos, listaImpuestos] =
+          await Promise.all([
+            dashboardService.getMetricasContador(session.user.id, cargoLimpio),
+            vencimientosService.getVencimientosMes(
+              hoy.getFullYear(),
+              hoy.getMonth(),
+              session.user.id,
+              cargoLimpio,
+            ),
+            impuestosService.getAll(),
+          ]);
 
-        const dataVencimientos = await vencimientosService.getVencimientosMes(
-          hoy.getFullYear(),
-          hoy.getMonth(),
-          session.user.id,
-          cargoLimpio,
-        );
+        setMetricas(dataMetricas);
         setVencimientosSemana(dataVencimientos || []);
+        setTotalImpuestosSistema(listaImpuestos?.length || 0);
       } catch (error: any) {
         console.error("Error crítico de sincronización en Dashboard:", error);
         setErrorConexion(
@@ -161,6 +170,10 @@ export const DashboardPage = () => {
     );
   }
 
+  // Condicional SOLID de Visualización según portafolio asignado (Ingeniero / Admin General)
+  const esVistaGlobal =
+    perfil?.cargo === "Ingeniero" || metricas.totalClientes === 0;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
       {/* Mensaje de Bienvenida */}
@@ -177,18 +190,21 @@ export const DashboardPage = () => {
         </p>
       </div>
 
-      {/* Grid de Tarjetas Core */}
+      {/* GRID DINÁMICO ADAPTADO AL ROL DEL USUARIO */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Tarjeta 1: Portafolio */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              Mis Empresas
+              {esVistaGlobal ? "Total Empresas" : "Mis Empresas"}
             </span>
             <p className="text-3xl font-bold text-primary font-title">
-              {metricas.totalClientes}
+              {esVistaGlobal ? metricas.totalClientes : metricas.totalClientes}
             </p>
             <p className="text-[11px] text-text-muted">
-              Clientes bajo tu cargo
+              {esVistaGlobal
+                ? "Directorio general de la firma"
+                : "Clientes bajo tu cargo"}
             </p>
           </div>
           <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
@@ -196,33 +212,45 @@ export const DashboardPage = () => {
           </div>
         </div>
 
+        {/* Tarjeta 2: Distribución Dinámica */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              Vencimientos Mes
+              {esVistaGlobal ? "Estructura Fiscal" : "Vencimientos Mes"}
             </span>
             <p className="text-3xl font-bold text-primary font-title">
-              {metricas.totalVencimientos}
+              {esVistaGlobal
+                ? totalImpuestosSistema
+                : metricas.totalVencimientos}
             </p>
             <p className="text-[11px] text-text-muted">
-              Obligaciones totales del periodo
+              {esVistaGlobal
+                ? "Impuestos parametrizados"
+                : "Obligaciones totales del periodo"}
             </p>
           </div>
           <div className="w-12 h-12 bg-accent/20 text-primary rounded-xl flex items-center justify-center">
-            <Calendar className="w-6 h-6" />
+            {esVistaGlobal ? (
+              <FileText className="w-6 h-6" />
+            ) : (
+              <Calendar className="w-6 h-6" />
+            )}
           </div>
         </div>
 
+        {/* Tarjeta 3: Distribución Dinámica */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              Por Ejecutar
+              {esVistaGlobal ? "Carga Operativa" : "Por Ejecutar"}
             </span>
             <p className="text-3xl font-bold text-amber-600 font-title">
               {metricas.tareasPendientes}
             </p>
             <p className="text-[11px] text-text-muted">
-              Pendientes y en revisión
+              {esVistaGlobal
+                ? "Pendientes totales en la firma"
+                : "Pendientes y en revisión"}
             </p>
           </div>
           <div className="w-12 h-12 bg-amber-500/10 text-amber-600 rounded-xl flex items-center justify-center">
@@ -230,20 +258,27 @@ export const DashboardPage = () => {
           </div>
         </div>
 
+        {/* Tarjeta 4: Distribución Dinámica */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              Cumplimiento
+              {esVistaGlobal ? "Rendimiento Global" : "Cumplimiento"}
             </span>
             <p className="text-3xl font-bold text-success font-title">
               {metricas.porcentajeEfectividad}%
             </p>
             <p className="text-[11px] text-text-muted">
-              Efectividad de presentation
+              {esVistaGlobal
+                ? "Efectividad general de la firma"
+                : "Efectividad de presentación"}
             </p>
           </div>
           <div className="w-12 h-12 bg-success/10 text-success rounded-xl flex items-center justify-center">
-            <CheckCircle2 className="w-6 h-6" />
+            {esVistaGlobal ? (
+              <Percent className="w-6 h-6" />
+            ) : (
+              <CheckCircle2 className="w-6 h-6" />
+            )}
           </div>
         </div>
       </div>
@@ -256,7 +291,9 @@ export const DashboardPage = () => {
             <div className="flex items-center gap-2 text-danger border-b border-gray-100 pb-3">
               <AlertTriangle className="w-5 h-5" />
               <h3 className="text-sm font-title font-bold uppercase tracking-wide">
-                Alertas Críticas de Vencimiento (Próximos 5 days)
+                {esVistaGlobal
+                  ? "Alertas Críticas Globales (Próximos 5 días)"
+                  : "Alertas Críticas de Vencimiento (Próximos 5 días)"}
               </h3>
             </div>
 
@@ -265,10 +302,11 @@ export const DashboardPage = () => {
                 <div className="text-center py-8 text-text-muted space-y-1">
                   <CheckCircle2 className="w-8 h-8 text-success/60 mx-auto" />
                   <p className="text-xs font-medium text-text-main">
-                    ¡Agenda al día!
+                    ¡Firma al día!
                   </p>
                   <p className="text-[11px]">
-                    No tienes obligaciones críticas venciendo esta semana.
+                    No se registran obligaciones críticas pendientes en el
+                    sistema.
                   </p>
                 </div>
               ) : (
@@ -308,7 +346,7 @@ export const DashboardPage = () => {
             <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
               <Flame className="w-5 h-5 text-amber-500" />
               <h3 className="text-sm font-title font-bold uppercase tracking-wide">
-                Top 5 Clientes con Mayor Carga Pendiente
+                Top 5 Empresas con Mayor Carga Pendiente en la Firma
               </h3>
             </div>
 
@@ -336,12 +374,14 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* COMPONENTE: Agenda Semanal Completa Autodimensionable */}
-        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-5 flex flex-col h-full">
+        {/* COMPONENTE: Agenda Semanal Completa */}
+        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4 flex flex-col h-full">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-title font-bold text-primary uppercase tracking-wide">
-              Agenda Semanal de Trabajo
+              {esVistaGlobal
+                ? "Cronograma de Control General"
+                : "Agenda Semanal de Trabajo"}
             </h3>
           </div>
 
@@ -390,10 +430,9 @@ export const DashboardPage = () => {
             })}
           </div>
 
-          {/* REFACTOR FLEX SOLID: Eliminamos max-h-[145px] para permitir expansión natural fluida */}
-          <div className="flex-1 flex flex-col space-y-3 pt-1">
+          <div className="flex-1 flex flex-col space-y-2">
             <div className="flex justify-between items-center text-[10px] text-text-muted font-mono uppercase tracking-wider px-0.5 shrink-0">
-              <span>Obligaciones para el día:</span>
+              <span>Vencimientos del día:</span>
               <span className="font-bold text-primary bg-gray-100 px-1.5 py-0.5 rounded">
                 {infoDiaSeleccionado
                   ? `${infoDiaSeleccionado.nombre} ${infoDiaSeleccionado.numeroDia}`
@@ -401,13 +440,12 @@ export const DashboardPage = () => {
               </span>
             </div>
 
-            {/* Contenedor adaptativo sin límites fijos artificiales */}
             <div className="overflow-y-auto space-y-2 pr-1 flex-1">
               {tareasDiaSeleccionado.length === 0 ? (
                 <div className="text-center py-12 text-text-muted space-y-2 border border-dashed border-gray-100 rounded-xl bg-gray-50/30">
-                  <AlertCircle className="w-6 h-6 text-text-muted/30 mx-auto" />
+                  <AlertCircle className="w-5 h-5 text-text-muted/40 mx-auto" />
                   <p className="text-[11px] font-medium">
-                    No registras vencimientos este día.
+                    No se registran tareas corporativas para este día.
                   </p>
                 </div>
               ) : (
@@ -415,18 +453,18 @@ export const DashboardPage = () => {
                   <div
                     key={t.id}
                     onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
-                    className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white hover:border-gray-200 transition-all cursor-pointer group"
+                    className="p-2 bg-gray-50 border border-gray-100 rounded-md flex justify-between items-center text-[11px] hover:shadow-2xs transition-all animate-in fade-in zoom-in-95 duration-100 cursor-pointer"
                   >
                     <div className="truncate space-y-0.5 max-w-[70%]">
-                      <p className="font-bold text-primary truncate group-hover:text-accent transition-colors">
+                      <p className="font-bold text-primary truncate">
                         {t.clientes?.razon_social}
                       </p>
-                      <p className="text-text-muted truncate font-medium">
+                      <p className="text-text-muted truncate">
                         {t.impuestos?.nombre}
                       </p>
                     </div>
                     <span
-                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wide shrink-0 ${
+                      className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase ${
                         t.estado_tarea === "PRESENTADO"
                           ? "bg-success/10 text-success border-success/20"
                           : "bg-amber-500/10 text-amber-600 border-amber-500/20"
