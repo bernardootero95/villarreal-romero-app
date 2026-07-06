@@ -23,7 +23,7 @@ export const usuariosService = {
       usuario_id: user.id,
       accion,
       modulo,
-      text_id: id, // O el campo homólogo de tu tabla de auditoría para el ID del registro afectado
+      text_id: id,
       registro_id: id,
       datos_previos: previo,
       datos_nuevos: nuevo
@@ -53,12 +53,10 @@ export const usuariosService = {
     return data;
   },
 
-  // NUEVA FUNCIÓN DE ACTUALIZACIÓN
+  // Actualización básica de metadatos
   async update(id: string, formData: UsuarioFormData) {
-    // 1. Capturamos el estado actual antes de cambiarlo
     const { data: previo } = await supabase.from('usuarios').select('*').eq('id', id).single();
 
-    // 2. Ejecutamos la actualización
     const { data, error } = await supabase
       .from('usuarios')
       .update({
@@ -74,12 +72,11 @@ export const usuariosService = {
 
     if (error) throw error;
 
-    // 3. Dejamos rastro en la auditoría
     await this.registrarAuditoria('MODIFICAR', 'USUARIOS', id, previo, data);
     return data;
   },
 
-  // Soft Delete (Marcar como inactivo y guardar timestamp)
+  // Soft Delete
   async delete(id: string) {
     const { data: previo } = await supabase.from('usuarios').select('*').eq('id', id).single();
     
@@ -91,5 +88,25 @@ export const usuariosService = {
     if (error) throw error;
 
     await this.registrarAuditoria('ELIMINAR', 'USUARIOS', id, previo, { eliminado: true });
+  },
+
+  /**
+   * LÓGICA SOLID: Fuerza el cambio de contraseña de cualquier usuario sin depender de correos SMTP reales.
+   * Invoca la API administrativa de Supabase Auth mediante el bypass de privilegios por ID.
+   */
+  async forzarCambioPassword(usuarioId: string, nuevaClave: string): Promise<void> {
+    if (!usuarioId || nuevaClave.length < 6) {
+      throw new Error("La nueva clave de acceso debe tener por lo menos 6 caracteres.");
+    }
+
+    const { error } = await supabase.auth.admin.updateUserById(usuarioId, {
+      password: nuevaClave.trim()
+    });
+
+    if (error) {
+      throw new Error(`Fallo administrativo de autenticación: ${error.message}`);
+    }
+
+    await this.registrarAuditoria('RESET_PASSWORD_FORZADO', 'USUARIOS', usuarioId, { info: 'Contraseña alterada de forma remota por el Ingeniero' }, null);
   }
 };

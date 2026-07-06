@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { type Usuario } from "./types";
 import { usuariosService } from "./usuariosService";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   UserPlus,
   Search,
@@ -8,19 +9,30 @@ import {
   Edit2,
   ChevronLeft,
   ChevronRight,
+  KeyRound,
 } from "lucide-react";
 import { UserForm } from "./UserForm";
+import { ResetPasswordModal } from "./ResetPasswordModal";
 
 export const UsersPage = () => {
+  const { perfil } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // ESTADOS Y CONSTANTES PARA PAGINACIÓN
+  // Estado para capturar el objetivo de cambio remoto de clave
+  const [usuarioClaveTarget, setUsuarioClaveTarget] = useState<Usuario | null>(
+    null,
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 5; // Puedes cambiar este número para mostrar más o menos filas
+  const ITEMS_PER_PAGE = 5;
+
+  // LÓGICA SOLID: El control de redefinición técnica se asocia únicamente a los roles de infraestructura
+  const puedeAdministrar =
+    perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
   const fetchUsuarios = async () => {
     try {
@@ -38,7 +50,6 @@ export const UsersPage = () => {
     fetchUsuarios();
   }, []);
 
-  // Si el usuario escribe algo en el buscador, regresamos a la página 1 para evitar que la tabla quede vacía
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
@@ -68,7 +79,6 @@ export const UsersPage = () => {
     setShowForm(true);
   };
 
-  // 1. Aplicamos el Filtro de búsqueda primero
   const usuariosFiltrados = usuarios.filter(
     (u) =>
       u.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,10 +86,8 @@ export const UsersPage = () => {
       u.username.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  // 2. Lógica Matemática de Paginación
   const totalPages = Math.ceil(usuariosFiltrados.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  // 3. Cortamos el arreglo para obtener solo los de la página actual
   const paginatedUsuarios = usuariosFiltrados.slice(
     startIndex,
     startIndex + ITEMS_PER_PAGE,
@@ -199,6 +207,17 @@ export const UsersPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {/* BOTÓN INYECTADO: Abre la sobreescritura administrativa de clave provisional */}
+                        {puedeAdministrar && user.id !== perfil?.id && (
+                          <button
+                            onClick={() => setUsuarioClaveTarget(user)}
+                            className="text-text-muted hover:text-accent p-2 transition-colors bg-gray-50 hover:bg-accent/10 rounded-md border border-gray-100"
+                            title="Sobreescribir Contraseña Remotamente"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+                        )}
+
                         <button
                           onClick={() => handleEdit(user)}
                           className="text-text-muted hover:text-accent p-2 transition-colors"
@@ -223,7 +242,6 @@ export const UsersPage = () => {
           </table>
         </div>
 
-        {/* CONTROLES DE PAGINACIÓN */}
         {!loading && usuariosFiltrados.length > 0 && (
           <div className="p-4 border-t border-gray-100 bg-surface flex items-center justify-between text-sm">
             <span className="text-text-muted">
@@ -254,11 +272,9 @@ export const UsersPage = () => {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-
               <span className="text-text-muted font-medium px-2">
                 Página {currentPage} de {totalPages}
               </span>
-
               <button
                 onClick={() =>
                   setCurrentPage((prev) => Math.min(prev + 1, totalPages))
@@ -286,6 +302,14 @@ export const UsersPage = () => {
             setUsuarioEditando(null);
             fetchUsuarios();
           }}
+        />
+      )}
+
+      {/* MODAL INYECTADO */}
+      {usuarioClaveTarget && (
+        <ResetPasswordModal
+          usuario={usuarioClaveTarget}
+          onClose={() => setUsuarioClaveTarget(null)}
         />
       )}
     </div>
