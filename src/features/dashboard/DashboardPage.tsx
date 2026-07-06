@@ -30,22 +30,18 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [errorConexion, setErrorConexion] = useState<string | null>(null);
 
-  // LÓGICA SOLID: Extensión del cálculo del mini-calendario a 7 días (Lunes a Domingo)
   const calcularSemanaActual = () => {
     const hoy = new Date();
     const diaActual = hoy.getDay();
-    // Ajuste de rango si hoy es Domingo (0), la distancia debe ser -6 para volver al Lunes
     const distanciaAlLunes = diaActual === 0 ? -6 : 1 - diaActual;
 
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() + distanciaAlLunes);
 
-    // Agregamos Sábado y Domingo al diccionario de renderizado
     const nombresDias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
     const semana: any[] = [];
     let banderaDiaSeleccionado = "";
 
-    // Modificado de 5 a 7 para mapear la semana contable completa
     for (let i = 0; i < 7; i++) {
       const diaParaCalcular = new Date(lunes);
       diaParaCalcular.setDate(lunes.getDate() + i);
@@ -253,14 +249,14 @@ export const DashboardPage = () => {
       </div>
 
       {/* ÁREA CENTRAL DEL DASHBOARD */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
           {/* Sección Alertas Críticas */}
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
             <div className="flex items-center gap-2 text-danger border-b border-gray-100 pb-3">
               <AlertTriangle className="w-5 h-5" />
               <h3 className="text-sm font-title font-bold uppercase tracking-wide">
-                Alertas Críticas de Vencimiento (Próximos 5 días)
+                Alertas Críticas de Vencimiento (Próximos 5 days)
               </h3>
             </div>
 
@@ -340,8 +336,8 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* COMPONENTE: Agenda Semanal Completa */}
-        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4 flex flex-col">
+        {/* COMPONENTE: Agenda Semanal Completa Autodimensionable */}
+        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-5 flex flex-col h-full">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-title font-bold text-primary uppercase tracking-wide">
@@ -349,8 +345,7 @@ export const DashboardPage = () => {
             </h3>
           </div>
 
-          {/* CORREGIDO: Modificado grid-cols-5 a grid-cols-7 para dar espacio al fin de semana */}
-          <div className="grid grid-cols-7 gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
+          <div className="grid grid-cols-7 gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-100 shrink-0">
             {diasSemana.map((dia) => {
               const tareasDelDia = vencimientosSemana.filter(
                 (v) => v.fecha_limite === dia.fechaStr,
@@ -395,8 +390,9 @@ export const DashboardPage = () => {
             })}
           </div>
 
-          <div className="flex-1 flex flex-col space-y-2">
-            <div className="flex justify-between items-center text-[10px] text-text-muted font-mono uppercase tracking-wider px-0.5">
+          {/* REFACTOR FLEX SOLID: Eliminamos max-h-[145px] para permitir expansión natural fluida */}
+          <div className="flex-1 flex flex-col space-y-3 pt-1">
+            <div className="flex justify-between items-center text-[10px] text-text-muted font-mono uppercase tracking-wider px-0.5 shrink-0">
               <span>Obligaciones para el día:</span>
               <span className="font-bold text-primary bg-gray-100 px-1.5 py-0.5 rounded">
                 {infoDiaSeleccionado
@@ -405,10 +401,11 @@ export const DashboardPage = () => {
               </span>
             </div>
 
-            <div className="overflow-y-auto max-h-[145px] space-y-2 pr-1 flex-1">
+            {/* Contenedor adaptativo sin límites fijos artificiales */}
+            <div className="overflow-y-auto space-y-2 pr-1 flex-1">
               {tareasDiaSeleccionado.length === 0 ? (
-                <div className="text-center py-8 text-text-muted space-y-1">
-                  <AlertCircle className="w-5 h-5 text-text-muted/40 mx-auto" />
+                <div className="text-center py-12 text-text-muted space-y-2 border border-dashed border-gray-100 rounded-xl bg-gray-50/30">
+                  <AlertCircle className="w-6 h-6 text-text-muted/30 mx-auto" />
                   <p className="text-[11px] font-medium">
                     No registras vencimientos este día.
                   </p>
@@ -418,18 +415,18 @@ export const DashboardPage = () => {
                   <div
                     key={t.id}
                     onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
-                    className="p-2 bg-gray-50 border border-gray-100 rounded-md flex justify-between items-center text-[11px] hover:shadow-2xs transition-all animate-in fade-in zoom-in-95 duration-100 cursor-pointer"
+                    className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white hover:border-gray-200 transition-all cursor-pointer group"
                   >
                     <div className="truncate space-y-0.5 max-w-[70%]">
-                      <p className="font-bold text-primary truncate">
+                      <p className="font-bold text-primary truncate group-hover:text-accent transition-colors">
                         {t.clientes?.razon_social}
                       </p>
-                      <p className="text-text-muted truncate">
+                      <p className="text-text-muted truncate font-medium">
                         {t.impuestos?.nombre}
                       </p>
                     </div>
                     <span
-                      className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase ${
+                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wide shrink-0 ${
                         t.estado_tarea === "PRESENTADO"
                           ? "bg-success/10 text-success border-success/20"
                           : "bg-amber-500/10 text-amber-600 border-amber-500/20"
