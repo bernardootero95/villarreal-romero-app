@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { clientesService } from "./clientesService";
 import type { ClienteConContador } from "./types";
@@ -16,14 +16,20 @@ import {
 } from "lucide-react";
 import { ClienteForm } from "./ClienteForm";
 import { FichaObligaciones } from "./FichaObligaciones";
-import { ClienteCargaMasiva } from "./ClienteCargaMasiva";
 import { useNavigate } from "react-router-dom";
+
+// OPTIMIZACIÓN SOLID: Carga dinámica (Dynamic Import) del componente pesado de Excel
+const ClienteCargaMasiva = lazy(() =>
+  import("./ClienteCargaMasiva").then((module) => ({
+    default: module.ClienteCargaMasiva,
+  })),
+);
 
 export const ClientesPage = () => {
   const { perfil } = useAuth();
+  const navigate = useNavigate();
   const [clientes, setClientes] = useState<ClienteConContador[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Control de Modales
   const [showForm, setShowForm] = useState(false);
@@ -35,7 +41,7 @@ export const ClientesPage = () => {
 
   // Estados de Búsqueda y Filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedResponsable, setSelectedResponsable] = useState(""); // <-- Nuevo estado para el filtro de responsable
+  const [selectedResponsable, setSelectedResponsable] = useState("");
 
   // ESTADOS Y CONSTANTES PARA PAGINACIÓN
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,9 +66,8 @@ export const ClientesPage = () => {
     fetchClientes();
   }, []);
 
-  // Resetear paginación cuando cambie cualquier criterio de búsqueda
   useEffect(() => {
-    setCurrentPage(1);
+    currentPage !== 1 && setCurrentPage(1);
   }, [searchTerm, selectedResponsable]);
 
   const handleDelete = async (id: string) => {
@@ -90,7 +95,6 @@ export const ClientesPage = () => {
     setShowForm(true);
   };
 
-  // LÓGICA SOLID: Extraer la lista única de responsables disponibles en la base de datos actual para el selector
   const listaResponsables = Array.from(
     new Set(
       clientes
@@ -99,7 +103,6 @@ export const ClientesPage = () => {
     ),
   ).sort();
 
-  // LÓGICA FILTRADO MULTI-CRITERIO (NIT, Razón Social y Responsable Asignado)
   const clientesFiltrados = clientes.filter((c) => {
     const matchesSearch =
       c.razon_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -112,7 +115,6 @@ export const ClientesPage = () => {
     return matchesSearch && matchesResponsable;
   });
 
-  // Ordenamiento alfabético A-Z por Nombre/Razón Social
   clientesFiltrados.sort((a, b) =>
     a.razon_social.localeCompare(b.razon_social, "es", { sensitivity: "base" }),
   );
@@ -157,7 +159,6 @@ export const ClientesPage = () => {
       </div>
 
       <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs flex flex-col">
-        {/* BARRA DE HERRAMIENTAS COHESIVA CON FILTROS EN LÍNEA */}
         <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
           <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -367,14 +368,25 @@ export const ClientesPage = () => {
         />
       )}
 
+      {/* RENDERIZADO CON SUSPENSE: Se descarga el chunk 'vendor-excel' únicamente si showBulk es verdadero */}
       {showBulk && (
-        <ClienteCargaMasiva
-          onClose={() => setShowBulk(false)}
-          onSuccess={() => {
-            setShowBulk(false);
-            fetchClientes();
-          }}
-        />
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 bg-primary/20 backdrop-blur-xs flex items-center justify-center z-50">
+              <div className="bg-surface p-6 rounded-lg shadow-xl font-mono text-xs uppercase animate-pulse">
+                Invocando analizador XLSX...
+              </div>
+            </div>
+          }
+        >
+          <ClienteCargaMasiva
+            onClose={() => setShowBulk(false)}
+            onSuccess={() => {
+              setShowBulk(false);
+              fetchClientes();
+            }}
+          />
+        </Suspense>
       )}
 
       {clienteObligaciones && (
