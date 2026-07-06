@@ -91,22 +91,34 @@ export const usuariosService = {
   },
 
   /**
-   * LÓGICA SOLID: Fuerza el cambio de contraseña de cualquier usuario sin depender de correos SMTP reales.
-   * Invoca la API administrativa de Supabase Auth mediante el bypass de privilegios por ID.
+   * REFACTOR SOLID (SRP & SEGURIDAD): Migrado de cliente directo a invocación de Edge Function segura.
+   * Evita la filtración de credenciales maestras y soluciona el error 401 de manera definitiva.
    */
   async forzarCambioPassword(usuarioId: string, nuevaClave: string): Promise<void> {
     if (!usuarioId || nuevaClave.length < 6) {
       throw new Error("La nueva clave de acceso debe tener por lo menos 6 caracteres.");
     }
 
-    const { error } = await supabase.auth.admin.updateUserById(usuarioId, {
-      password: nuevaClave.trim()
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Invocamos la Edge Function pasando las credenciales y el autorizador en el body seguro
+    const { data, error } = await supabase.functions.invoke('resetear-clave', {
+      body: {
+        usuario_id: usuarioId,
+        nueva_clave: nuevaClave.trim(),
+        admin_id: user?.id
+      }
     });
 
     if (error) {
-      throw new Error(`Fallo administrativo de autenticación: ${error.message}`);
+      console.error('Error de red al invocar Edge Function:', error);
+      throw new Error('No se pudo establecer comunicación con el módulo de rescate.');
     }
 
-    await this.registrarAuditoria('RESET_PASSWORD_FORZADO', 'USUARIOS', usuarioId, { info: 'Contraseña alterada de forma remota por el Ingeniero' }, null);
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
+    await this.registrarAuditoria('RESET_PASSWORD_FORZADO', 'USUARIOS', usuarioId, { info: 'Contraseña alterada mediante túnel Edge Function por administración' }, null);
   }
 };
