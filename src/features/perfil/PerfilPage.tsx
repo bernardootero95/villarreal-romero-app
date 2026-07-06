@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
+import { clientesService } from "../clientes/clientesService";
+import type { ClienteConContador } from "../clientes/types";
 import {
   UserCircle,
   Mail,
@@ -9,10 +11,15 @@ import {
   Key,
   Save,
   Edit,
+  Building2,
+  FolderOpen,
+  ArrowRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const PerfilPage = () => {
   const { perfil } = useAuth();
+  const navigate = useNavigate();
   const [newPassword, setNewPassword] = useState("");
   const [correoNotif, setCorreoNotif] = useState("");
   const [loadingPass, setLoadingPass] = useState(false);
@@ -20,12 +27,38 @@ export const PerfilPage = () => {
   const [mensajePass, setMensajePass] = useState({ tipo: "", texto: "" });
   const [mensajeCorreo, setMensajeCorreo] = useState({ tipo: "", texto: "" });
 
+  // Estados nuevos para el listado de clientes bajo encargo
+  const [misClientes, setMisClientes] = useState<ClienteConContador[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(true);
+
   // Sincronizar el estado local cuando el perfil termine de cargar
   useEffect(() => {
     if (perfil?.correo_notificacion) {
       setCorreoNotif(perfil.correo_notificacion);
     }
   }, [perfil]);
+
+  // LÓGICA SOLID: Carga aislada del portafolio de clientes asignados al usuario en sesión
+  useEffect(() => {
+    const cargarMisClientes = async () => {
+      if (!perfil?.id) return;
+      try {
+        setLoadingClientes(true);
+        const todosLosClientes = await clientesService.getAll();
+        // Filtramos en memoria O(N) para extraer únicamente los clientes activos bajo su cargo
+        const filtrados = todosLosClientes.filter(
+          (c) => c.contador_id === perfil.id && c.estado === "ACTIVO",
+        );
+        setMisClientes(filtrados);
+      } catch (error) {
+        console.error("Error cargando portafolio de clientes:", error);
+      } finally {
+        setLoadingClientes(false);
+      }
+    };
+
+    cargarMisClientes();
+  }, [perfil?.id]);
 
   if (!perfil) return null;
 
@@ -75,7 +108,6 @@ export const PerfilPage = () => {
       setLoadingCorreo(true);
       setMensajeCorreo({ tipo: "", texto: "" });
 
-      // Actualizamos solo en nuestra tabla pública de usuarios
       const { error } = await supabase
         .from("usuarios")
         .update({
@@ -107,7 +139,8 @@ export const PerfilPage = () => {
           Mi Perfil
         </h1>
         <p className="text-text-muted">
-          Gestiona tus preferencias de notificación y seguridad.
+          Gestiona tus preferencias de notificación, seguridad y revisa tu
+          portafolio asignado.
         </p>
       </div>
 
@@ -178,7 +211,7 @@ export const PerfilPage = () => {
               )}
               <div>
                 <label className="block text-xs font-semibold text-text-muted uppercase mb-1">
-                  Correo Electrónico para Alertas
+                  Correo Electronics para Alertas
                 </label>
                 <input
                   type="email"
@@ -255,6 +288,63 @@ export const PerfilPage = () => {
             </button>
           </form>
         </div>
+      </div>
+
+      {/* SECCIÓN NUEVA: PORTAFOLIO DE EMPRESAS ASIGNADAS (Ancho completo) */}
+      <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center gap-2 mb-4 border-b border-gray-50 pb-3">
+          <FolderOpen className="w-5 h-5 text-accent" />
+          <div>
+            <h3 className="text-lg font-bold text-primary">
+              Mis Empresas Asignadas
+            </h3>
+            <p className="text-xs text-text-muted">
+              Listado de clientes corporativos bajo tu responsabilidad directa.
+            </p>
+          </div>
+        </div>
+
+        {loadingClientes ? (
+          <p className="text-sm text-text-muted text-center py-6 font-mono">
+            Sincronizando archivo corporativo...
+          </p>
+        ) : misClientes.length === 0 ? (
+          <div className="p-8 text-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200 space-y-1.5">
+            <Building2 className="w-8 h-8 text-text-muted/40 mx-auto" />
+            <p className="text-sm font-medium text-text-main">
+              No registras clientes a tu cargo
+            </p>
+            <p className="text-xs text-text-muted">
+              Si consideras que es un error, comunícate con la dirección o
+              ingeniería.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {misClientes.map((cliente) => (
+              <div
+                key={cliente.id}
+                onClick={() => navigate(`/clientes/${cliente.id}`)}
+                className="p-4 bg-gray-50 hover:bg-white border border-gray-100 hover:border-gray-200 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-2xs group"
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <div className="w-9 h-9 rounded-lg bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/5 group-hover:bg-primary group-hover:text-surface transition-colors">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <div className="truncate space-y-0.5">
+                    <h4 className="text-sm font-bold text-primary truncate group-hover:text-accent transition-colors">
+                      {cliente.razon_social}
+                    </h4>
+                    <p className="text-xs text-text-muted font-mono bg-gray-100 group-hover:bg-gray-50 px-2 py-0.5 rounded w-fit">
+                      NIT: {cliente.nit}-{cliente.dv}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-text-muted group-hover:translate-x-1 group-hover:text-accent transition-all shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
