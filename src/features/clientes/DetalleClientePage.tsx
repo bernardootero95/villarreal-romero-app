@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext"; // <-- Importación del contexto de autenticación
 import {
   ArrowLeft,
   Building2,
@@ -12,7 +13,7 @@ import {
   Clock,
   Plus,
   FileText,
-  Edit2, // <-- Ícono para el gatillo de edición
+  Edit2,
 } from "lucide-react";
 import type { ClienteConContador } from "./types";
 import {
@@ -22,11 +23,12 @@ import {
 import { clientesService } from "./clientesService";
 import { clienteImpuestosService } from "./clienteImpuestosService";
 import { FichaObligaciones } from "./FichaObligaciones";
-import { ClienteForm } from "./ClienteForm"; // <-- Reutilización limpia del formulario existente
+import { ClienteForm } from "./ClienteForm";
 
 export const DetalleClientePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { perfil } = useAuth(); // <-- Acceso a los metadatos de sesión del usuario contable
 
   const [cliente, setCliente] = useState<ClienteConContador | null>(null);
   const [loadingCliente, setLoadingCliente] = useState(true);
@@ -35,10 +37,14 @@ export const DetalleClientePage = () => {
 
   // Modales de Control
   const [showObligacionesModal, setShowObligacionesModal] = useState(false);
-  const [showForm, setShowForm] = useState(false); // <-- Estado para abrir la edición
+  const [showForm, setShowForm] = useState(false);
 
   const [impuestosCargo, setImpuestosCargo] = useState<any[]>([]);
   const [loadingImpuestos, setLoadingImpuestos] = useState(true);
+
+  // LÓGICA SOLID: Validación de permisos centralizada e inequívoca para Villarreal-Romero
+  const puedeAdministrar =
+    perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
   // 1. Cargar información base del cliente corporativo
   const fetchClienteData = async () => {
@@ -155,14 +161,16 @@ export const DetalleClientePage = () => {
           Volver
         </button>
 
-        {/* BOTÓN NUEVO: Permite editar toda la data (Contacto y Responsable) */}
-        <button
-          onClick={() => setShowForm(true)}
-          className="border border-gray-200 bg-surface hover:bg-gray-50 text-text-main text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-2xs"
-        >
-          <Edit2 className="w-3.5 h-3.5 text-text-muted" />
-          Editar Información
-        </button>
+        {/* RESTRICCIÓN SOLID: Renderizado condicional del botón de edición física */}
+        {puedeAdministrar && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="border border-gray-200 bg-surface hover:bg-gray-50 text-text-main text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-2xs"
+          >
+            <Edit2 className="w-3.5 h-3.5 text-text-muted" />
+            Editar Información
+          </button>
+        )}
       </div>
 
       {/* Encabezado Principal */}
@@ -264,12 +272,15 @@ export const DetalleClientePage = () => {
                 <h3 className="text-lg font-title font-semibold text-primary">
                   Impuestos y Obligaciones a Cargo
                 </h3>
-                <button
-                  onClick={() => setShowObligacionesModal(true)}
-                  className="text-xs font-semibold bg-primary text-surface px-3 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Gestionar Obligaciones
-                </button>
+                {/* RESTRICCIÓN SOLID: Renderizado condicional del botón de gestión masiva de obligaciones */}
+                {puedeAdministrar && (
+                  <button
+                    onClick={() => setShowObligacionesModal(true)}
+                    className="text-xs font-semibold bg-primary text-surface px-3 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Gestionar Obligaciones
+                  </button>
+                )}
               </div>
 
               {loadingImpuestos ? (
@@ -364,8 +375,8 @@ export const DetalleClientePage = () => {
         </div>
       </div>
 
-      {/* MODAL GESTIÓN DE OBLIGACIONES */}
-      {showObligacionesModal && (
+      {/* MODAL GESTIÓN DE OBLIGACIONES (Bajo validación de seguridad perimetral) */}
+      {showObligacionesModal && puedeAdministrar && (
         <FichaObligaciones
           cliente={cliente}
           onClose={() => {
@@ -375,14 +386,14 @@ export const DetalleClientePage = () => {
         />
       )}
 
-      {/* FORMULARIO DE EDICIÓN REUTILIZADO (S SOLID) */}
-      {showForm && (
+      {/* FORMULARIO DE EDICIÓN REUTILIZADO (Bajo validación de seguridad perimetral) */}
+      {showForm && puedeAdministrar && (
         <ClienteForm
-          clienteAEditar={cliente} // <-- Pasamos el cliente cargado actual para poblar campos
+          clienteAEditar={cliente}
           onClose={() => setShowForm(false)}
           onSuccess={() => {
             setShowForm(false);
-            fetchClienteData(); // <-- Refrescamos los datos inmediatamente para actualizar UI
+            fetchClienteData();
           }}
         />
       )}
