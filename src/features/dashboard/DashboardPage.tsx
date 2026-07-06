@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { dashboardService } from "./dashboardService";
-import { impuestosService } from "../impuestos/impuestosService"; // <-- Importación para estadísticas globales
+import { impuestosService } from "../impuestos/impuestosService";
+import { clientesService } from "../clientes/clientesService";
+import { clienteImpuestosService } from "../clientes/clienteImpuestosService";
 import {
   vencimientosService,
   type Vencimiento,
@@ -18,6 +20,7 @@ import {
   Flame,
   FileText,
   Percent,
+  ListFilter,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -33,8 +36,15 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [errorConexion, setErrorConexion] = useState<string | null>(null);
 
-  // Estado para capturar el catálogo global si el usuario es Ingeniero/Administrador
-  const [totalImpuestosSistema, setTotalImpuestosSistema] = useState<number>(0);
+  // Estados para el resumen del catálogo de impuestos (Exclusivo Ingeniero/Admin)
+  const [resumenImpuestos, setResumenImpuestos] = useState<
+    Array<{
+      id: string;
+      nombre: string;
+      periodicidad: string;
+      empresasContadas: number;
+    }>
+  >([]);
 
   const calcularSemanaActual = () => {
     const hoy = new Date();
@@ -91,22 +101,48 @@ export const DashboardPage = () => {
           ? String(perfil.cargo).trim()
           : "Contador";
 
-        // Carga paralela de métricas core y catálogo fiscal para optimizar rendimiento
-        const [dataMetricas, dataVencimientos, listaImpuestos] =
-          await Promise.all([
-            dashboardService.getMetricasContador(session.user.id, cargoLimpio),
-            vencimientosService.getVencimientosMes(
-              hoy.getFullYear(),
-              hoy.getMonth(),
-              session.user.id,
-              cargoLimpio,
-            ),
-            impuestosService.getAll(),
-          ]);
+        const [
+          dataMetricas,
+          dataVencimientos,
+          listaImpuestos,
+          todosLosClientes,
+        ] = await Promise.all([
+          dashboardService.getMetricasContador(session.user.id, cargoLimpio),
+          vencimientosService.getVencimientosMes(
+            hoy.getFullYear(),
+            hoy.getMonth(),
+            session.user.id,
+            cargoLimpio,
+          ),
+          impuestosService.getAll(),
+          clientesService.getAll(),
+        ]);
 
         setMetricas(dataMetricas);
         setVencimientosSemana(dataVencimientos || []);
-        setTotalImpuestosSistema(listaImpuestos?.length || 0);
+
+        // Si es Ingeniero, construimos un cruce analítico en memoria O(N+M) de obligaciones por impuesto
+        if (cargoLimpio === "Ingeniero") {
+          const promesasAsignaciones = listaImpuestos.map(async (imp) => {
+            const { count } = await supabase
+              .from("cliente_impuestos")
+              .select("*", { count: "exact", head: true })
+              .eq("impuesto_id", imp.id)
+              .eq("estado", "ACTIVO")
+              .is("eliminado", null);
+
+            return {
+              id: imp.id,
+              nombre: imp.nombre,
+              periodicidad: imp.periodicidad,
+              empresasContadas: count || 0,
+            };
+          });
+
+          const resImpuestosCalculados =
+            await Promise.all(promesasAsignaciones);
+          setResumenImpuestos(resImpuestosCalculados);
+        }
       } catch (error: any) {
         console.error("Error crítico de sincronización en Dashboard:", error);
         setErrorConexion(
@@ -170,9 +206,7 @@ export const DashboardPage = () => {
     );
   }
 
-  // Condicional SOLID de Visualización según portafolio asignado (Ingeniero / Admin General)
-  const esVistaGlobal =
-    perfil?.cargo === "Ingeniero" || metricas.totalClientes === 0;
+  const esIngeniero = perfil?.cargo === "Ingeniero";
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -190,20 +224,20 @@ export const DashboardPage = () => {
         </p>
       </div>
 
-      {/* GRID DINÁMICO ADAPTADO AL ROL DEL USUARIO */}
+      {/* RECUADROS SUPERIORES CORE: Estructura original restablecida con etiquetas dinámicas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Tarjeta 1: Portafolio */}
+        {/* Tarjeta 1: Empresas */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esVistaGlobal ? "Total Empresas" : "Mis Empresas"}
+              {esIngeniero ? "Total Empresas" : "Mis Empresas"}
             </span>
             <p className="text-3xl font-bold text-primary font-title">
-              {esVistaGlobal ? metricas.totalClientes : metricas.totalClientes}
+              {metricas.totalClientes}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esVistaGlobal
-                ? "Directorio general de la firma"
+              {esIngeniero
+                ? "Empresas dadas de alta en el sistema"
                 : "Clientes bajo tu cargo"}
             </p>
           </div>
@@ -212,44 +246,38 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Tarjeta 2: Distribución Dinámica */}
+        {/* Tarjeta 2: Vencimientos Totales */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esVistaGlobal ? "Estructura Fiscal" : "Vencimientos Mes"}
+              {esIngeniero ? "Vencimientos Firma" : "Vencimientos Mes"}
             </span>
             <p className="text-3xl font-bold text-primary font-title">
-              {esVistaGlobal
-                ? totalImpuestosSistema
-                : metricas.totalVencimientos}
+              {metricas.totalVencimientos}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esVistaGlobal
-                ? "Impuestos parametrizados"
+              {esIngeniero
+                ? "Calendarios totales sembrados este mes"
                 : "Obligaciones totales del periodo"}
             </p>
           </div>
           <div className="w-12 h-12 bg-accent/20 text-primary rounded-xl flex items-center justify-center">
-            {esVistaGlobal ? (
-              <FileText className="w-6 h-6" />
-            ) : (
-              <Calendar className="w-6 h-6" />
-            )}
+            <Calendar className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Tarjeta 3: Distribución Dinámica */}
+        {/* Tarjeta 3: Pendientes */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esVistaGlobal ? "Carga Operativa" : "Por Ejecutar"}
+              {esIngeniero ? "Pendientes Globales" : "Por Ejecutar"}
             </span>
             <p className="text-3xl font-bold text-amber-600 font-title">
               {metricas.tareasPendientes}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esVistaGlobal
-                ? "Pendientes totales en la firma"
+              {esIngeniero
+                ? "Tareas sin presentar de toda la firma"
                 : "Pendientes y en revisión"}
             </p>
           </div>
@@ -258,27 +286,23 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Tarjeta 4: Distribución Dinámica */}
+        {/* Tarjeta 4: Efectividad */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esVistaGlobal ? "Rendimiento Global" : "Cumplimiento"}
+              Cumplimiento
             </span>
             <p className="text-3xl font-bold text-success font-title">
               {metricas.porcentajeEfectividad}%
             </p>
             <p className="text-[11px] text-text-muted">
-              {esVistaGlobal
-                ? "Efectividad general de la firma"
+              {esIngeniero
+                ? "Efectividad operativa global de la firma"
                 : "Efectividad de presentación"}
             </p>
           </div>
           <div className="w-12 h-12 bg-success/10 text-success rounded-xl flex items-center justify-center">
-            {esVistaGlobal ? (
-              <Percent className="w-6 h-6" />
-            ) : (
-              <CheckCircle2 className="w-6 h-6" />
-            )}
+            <CheckCircle2 className="w-6 h-6" />
           </div>
         </div>
       </div>
@@ -286,67 +310,96 @@ export const DashboardPage = () => {
       {/* ÁREA CENTRAL DEL DASHBOARD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
-          {/* Sección Alertas Críticas */}
-          <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2 text-danger border-b border-gray-100 pb-3">
-              <AlertTriangle className="w-5 h-5" />
-              <h3 className="text-sm font-title font-bold uppercase tracking-wide">
-                {esVistaGlobal
-                  ? "Alertas Críticas Globales (Próximos 5 días)"
-                  : "Alertas Críticas de Vencimiento (Próximos 5 días)"}
-              </h3>
-            </div>
-
-            <div className="divide-y divide-gray-100">
-              {metricas.alertasCriticas?.length === 0 ? (
-                <div className="text-center py-8 text-text-muted space-y-1">
-                  <CheckCircle2 className="w-8 h-8 text-success/60 mx-auto" />
-                  <p className="text-xs font-medium text-text-main">
-                    ¡Firma al día!
-                  </p>
-                  <p className="text-[11px]">
-                    No se registran obligaciones críticas pendientes en el
-                    sistema.
-                  </p>
-                </div>
-              ) : (
-                metricas.alertasCriticas?.map((alerta: any) => (
+          {/* CONTROL INYECTADO: Si es Ingeniero muestra el cuadro estadístico de Impuestos, si no, Alertas Críticas */}
+          {esIngeniero ? (
+            <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
+              <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
+                <ListFilter className="w-5 h-5 text-accent" />
+                <h3 className="text-sm font-title font-bold uppercase tracking-wide">
+                  Distribución Analítica de Obligaciones del Catálogo
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1">
+                {resumenImpuestos.map((imp) => (
                   <div
-                    key={alerta.id}
-                    onClick={() => navigate(`/clientes/${alerta.clientes.id}`)}
-                    className="py-3 flex justify-between items-center hover:bg-gray-50/60 px-2 rounded-lg cursor-pointer transition-colors group"
+                    key={imp.id}
+                    className="p-3 bg-gray-50 border border-gray-100 rounded-xl flex justify-between items-center"
                   >
-                    <div className="space-y-0.5 max-w-[70%]">
-                      <p className="text-xs font-bold text-primary group-hover:text-accent transition-colors truncate">
-                        {alerta.clientes?.razon_social}
+                    <div className="truncate space-y-0.5 max-w-[70%]">
+                      <p className="text-xs font-bold text-primary truncate">
+                        {imp.nombre}
                       </p>
-                      <p className="text-[11px] text-text-muted truncate">
-                        {alerta.impuestos?.nombre} (Per: {alerta.periodo_fiscal}
-                        )
+                      <p className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+                        {imp.periodicidad}
                       </p>
                     </div>
-                    <div className="text-right flex items-center gap-3">
-                      <span className="text-[11px] font-mono bg-danger/10 text-danger px-2 py-0.5 rounded border border-danger/20 font-bold">
-                        Vence:{" "}
-                        {new Date(alerta.fecha_limite).toLocaleDateString(
-                          "es-CO",
-                          { day: "2-digit", month: "short", timeZone: "UTC" },
-                        )}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-0.5 transition-transform" />
-                    </div>
+                    <span className="text-xs font-mono font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-md border border-primary/5">
+                      {imp.empresasContadas} empresas
+                    </span>
                   </div>
-                ))
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
+              <div className="flex items-center gap-2 text-danger border-b border-gray-100 pb-3">
+                <AlertTriangle className="w-5 h-5" />
+                <h3 className="text-sm font-title font-bold uppercase tracking-wide">
+                  Alertas Críticas de Vencimiento (Próximos 5 días)
+                </h3>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {metricas.alertasCriticas?.length === 0 ? (
+                  <div className="text-center py-8 text-text-muted space-y-1">
+                    <CheckCircle2 className="w-8 h-8 text-success/60 mx-auto" />
+                    <p className="text-xs font-medium text-text-main">
+                      ¡Agenda al día!
+                    </p>
+                    <p className="text-[11px]">
+                      No tienes obligaciones críticas venciendo esta semana.
+                    </p>
+                  </div>
+                ) : (
+                  metricas.alertasCriticas?.map((alerta: any) => (
+                    <div
+                      key={alerta.id}
+                      onClick={() =>
+                        navigate(`/clientes/${alerta.clientes.id}`)
+                      }
+                      className="py-3 flex justify-between items-center hover:bg-gray-50/60 px-2 rounded-lg cursor-pointer transition-colors group"
+                    >
+                      <div className="space-y-0.5 max-w-[70%]">
+                        <p className="text-xs font-bold text-primary group-hover:text-accent transition-colors truncate">
+                          {alerta.clientes?.razon_social}
+                        </p>
+                        <p className="text-[11px] text-text-muted truncate">
+                          {alerta.impuestos?.nombre} (Per:{" "}
+                          {alerta.periodo_fiscal})
+                        </p>
+                      </div>
+                      <div className="text-right flex items-center gap-3">
+                        <span className="text-[11px] font-mono bg-danger/10 text-danger px-2 py-0.5 rounded border border-danger/20 font-bold">
+                          Vence:{" "}
+                          {new Date(alerta.fecha_limite).toLocaleDateString(
+                            "es-CO",
+                            { day: "2-digit", month: "short", timeZone: "UTC" },
+                          )}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-0.5 transition-transform" />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Sección Top Clientes */}
           <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
             <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
               <Flame className="w-5 h-5 text-amber-500" />
               <h3 className="text-sm font-title font-bold uppercase tracking-wide">
-                Top 5 Empresas con Mayor Carga Pendiente en la Firma
+                Top 5 Clientes con Mayor Carga Pendiente
               </h3>
             </div>
 
@@ -374,13 +427,13 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* COMPONENTE: Agenda Semanal Completa */}
+        {/* COMPONENTE: Agenda Semanal de Control */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4 flex flex-col h-full">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-title font-bold text-primary uppercase tracking-wide">
-              {esVistaGlobal
-                ? "Cronograma de Control General"
+              {esIngeniero
+                ? "Cronograma Base de Control Global"
                 : "Agenda Semanal de Trabajo"}
             </h3>
           </div>
@@ -430,7 +483,7 @@ export const DashboardPage = () => {
             })}
           </div>
 
-          <div className="flex-1 flex flex-col space-y-2">
+          <div className="flex-1 flex flex-col space-y-3 pt-1">
             <div className="flex justify-between items-center text-[10px] text-text-muted font-mono uppercase tracking-wider px-0.5 shrink-0">
               <span>Vencimientos del día:</span>
               <span className="font-bold text-primary bg-gray-100 px-1.5 py-0.5 rounded">
@@ -445,7 +498,7 @@ export const DashboardPage = () => {
                 <div className="text-center py-12 text-text-muted space-y-2 border border-dashed border-gray-100 rounded-xl bg-gray-50/30">
                   <AlertCircle className="w-5 h-5 text-text-muted/40 mx-auto" />
                   <p className="text-[11px] font-medium">
-                    No se registran tareas corporativas para este día.
+                    No se registras tareas corporativas para este día.
                   </p>
                 </div>
               ) : (
@@ -453,18 +506,18 @@ export const DashboardPage = () => {
                   <div
                     key={t.id}
                     onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
-                    className="p-2 bg-gray-50 border border-gray-100 rounded-md flex justify-between items-center text-[11px] hover:shadow-2xs transition-all animate-in fade-in zoom-in-95 duration-100 cursor-pointer"
+                    className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white hover:border-gray-200 transition-all cursor-pointer group"
                   >
                     <div className="truncate space-y-0.5 max-w-[70%]">
-                      <p className="font-bold text-primary truncate">
+                      <p className="font-bold text-primary truncate group-hover:text-accent transition-colors">
                         {t.clientes?.razon_social}
                       </p>
-                      <p className="text-text-muted truncate">
+                      <p className="text-text-muted truncate font-medium">
                         {t.impuestos?.nombre}
                       </p>
                     </div>
                     <span
-                      className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase ${
+                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wide shrink-0 ${
                         t.estado_tarea === "PRESENTADO"
                           ? "bg-success/10 text-success border-success/20"
                           : "bg-amber-500/10 text-amber-600 border-amber-500/20"
