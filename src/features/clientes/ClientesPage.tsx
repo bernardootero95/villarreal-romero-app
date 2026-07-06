@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
+  User,
 } from "lucide-react";
 import { ClienteForm } from "./ClienteForm";
 import { FichaObligaciones } from "./FichaObligaciones";
@@ -32,7 +33,9 @@ export const ClientesPage = () => {
   const [clienteObligaciones, setClienteObligaciones] =
     useState<ClienteConContador | null>(null);
 
+  // Estados de Búsqueda y Filtros
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedResponsable, setSelectedResponsable] = useState(""); // <-- Nuevo estado para el filtro de responsable
 
   // ESTADOS Y CONSTANTES PARA PAGINACIÓN
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,7 +52,6 @@ export const ClientesPage = () => {
     } catch (error) {
       console.error(error);
     } finally {
-      // <-- CORREGIDO: De 'filter' a 'finally'
       setLoading(false);
     }
   };
@@ -58,9 +60,10 @@ export const ClientesPage = () => {
     fetchClientes();
   }, []);
 
+  // Resetear paginación cuando cambie cualquier criterio de búsqueda
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, selectedResponsable]);
 
   const handleDelete = async (id: string) => {
     if (
@@ -87,12 +90,29 @@ export const ClientesPage = () => {
     setShowForm(true);
   };
 
-  const clientesFiltrados = clientes.filter(
-    (c) =>
-      c.razon_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.nit.includes(searchTerm),
-  );
+  // LÓGICA SOLID: Extraer la lista única de responsables disponibles en la base de datos actual para el selector
+  const listaResponsables = Array.from(
+    new Set(
+      clientes
+        .map((c) => c.usuarios?.nombre_completo)
+        .filter((nombre): nombre is string => !!nombre),
+    ),
+  ).sort();
 
+  // LÓGICA FILTRADO MULTI-CRITERIO (NIT, Razón Social y Responsable Asignado)
+  const clientesFiltrados = clientes.filter((c) => {
+    const matchesSearch =
+      c.razon_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.nit.includes(searchTerm);
+
+    const matchesResponsable =
+      selectedResponsable === "" ||
+      c.usuarios?.nombre_completo === selectedResponsable;
+
+    return matchesSearch && matchesResponsable;
+  });
+
+  // Ordenamiento alfabético A-Z por Nombre/Razón Social
   clientesFiltrados.sort((a, b) =>
     a.razon_social.localeCompare(b.razon_social, "es", { sensitivity: "base" }),
   );
@@ -137,8 +157,9 @@ export const ClientesPage = () => {
       </div>
 
       <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs flex flex-col">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-          <div className="relative max-w-md">
+        {/* BARRA DE HERRAMIENTAS COHESIVA CON FILTROS EN LÍNEA */}
+        <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+          <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
               value={searchTerm}
@@ -146,6 +167,22 @@ export const ClientesPage = () => {
               placeholder="Buscar por Razón Social o NIT..."
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none"
             />
+          </div>
+
+          <div className="relative min-w-[200px]">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted select-none pointer-events-none" />
+            <select
+              value={selectedResponsable}
+              onChange={(e) => setSelectedResponsable(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none appearance-none text-text-main font-medium cursor-pointer"
+            >
+              <option value="">Todos los Responsables</option>
+              {listaResponsables.map((resp) => (
+                <option key={resp} value={resp}>
+                  {resp}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -180,8 +217,8 @@ export const ClientesPage = () => {
                     colSpan={puedeAdministrar ? 5 : 4}
                     className="px-6 py-8 text-center text-text-muted"
                   >
-                    {searchTerm
-                      ? "No se encontraron clientes con esa búsqueda."
+                    {searchTerm || selectedResponsable
+                      ? "No se encontraron clientes con los filtros aplicados."
                       : "No hay clientes registrados."}
                   </td>
                 </tr>
