@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { vencimientosService, type Vencimiento } from "./vencimientosService";
 import { Loader } from "../../components/Loader";
+import { AlertNotification } from "../../components/ui/AlertNotification"; // <-- Importación del componente de alertas inyectado
 import {
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,9 @@ export const CalendarioPage = () => {
   const [radicados, setRadicados] = useState<Record<string, string>>({});
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
 
+  // LÓGICA SOLID (SRP): Estado unificado para el manejo de fallas de red/persistencia en el calendario
+  const [operError, setOperError] = useState<string | null>(null);
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -28,6 +32,7 @@ export const CalendarioPage = () => {
     if (!perfil) return;
     try {
       setLoading(true);
+      setOperError(null);
       const data = await vencimientosService.getVencimientosMes(
         year,
         month,
@@ -35,8 +40,11 @@ export const CalendarioPage = () => {
         perfil.cargo,
       );
       setVencimientos(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error cargando calendario:", error);
+      setOperError(
+        "No se pudieron sincronizar las fechas tributarias correspondientes al mes seleccionado.",
+      );
     } finally {
       setLoading(false);
     }
@@ -85,6 +93,7 @@ export const CalendarioPage = () => {
     const observacionText = radicados[tareaId] || "";
     try {
       setGuardandoId(tareaId);
+      setOperError(null);
       await vencimientosService.actualizarEstado(
         tareaId,
         "PRESENTADO",
@@ -98,8 +107,11 @@ export const CalendarioPage = () => {
       });
 
       await fetchDatos();
-    } catch (error) {
-      alert("Error al actualizar el estado del vencimiento");
+    } catch (error: any) {
+      setOperError(
+        error.message ||
+          "No se pudo actualizar el radicado de la obligación tributaria.",
+      );
     } finally {
       setGuardandoId(null);
     }
@@ -118,7 +130,7 @@ export const CalendarioPage = () => {
 
     return (
       <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
           <div className="bg-primary p-4 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-2 text-surface">
               <CalendarIcon className="w-5 h-5" />
@@ -136,7 +148,7 @@ export const CalendarioPage = () => {
 
           <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50 space-y-4">
             {tareasDelDia.length === 0 ? (
-              <p className="text-center text-text-muted py-8">
+              <p className="text-center text-text-muted py-8 text-xs font-semibold">
                 No hay vencimientos programados para este día.
               </p>
             ) : (
@@ -147,7 +159,7 @@ export const CalendarioPage = () => {
                   return (
                     <div
                       key={tarea.id}
-                      className="bg-surface border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      className="bg-surface border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100"
                     >
                       <div className="flex-1 space-y-1">
                         <h4 className="font-bold text-primary text-base leading-tight">
@@ -175,7 +187,7 @@ export const CalendarioPage = () => {
 
                       <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
                         {tarea.estado_tarea === "PRESENTADO" ? (
-                          <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full">
+                          <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full border border-success/10">
                             <CheckCircle className="w-4 h-4" /> Presentado
                           </span>
                         ) : (
@@ -195,7 +207,7 @@ export const CalendarioPage = () => {
                             <button
                               onClick={() => handleMarcarPresentado(tarea.id)}
                               disabled={guardandoId === tarea.id}
-                              className="w-full bg-success hover:bg-success/90 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all"
+                              className="w-full bg-success hover:bg-success/90 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50"
                             >
                               <CheckSquare className="w-3.5 h-3.5" />
                               {guardandoId === tarea.id
@@ -254,7 +266,19 @@ export const CalendarioPage = () => {
         </div>
       </div>
 
-      <div className="card-container !p-0 overflow-hidden bg-surface shadow-lg">
+      {/* LÓGICA SOLID (SRP): Renderizado condicional del componente inyectado si existe error operativo */}
+      {operError && (
+        <div className="animate-in fade-in duration-200 max-w-4xl">
+          <AlertNotification
+            type="error"
+            title="Error de Operación"
+            message={operError}
+            onClose={() => setOperError(null)}
+          />
+        </div>
+      )}
+
+      <div className="card-container !p-0 overflow-hidden bg-surface shadow-lg border border-gray-200 rounded-xl">
         <div className="p-4 border-b border-gray-100 bg-gray-50/80 text-center">
           <h2 className="text-xl font-title font-bold text-primary">
             {meses[month]} {year}
