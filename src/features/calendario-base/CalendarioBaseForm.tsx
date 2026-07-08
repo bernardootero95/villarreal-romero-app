@@ -11,6 +11,7 @@ import { calendarioBaseService } from "./calendarioBaseService";
 import { impuestosService } from "../impuestos/impuestosService";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
 import { Loader } from "../../components/Loader";
+import { AlertNotification } from "../../components/ui/AlertNotification"; // <-- Componente atómico inyectado
 
 interface CalendarioBaseFormProps {
   onClose: () => void;
@@ -29,6 +30,9 @@ export const CalendarioBaseForm = ({
     useState<ImpuestoConEspecialista | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
 
+  // LÓGICA SOLID (SRP): Estado unificado para control reactivo de errores en el formulario
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -44,7 +48,6 @@ export const CalendarioBaseForm = ({
   });
 
   const isEditing = !!fechaAEditar;
-
   const requiereDigito = impuestoMeta?.regla_vencimiento !== "FECHA_FIJA";
 
   useEffect(() => {
@@ -75,6 +78,7 @@ export const CalendarioBaseForm = ({
 
   const onSubmit = async (data: CalendarioBaseFormData) => {
     try {
+      setSubmitError(null);
       const payload = { ...data, impuesto_id: impuestoId };
 
       if (isEditing && fechaAEditar) {
@@ -84,7 +88,11 @@ export const CalendarioBaseForm = ({
       }
       onSuccess();
     } catch (error: any) {
-      alert(error.message || "Error al guardar la fecha oficial");
+      // Sustitución SOLID del alert por captura reactiva en estado
+      setSubmitError(
+        error.message ||
+          "Ocurrió un error inesperado al intentar guardar la fecha oficial.",
+      );
     }
   };
 
@@ -117,6 +125,18 @@ export const CalendarioBaseForm = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+            {/* LÓGICA SOLID (SRP): Inyección controlada de errores operativos mediante el componente de alertas */}
+            {submitError && (
+              <div className="animate-in fade-in duration-200">
+                <AlertNotification
+                  type="error"
+                  title="Error al Guardar"
+                  message={submitError}
+                  onClose={() => setSubmitError(null)}
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-main mb-1">
@@ -125,7 +145,7 @@ export const CalendarioBaseForm = ({
                 <input
                   type="number"
                   {...register("anio", { valueAsNumber: true })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
                 />
                 {errors.anio && (
                   <p className="text-danger text-xs mt-1">
@@ -140,7 +160,7 @@ export const CalendarioBaseForm = ({
                 </label>
                 <input
                   {...register("periodo")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
                   placeholder="Ej. 01, B1, ANUAL"
                 />
                 {errors.periodo && (
@@ -183,7 +203,7 @@ export const CalendarioBaseForm = ({
                 <input
                   type="date"
                   {...register("fecha_vencimiento_oficial")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
                 />
                 {errors.fecha_vencimiento_oficial && (
                   <p className="text-danger text-xs mt-1">
@@ -205,7 +225,7 @@ export const CalendarioBaseForm = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm"
+                className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium"
               >
                 Cancelar
               </button>
