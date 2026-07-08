@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "../../lib/supabase";
-import { Lock, User as UserIcon, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Lock, User as UserIcon, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { Loader } from "../../components/Loader"; // <-- Importamos tu componente Loader corporativo
+import { Loader } from "../../components/Loader";
+import { AlertNotification } from "../../components/ui/AlertNotification"; // <-- Componente atómico inyectado
 import logo from "../../assets/LOGO-2.png";
 
 const loginSchema = z.object({
@@ -51,7 +52,7 @@ export const LoginPage = () => {
 
     if (error) {
       setAuthError(
-        "Credenciales incorrectas. Verifica tu usuario y contraseña.",
+        "Credenciales incorrectas. Verifica tu usuario y contraseña de acceso corporativo.",
       );
       setIsLoading(false);
     }
@@ -82,6 +83,18 @@ export const LoginPage = () => {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* LÓGICA SOLID (SRP): Mensaje de Error controlado de inmediato con AlertNotification */}
+          {authError && (
+            <div className="animate-in fade-in duration-200">
+              <AlertNotification
+                type="error"
+                title="Error de Autenticación"
+                message={authError}
+                onClose={() => setAuthError(null)}
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Usuario
@@ -146,13 +159,6 @@ export const LoginPage = () => {
               </p>
             )}
           </div>
-
-          {authError && (
-            <div className="flex items-center gap-2 text-danger bg-danger/10 p-3 rounded-md text-sm">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <p>{authError}</p>
-            </div>
-          )}
 
           <button
             type="submit"
