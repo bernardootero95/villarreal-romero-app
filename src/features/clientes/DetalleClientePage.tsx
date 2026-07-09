@@ -24,6 +24,7 @@ import { clientesService } from "./clientesService";
 import { clienteImpuestosService } from "./clienteImpuestosService";
 import { FichaObligaciones } from "./FichaObligaciones";
 import { ClienteForm } from "./ClienteForm";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 
 export const DetalleClientePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +42,8 @@ export const DetalleClientePage = () => {
   const [impuestosCargo, setImpuestosCargo] = useState<any[]>([]);
   const [loadingImpuestos, setLoadingImpuestos] = useState(true);
 
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
+
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
@@ -48,13 +51,21 @@ export const DetalleClientePage = () => {
     if (!id) return;
     try {
       setLoadingCliente(true);
+      setErrorCarga(null);
       const data = await clientesService.getAll();
       const encontrado = data.find((c) => c.id === id);
       if (encontrado) {
         setCliente(encontrado);
+      } else {
+        setErrorCarga(
+          "La firma seleccionada no existe en el sistema o fue removida de los archivos.",
+        );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error cargando metadatos de empresa:", error);
+      setErrorCarga(
+        "Fallo técnico al recuperar los metadatos corporativos del cliente.",
+      );
     } finally {
       setLoadingCliente(false);
     }
@@ -109,7 +120,7 @@ export const DetalleClientePage = () => {
 
   if (loadingCliente) {
     return (
-      <div className="text-center p-8 text-text-muted text-sm font-semibold font-mono uppercase">
+      <div className="text-center p-8 text-text-muted text-sm font-semibold font-mono uppercase tracking-wider animate-pulse">
         Consultando bóveda de cliente...
       </div>
     );
@@ -117,14 +128,18 @@ export const DetalleClientePage = () => {
 
   if (!cliente) {
     return (
-      <div className="text-center p-8 space-y-4">
-        <AlertCircle className="w-12 h-12 text-danger mx-auto" />
-        <h3 className="text-lg font-bold text-primary">
+      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-gray-200 rounded-xl shadow-sm my-12 space-y-4 animate-in fade-in duration-200">
+        <AlertCircle className="w-12 h-12 text-danger mx-auto stroke-[1.5]" />
+        <h3 className="text-lg font-bold text-primary font-title">
           Error 404: Empresa No Encontrada
         </h3>
+        <p className="text-xs text-text-muted">
+          El registro solicitado no figura en el directorio activo de
+          Villarreal-Romero.
+        </p>
         <button
           onClick={() => navigate("/clientes")}
-          className="bg-primary text-surface px-4 py-2 rounded-lg text-sm"
+          className="bg-primary text-surface text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all shadow-xs"
         >
           Regresar al Directorio
         </button>
@@ -166,6 +181,18 @@ export const DetalleClientePage = () => {
           </button>
         )}
       </div>
+
+      {/* LÓGICA SOLID (SRP): Notificación reactiva inyectada ante errores de carga asíncrona */}
+      {errorCarga && (
+        <div className="animate-in fade-in duration-200 max-w-4xl">
+          <AlertNotification
+            type="warning"
+            title="Advertencia de Registro"
+            message={errorCarga}
+            onClose={() => setErrorCarga(null)}
+          />
+        </div>
+      )}
 
       <div className="card-container flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface p-6 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center gap-4">
@@ -213,7 +240,7 @@ export const DetalleClientePage = () => {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
-                    <Briefcase className="w-3.5 h-3.5" /> Responsable Contable
+                    <Briefcase className="w-3.5 h-3.5" /> Responsable Asignado
                   </span>
                   <p className="text-base font-medium text-primary bg-gray-50 px-3 py-2 rounded-md border border-gray-100 truncate">
                     {cliente.usuarios?.nombre_completo ||
