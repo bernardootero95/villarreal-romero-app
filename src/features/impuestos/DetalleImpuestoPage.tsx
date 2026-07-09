@@ -21,6 +21,7 @@ import type { CalendarioBaseConImpuesto } from "../calendario-base/types";
 
 import { CalendarioBaseForm } from "../calendario-base/CalendarioBaseForm";
 import { CalendarioCargaMasiva } from "../calendario-base/CalendarioCargaMasiva";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 
 const REGISTROS_POR_PAGINA = 10;
 
@@ -45,17 +46,23 @@ export const DetalleImpuestoPage = () => {
   const [fechaEditando, setFechaEditando] =
     useState<CalendarioBaseConImpuesto | null>(null);
 
+  const [errorOperativo, setErrorOperativo] = useState<string | null>(null);
+
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
   const cargarImpuesto = async () => {
     if (!id) return;
     try {
+      setErrorOperativo(null);
       const data = await impuestosService.getAll();
       const encontrado = data.find((i) => i.id === id);
       if (encontrado) setImpuesto(encontrado);
     } catch (error) {
       console.error("Error cargando metadatos del impuesto:", error);
+      setErrorOperativo(
+        "No se pudieron recuperar las propiedades de configuración del impuesto seleccionado.",
+      );
     }
   };
 
@@ -63,12 +70,16 @@ export const DetalleImpuestoPage = () => {
     if (!id) return;
     try {
       setLoading(true);
+      setErrorOperativo(null);
       const data = await calendarioBaseService.getAll(anioFiltro);
       const filtradasPorImpuesto = data.filter((f) => f.impuesto_id === id);
       setFechasBase(filtradasPorImpuesto);
-      setPaginaActual(1); // Reiniciar a la primera página al cambiar año
+      setPaginaActual(1);
     } catch (error) {
       console.error("Error cargando matriz de fechas:", error);
+      setErrorOperativo(
+        "Fallo de red al intentar sincronizar la matriz base de vencimientos oficiales.",
+      );
     } finally {
       setLoading(false);
     }
@@ -89,10 +100,14 @@ export const DetalleImpuestoPage = () => {
       )
     ) {
       try {
+        setErrorOperativo(null);
         await calendarioBaseService.delete(fechaId);
         cargarCalendarioBase();
       } catch (error: any) {
-        alert(error.message || "Error al remover la fecha");
+        setErrorOperativo(
+          error.message ||
+            "Fallo de persistencia: La fecha oficial seleccionada se encuentra vinculada a obligaciones activas.",
+        );
       }
     }
   };
@@ -121,14 +136,18 @@ export const DetalleImpuestoPage = () => {
 
   if (!impuesto) {
     return (
-      <div className="text-center p-8 space-y-4">
-        <AlertCircle className="w-12 h-12 text-danger mx-auto" />
-        <h3 className="text-lg font-bold text-primary">
+      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-gray-200 rounded-xl shadow-sm my-12 space-y-4 animate-in fade-in duration-200">
+        <AlertCircle className="w-12 h-12 text-danger mx-auto stroke-[1.5]" />
+        <h3 className="text-lg font-bold text-primary font-title">
           Impuesto No Encontrado
         </h3>
+        <p className="text-xs text-text-muted">
+          La clave de identificación fiscal provista no corresponde a ningún
+          impuesto del catálogo de la firma.
+        </p>
         <button
           onClick={() => navigate("/impuestos")}
-          className="bg-primary text-surface px-4 py-2 rounded-lg text-sm"
+          className="bg-primary text-surface text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all shadow-xs"
         >
           Regresar al Catálogo
         </button>
@@ -169,6 +188,17 @@ export const DetalleImpuestoPage = () => {
           </div>
         )}
       </div>
+
+      {errorOperativo && (
+        <div className="animate-in fade-in duration-200 max-w-4xl">
+          <AlertNotification
+            type="error"
+            title="Excepción de Control"
+            message={errorOperativo}
+            onClose={() => setErrorOperativo(null)}
+          />
+        </div>
+      )}
 
       <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -261,7 +291,7 @@ export const DetalleImpuestoPage = () => {
               <tr>
                 <td
                   colSpan={puedeAdministrar ? 4 : 3}
-                  className="px-6 py-12 text-center text-text-muted font-mono text-xs uppercase animate-pulse"
+                  className="px-6 py-12 text-center text-text-muted font-mono text-xs uppercase tracking-wider animate-pulse"
                 >
                   Consultando matriz de vencimientos...
                 </td>
@@ -287,7 +317,7 @@ export const DetalleImpuestoPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className="data-code font-semibold px-2 py-0.5 rounded text-xs">
+                    <span className="data-code font-semibold px-2 py-0.5 rounded text-xs bg-surface border border-gray-100">
                       {f.digito !== null
                         ? `Termina en: ${f.digito}`
                         : "Todos (Fecha Fija)"}
