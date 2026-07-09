@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X, Landmark, Plus, Trash2, ShieldAlert } from "lucide-react";
 import { clienteImpuestosService } from "./clienteImpuestosService";
 import { impuestosService } from "../impuestos/impuestosService";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 import type { ClienteConContador } from "./types";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
 
@@ -22,6 +23,8 @@ export const FichaObligaciones = ({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  const [errorFicha, setErrorFicha] = useState<string | null>(null);
+
   const ultimoDigito = Number(cliente.nit.slice(-1));
 
   const cargarDatos = async () => {
@@ -35,6 +38,9 @@ export const FichaObligaciones = ({
       setCatImpuestos(todoElCat.filter((i) => i.estado === "ACTIVO"));
     } catch (error) {
       console.error(error);
+      setErrorFicha(
+        "Error de comunicación al intentar sincronizar la ficha técnica de obligaciones.",
+      );
     } finally {
       setLoading(false);
     }
@@ -48,6 +54,7 @@ export const FichaObligaciones = ({
     if (!selectedImpuesto) return;
     try {
       setSubmitting(true);
+      setErrorFicha(null);
       await clienteImpuestosService.asignarImpuesto(
         cliente.id,
         selectedImpuesto,
@@ -56,7 +63,10 @@ export const FichaObligaciones = ({
       setSelectedImpuesto("");
       cargarDatos();
     } catch (error: any) {
-      alert(error.message || "Error al asignar la obligación");
+      setErrorFicha(
+        error.message ||
+          "No se pudo inyectar la nueva obligación en el calendario.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -70,14 +80,19 @@ export const FichaObligaciones = ({
     ) {
       try {
         setLoading(true);
+        setErrorFicha(null);
         await clienteImpuestosService.desasignarImpuesto(
           asignacionId,
           cliente.id,
           impuestoId,
         );
         cargarDatos();
-      } catch (error) {
-        alert("Error al remover la obligación");
+      } catch (error: any) {
+        setErrorFicha(
+          error.message ||
+            "Fallo de persistencia al intentar remover la obligación fiscal.",
+        );
+        setLoading(false);
       }
     }
   };
@@ -109,7 +124,18 @@ export const FichaObligaciones = ({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+          {errorFicha && (
+            <div className="animate-in fade-in duration-200">
+              <AlertNotification
+                type="error"
+                title="Aviso de Operación"
+                message={errorFicha}
+                onClose={() => setErrorFicha(null)}
+              />
+            </div>
+          )}
+
           <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl space-y-3">
             <h3 className="text-xs uppercase font-bold tracking-wider text-text-main flex items-center gap-1.5">
               <Plus className="w-4 h-4 text-accent" /> Registrar Nueva
@@ -151,7 +177,7 @@ export const FichaObligaciones = ({
             </h3>
 
             {loading ? (
-              <p className="text-sm text-text-muted text-center py-6">
+              <p className="text-sm text-text-muted text-center py-6 font-mono">
                 Consultando ficha técnica...
               </p>
             ) : obligaciones.length === 0 ? (
