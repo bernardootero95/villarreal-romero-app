@@ -12,6 +12,7 @@ import { X, Save, Landmark } from "lucide-react";
 import { impuestosService } from "./impuestosService";
 import { usuariosService } from "../usuarios/usuariosService";
 import type { Usuario } from "../usuarios/types";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 
 interface ImpuestoFormProps {
   onClose: () => void;
@@ -26,6 +27,8 @@ export const ImpuestoForm = ({
 }: ImpuestoFormProps) => {
   const [especialistas, setEspecialistas] = useState<Usuario[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -68,6 +71,7 @@ export const ImpuestoForm = ({
 
   const onSubmit = async (data: ImpuestoFormData) => {
     try {
+      setSubmitError(null);
       if (isEditing && impuestoAEditar) {
         await impuestosService.update(impuestoAEditar.id, data);
       } else {
@@ -75,7 +79,10 @@ export const ImpuestoForm = ({
       }
       onSuccess();
     } catch (error: any) {
-      alert(error.message || "Error al guardar el impuesto");
+      setSubmitError(
+        error.message ||
+          "Ocurrió un error inesperado al intentar guardar la configuración fiscal.",
+      );
     }
   };
 
@@ -98,13 +105,24 @@ export const ImpuestoForm = ({
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+          {submitError && (
+            <div className="animate-in fade-in duration-200">
+              <AlertNotification
+                type="error"
+                title="Error al Guardar"
+                message={submitError}
+                onClose={() => setSubmitError(null)}
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">
               Nombre del Impuesto u Obligación
             </label>
             <input
               {...register("nombre")}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${errors.nombre ? "border-danger" : "border-gray-300"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.nombre ? "border-danger" : "border-gray-300"}`}
               placeholder="Ej. IVA Bimestral, ICA Medellín..."
             />
             {errors.nombre && (
@@ -189,14 +207,14 @@ export const ImpuestoForm = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors"
+              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm"
             >
               <Save className="w-4 h-4" />
               {isSubmitting
