@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { impuestosService } from "./impuestosService";
 import type { ImpuestoConEspecialista } from "./types";
-import { Search, Trash2, Plus, Edit2, Eye } from "lucide-react"; // Añadimos Eye
+import { Search, Trash2, Plus, Edit2, Eye } from "lucide-react";
 import { ImpuestoForm } from "./ImpuestoForm";
-import { useNavigate } from "react-router-dom"; // <-- Importamos hook nativo
+import { AlertNotification } from "../../components/ui/AlertNotification";
+import { useNavigate } from "react-router-dom";
 
 export const ImpuestosPage = () => {
   const { perfil } = useAuth();
-  const navigate = useNavigate(); // <-- Instanciamos
+  const navigate = useNavigate();
   const [impuestos, setImpuestos] = useState<ImpuestoConEspecialista[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -16,16 +17,22 @@ export const ImpuestosPage = () => {
     useState<ImpuestoConEspecialista | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [errorCatalogo, setErrorCatalogo] = useState<string | null>(null);
+
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
   const fetchImpuestos = async () => {
     try {
       setLoading(true);
+      setErrorCatalogo(null);
       const data = await impuestosService.getAll();
       setImpuestos(data);
     } catch (error) {
       console.error(error);
+      setErrorCatalogo(
+        "No se pudo establecer conexión para sincronizar el catálogo de impuestos tributarios.",
+      );
     } finally {
       setLoading(false);
     }
@@ -42,10 +49,14 @@ export const ImpuestosPage = () => {
       )
     ) {
       try {
+        setErrorCatalogo(null);
         await impuestosService.delete(id);
         fetchImpuestos();
-      } catch (error) {
-        alert("Error al desactivar el impuesto");
+      } catch (error: any) {
+        setErrorCatalogo(
+          error.message ||
+            "Fallo de persistencia al intentar desactivar el impuesto seleccionado.",
+        );
       }
     }
   };
@@ -81,7 +92,7 @@ export const ImpuestosPage = () => {
         {puedeAdministrar && (
           <button
             onClick={handleCreate}
-            className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm"
+            className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm text-sm font-semibold"
           >
             <Plus className="w-5 h-5" />
             Nuevo Impuesto
@@ -89,7 +100,18 @@ export const ImpuestosPage = () => {
         )}
       </div>
 
-      <div className="card-container !p-0 overflow-hidden">
+      {errorCatalogo && (
+        <div className="animate-in fade-in duration-200 max-w-4xl">
+          <AlertNotification
+            type="error"
+            title="Error de Catálogo"
+            message={errorCatalogo}
+            onClose={() => setErrorCatalogo(null)}
+          />
+        </div>
+      )}
+
+      <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -115,12 +137,12 @@ export const ImpuestosPage = () => {
                 <th className="px-6 py-4 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 text-sm">
               {loading ? (
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-8 text-center text-text-muted"
+                    className="px-6 py-12 text-center text-text-muted font-mono text-xs uppercase tracking-wider animate-pulse"
                   >
                     Cargando catálogo...
                   </td>
@@ -129,7 +151,7 @@ export const ImpuestosPage = () => {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-8 text-center text-text-muted"
+                    className="px-6 py-12 text-center text-text-muted italic text-xs"
                   >
                     No hay impuestos configurados.
                   </td>
@@ -141,7 +163,6 @@ export const ImpuestosPage = () => {
                     className="hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      {/* Enfoque SOLID: Navegación semántica profunda */}
                       <div
                         onClick={() => navigate(`/impuestos/${impuesto.id}`)}
                         className="flex flex-col cursor-pointer group"
@@ -149,18 +170,18 @@ export const ImpuestosPage = () => {
                         <span className="font-semibold text-primary group-hover:text-accent transition-colors">
                           {impuesto.nombre}
                         </span>
-                        <span className="text-xs text-text-muted font-mono bg-gray-100 w-fit px-1.5 rounded mt-1">
+                        <span className="text-xs text-text-muted font-mono bg-gray-100 w-fit px-1.5 py-0.5 rounded mt-1">
                           {impuesto.periodicidad}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-text-main">
+                      <span className="text-sm text-text-main font-medium">
                         {impuesto.regla_vencimiento.replace(/_/g, " ")}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-text-muted">
+                      <span className="text-sm text-text-muted font-medium">
                         {impuesto.usuarios?.nombre_completo || "-"}
                       </span>
                     </td>
