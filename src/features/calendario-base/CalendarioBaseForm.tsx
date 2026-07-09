@@ -11,7 +11,7 @@ import { calendarioBaseService } from "./calendarioBaseService";
 import { impuestosService } from "../impuestos/impuestosService";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
 import { Loader } from "../../components/Loader";
-import { AlertNotification } from "../../components/ui/AlertNotification"; // <-- Componente atómico inyectado
+import { AlertNotification } from "../../components/ui/AlertNotification";
 
 interface CalendarioBaseFormProps {
   onClose: () => void;
@@ -30,7 +30,6 @@ export const CalendarioBaseForm = ({
     useState<ImpuestoConEspecialista | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
 
-  // LÓGICA SOLID (SRP): Estado unificado para control reactivo de errores en el formulario
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
@@ -88,7 +87,6 @@ export const CalendarioBaseForm = ({
       }
       onSuccess();
     } catch (error: any) {
-      // Sustitución SOLID del alert por captura reactiva en estado
       setSubmitError(
         error.message ||
           "Ocurrió un error inesperado al intentar guardar la fecha oficial.",
@@ -125,7 +123,6 @@ export const CalendarioBaseForm = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-            {/* LÓGICA SOLID (SRP): Inyección controlada de errores operativos mediante el componente de alertas */}
             {submitError && (
               <div className="animate-in fade-in duration-200">
                 <AlertNotification

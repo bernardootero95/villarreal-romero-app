@@ -7,7 +7,7 @@ import { Lock, User as UserIcon, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Loader } from "../../components/Loader";
-import { AlertNotification } from "../../components/ui/AlertNotification"; // <-- Componente atómico inyectado
+import { AlertNotification } from "../../components/ui/AlertNotification";
 import logo from "../../assets/LOGO-2.png";
 
 const loginSchema = z.object({
@@ -83,7 +83,6 @@ export const LoginPage = () => {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* LÓGICA SOLID (SRP): Mensaje de Error controlado de inmediato con AlertNotification */}
           {authError && (
             <div className="animate-in fade-in duration-200">
               <AlertNotification

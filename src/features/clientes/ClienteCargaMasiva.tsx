@@ -12,6 +12,7 @@ import { clientesService } from "./clientesService";
 import { clienteImpuestosService } from "./clienteImpuestosService";
 import { usuariosService } from "../usuarios/usuariosService";
 import { impuestosService } from "../impuestos/impuestosService";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 import * as XLSX from "xlsx";
 
 interface ClienteCargaMasivaProps {
@@ -47,9 +48,15 @@ export const ClienteCargaMasiva = ({
     Array<{ nombre: string; periodicidad: string }>
   >([]);
 
+  const [errorProcesamiento, setErrorProcesamiento] = useState<string | null>(
+    null,
+  );
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+
   useEffect(() => {
     const cargarDiccionarios = async () => {
       try {
+        setErrorProcesamiento(null);
         const [users, taxes] = await Promise.all([
           usuariosService.getAll(),
           impuestosService.getAll(),
@@ -79,6 +86,9 @@ export const ClienteCargaMasiva = ({
         setImpuestosSistema(taxMap);
       } catch (err) {
         console.error("Error inicializando diccionarios de validación:", err);
+        setErrorProcesamiento(
+          "Error al sincronizar los catálogos base necesarios para la validación interna.",
+        );
       }
     };
     cargarDiccionarios();
@@ -86,6 +96,7 @@ export const ClienteCargaMasiva = ({
 
   const handleDescargarModelo = () => {
     try {
+      setErrorProcesamiento(null);
       const estructuraClientes = [
         ["NIT", "Razón Social", "Celular", "Correo", "Persona a Cargo"],
         [
@@ -129,12 +140,22 @@ export const ClienteCargaMasiva = ({
       XLSX.writeFile(wb, "Plantilla_Carga_Masiva_VR.xlsx");
     } catch (error) {
       console.error("Error generando plantilla modelo:", error);
-      alert("No se pudo generar la plantilla.");
+      setErrorProcesamiento(
+        "No se pudo compilar la estructura del archivo modelo Excel.",
+      );
     }
   };
 
   const handleProcesarExcel = async () => {
-    if (!archivo) return alert("Por favor seleccione un archivo Excel.");
+    setErrorProcesamiento(null);
+    setMensajeExito(null);
+
+    if (!archivo) {
+      setErrorProcesamiento(
+        "Por favor seleccione un libro de Excel válido antes de ejecutar el cargue.",
+      );
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -147,7 +168,7 @@ export const ClienteCargaMasiva = ({
 
           if (workbook.SheetNames.length < 2) {
             throw new Error(
-              "El archivo debe contener al menos las hojas: 'Clientes' y 'Obligaciones'.",
+              "El libro contable debe contener de manera obligatoria las pestañas: 'Clientes' y 'Obligaciones'.",
             );
           }
 
@@ -180,14 +201,14 @@ export const ClienteCargaMasiva = ({
 
             if (!nit || !razonSocial || !responsableStr) {
               throw new Error(
-                `Hoja 'Clientes' - Fila ${i + 1}: El NIT, la Razón Social y el Responsable son obligatorios.`,
+                `Pestaña 'Clientes' - Fila ${i + 1}: El campo NIT, Razón Social y Profesional a Cargo son obligatorios.`,
               );
             }
 
             const contadorId = usuariosSistema[responsableStr];
             if (!contadorId) {
               throw new Error(
-                `Hoja 'Clientes' - Fila ${i + 1}: El responsable '${row[4]}' no se encuentra registrado o activo en la base de datos.`,
+                `Pestaña 'Clientes' - Fila ${i + 1}: El profesional '${row[4]}' no figura registrado o activo en las firmas de la base de datos.`,
               );
             }
 
@@ -212,7 +233,7 @@ export const ClienteCargaMasiva = ({
 
           if (clientesPayload.length === 0)
             throw new Error(
-              "No se hallaron registros legibles en la hoja de Clientes.",
+              "No se detectaron filas legibles con estructuras de datos en la hoja de Clientes.",
             );
 
           const clientesCreados =
@@ -240,7 +261,7 @@ export const ClienteCargaMasiva = ({
 
             if (!nitBusqueda || !impuestoStr || !periodicidadStr) {
               throw new Error(
-                `Hoja 'Obligaciones' - Fila ${j + 1}: El NIT, nombre del Impuesto y su Periodicidad son requeridos.`,
+                `Pestaña 'Obligaciones' - Fila ${j + 1}: El NIT del Cliente, Nombre del Impuesto y su Periodicidad son obligatorios.`,
               );
             }
 
@@ -251,7 +272,7 @@ export const ClienteCargaMasiva = ({
             if (!clienteId) continue;
             if (!impuestoId) {
               throw new Error(
-                `Hoja 'Obligaciones' - Fila ${j + 1}: No existe un impuesto parametrizado con el nombre '${impuestoStr}' y periodicidad '${periodicidadStr}'.`,
+                `Pestaña 'Obligaciones' - Fila ${j + 1}: No existe concordancia en el catálogo para el impuesto '${impuestoStr}' con periodicidad '${periodicidadStr}'.`,
               );
             }
 
@@ -266,26 +287,33 @@ export const ClienteCargaMasiva = ({
           }
 
           if (obligacionesPayload.length > 0) {
-            // CORREGIDO: Invocación sincronizada con el nuevo nombre en español del servicio
             await clienteImpuestosService.asignarImpuestosBulk(
               obligacionesPayload,
               idToUltimoDigitoMapeado,
             );
           }
 
-          alert(
-            `¡Proceso Exitoso! Se crearon ${clientesCreados.length} clientes y se sembraron todas sus obligaciones fiscales correctamente.`,
+          setMensajeExito(
+            `¡Directorio Importado! Se han indexado ${clientesCreados.length} empresas y estructurado todas sus agendas tributarias.`,
           );
-          onSuccess();
+
+          setTimeout(() => {
+            onSuccess();
+          }, 1500);
         } catch (error: any) {
-          alert(error.message || "Error al decodificar el Excel.");
+          setErrorProcesamiento(
+            error.message ||
+              "Ocurrió un conflicto al descomprimir las matrices de celdas.",
+          );
           setIsSubmitting(false);
         }
       };
 
       windowReader.readAsBinaryString(archivo);
     } catch (error: any) {
-      alert(error.message);
+      setErrorProcesamiento(
+        error.message || "Fallo técnico en la cola de asignación de archivos.",
+      );
       setIsSubmitting(false);
     }
   };
@@ -316,21 +344,42 @@ export const ClienteCargaMasiva = ({
             />
           </div>
         ) : (
-          <div className="p-6 overflow-y-auto space-y-6">
-            <div className="flex justify-between items-center p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="p-6 overflow-y-auto space-y-5 flex-1">
+            {errorProcesamiento && (
+              <div className="animate-in fade-in duration-200">
+                <AlertNotification
+                  type="error"
+                  title="Fallo de Importación"
+                  message={errorProcesamiento}
+                  onClose={() => setErrorProcesamiento(null)}
+                />
+              </div>
+            )}
+
+            {mensajeExito && (
+              <div className="animate-in fade-in duration-200">
+                <AlertNotification
+                  type="success"
+                  title="Estructuración Exitosa"
+                  message={mensajeExito}
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
               <div className="space-y-0.5">
                 <span className="text-xs font-bold text-primary block uppercase tracking-wide">
                   ¿No tienes el formato de carga?
                 </span>
                 <p className="text-xs text-text-muted">
-                  Descarga el nuevo formato con columnas independientes para
-                  Impuesto y Periodicidad.
+                  Descarga la matriz patrón estructurada con columnas unificadas
+                  para el cargue masivo.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleDescargarModelo}
-                className="bg-white border border-gray-300 hover:border-primary text-text-main hover:text-primary px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-bold transition-all shadow-2xs"
+                className="bg-white border border-gray-300 hover:border-primary text-text-main hover:text-primary px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-bold transition-all shadow-2xs shrink-0"
               >
                 <Download className="w-3.5 h-3.5 text-accent" />
                 Descargar Plantilla Excel
@@ -349,8 +398,8 @@ export const ClienteCargaMasiva = ({
                 </p>
                 <p>
                   <b>Hoja 2 (Obligaciones):</b> NIT del Cliente | Nombre del
-                  Impuesto (Ej. <i>IVA</i>) | Periodicidad (Ej. <i>BIMESTRAL</i>{" "}
-                  o <i>CUATRIMESTRAL</i>).
+                  Impuesto (Ej. <i>IVA</i>) | Periodicidad (Ej. <i>BIMESTRAL</i>
+                  ).
                 </p>
               </div>
             </div>
@@ -380,24 +429,26 @@ export const ClienteCargaMasiva = ({
                 />
               </label>
             </div>
+          </div>
+        )}
 
-            <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 -mx-6 -mb-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md text-sm font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleProcesarExcel}
-                disabled={!archivo}
-                className="bg-primary hover:bg-primary/90 text-surface font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              >
-                <Upload className="w-4 h-4" />
-                Procesar e Importar
-              </button>
-            </div>
+        {!isSubmitting && (
+          <div className="p-4 border-t border-gray-100 flex justify-end gap-3 shrink-0 bg-gray-50">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md text-sm font-medium transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleProcesarExcel}
+              disabled={!archivo || !!mensajeExito}
+              className="bg-primary hover:bg-primary/90 text-surface font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <Upload className="w-4 h-4" />
+              Procesar e Importar
+            </button>
           </div>
         )}
       </div>

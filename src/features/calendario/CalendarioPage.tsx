@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { vencimientosService, type Vencimiento } from "./vencimientosService";
 import { Loader } from "../../components/Loader";
-import { AlertNotification } from "../../components/ui/AlertNotification"; // <-- Importación del componente de alertas inyectado
+import { AlertNotification } from "../../components/ui/AlertNotification";
 import {
   ChevronLeft,
   ChevronRight,
@@ -22,7 +22,6 @@ export const CalendarioPage = () => {
   const [radicados, setRadicados] = useState<Record<string, string>>({});
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
 
-  // LÓGICA SOLID (SRP): Estado unificado para el manejo de fallas de red/persistencia en el calendario
   const [operError, setOperError] = useState<string | null>(null);
 
   const year = currentDate.getFullYear();
@@ -266,7 +265,6 @@ export const CalendarioPage = () => {
         </div>
       </div>
 
-      {/* LÓGICA SOLID (SRP): Renderizado condicional del componente inyectado si existe error operativo */}
       {operError && (
         <div className="animate-in fade-in duration-200 max-w-4xl">
           <AlertNotification
