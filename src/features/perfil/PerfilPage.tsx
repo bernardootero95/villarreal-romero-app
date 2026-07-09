@@ -3,7 +3,10 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import { clientesService } from "../clientes/clientesService";
 import type { ClienteConContador } from "../clientes/types";
-import { AlertNotification, type AlertType } from "../../components/ui/AlertNotification"; // <-- Componente atómico inyectado
+import {
+  AlertNotification,
+  type AlertType,
+} from "../../components/ui/AlertNotification";
 import {
   UserCircle,
   Mail,
@@ -32,9 +35,16 @@ export const PerfilPage = () => {
   const [loadingPass, setLoadingPass] = useState(false);
   const [loadingCorreo, setLoadingCorreo] = useState(false);
 
-  // LÓGICA SOLID (SRP): Estructuras de notificación independientes y semánticas
-  const [notifPass, setNotifPass] = useState<EstadoNotificacion>({ tipo: "", titulo: "", texto: "" });
-  const [notifCorreo, setNotifCorreo] = useState<EstadoNotificacion>({ tipo: "", titulo: "", texto: "" });
+  const [notifPass, setNotifPass] = useState<EstadoNotificacion>({
+    tipo: "",
+    titulo: "",
+    texto: "",
+  });
+  const [notifCorreo, setNotifCorreo] = useState<EstadoNotificacion>({
+    tipo: "",
+    titulo: "",
+    texto: "",
+  });
 
   const [misClientes, setMisClientes] = useState<ClienteConContador[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
@@ -57,7 +67,8 @@ export const PerfilPage = () => {
         setMisClientes(filtrados);
       } catch (error) {
         console.error("Error cargando portafolio de clientes:", error);
-      } verify {
+      } finally {
+        // CORREGIDO: Cambiado 'verify' por 'finally' para corregir la sintaxis de TypeScript y el error 500
         setLoadingClientes(false);
       }
     };
@@ -75,7 +86,7 @@ export const PerfilPage = () => {
       setNotifPass({
         tipo: "error",
         titulo: "Contraseña Inválida",
-        texto: "La nueva contraseña provisional debe tener al menos 6 caracteres.",
+        texto: "La nueva contraseña debe tener al menos 6 caracteres.",
       });
       return;
     }
@@ -89,14 +100,17 @@ export const PerfilPage = () => {
       setNotifPass({
         tipo: "success",
         titulo: "Seguridad Actualizada",
-        texto: "¡Tu clave de acceso ha sido sobreescrita correctamente en la bóveda de autenticación!",
+        texto:
+          "¡Tu clave de acceso ha sido sobreescrita correctamente en la bóveda de autenticación!",
       });
       setNewPassword("");
     } catch (error: any) {
       setNotifPass({
         tipo: "error",
         titulo: "Error de Seguridad",
-        texto: error.message || "Fallo técnico al intentar actualizar la contraseña.",
+        texto:
+          error.message ||
+          "Fallo técnico al intentar actualizar la contraseña.",
       });
     } finally {
       setLoadingPass(false);
@@ -111,7 +125,8 @@ export const PerfilPage = () => {
       setNotifCorreo({
         tipo: "error",
         titulo: "Sintaxis Inválida",
-        texto: "Por favor ingresa un formato de correo electrónico válido corporativo.",
+        texto:
+          "Por favor ingresa un formato de correo electrónico válido corporativo.",
       });
       return;
     }
@@ -130,13 +145,16 @@ export const PerfilPage = () => {
       setNotifCorreo({
         tipo: "success",
         titulo: "Parámetro Guardado",
-        texto: "¡Canal de alertas enrutado! Por favor reinicia la aplicación para refrescar el perfil de sesión.",
+        texto:
+          "¡Canal de alertas enrutado! Por favor reinicia la aplicación para refrescar el perfil de sesión.",
       });
     } catch (error: any) {
       setNotifCorreo({
         tipo: "error",
         titulo: "Fallo de Persistencia",
-        texto: error.message || "Error al registrar el nuevo correo de notificaciones en la base de datos.",
+        texto:
+          error.message ||
+          "Error al registrar el nuevo correo de notificaciones en la base de datos.",
       });
     } finally {
       setLoadingCorreo(false);
@@ -210,14 +228,15 @@ export const PerfilPage = () => {
                 onSubmit={handleActualizarCorreoNotificacion}
                 className="space-y-4"
               >
-                {/* NOTIFICACIÓN REACTIVA SOLID (SRP) */}
                 {notifCorreo.tipo && (
                   <div className="animate-in fade-in duration-200">
                     <AlertNotification
                       type={notifCorreo.tipo as AlertType}
                       title={notifCorreo.titulo}
                       message={notifCorreo.texto}
-                      onClose={() => setNotifCorreo({ tipo: "", titulo: "", texto: "" })}
+                      onClose={() =>
+                        setNotifCorreo({ tipo: "", titulo: "", texto: "" })
+                      }
                     />
                   </div>
                 )}
@@ -231,7 +250,7 @@ export const PerfilPage = () => {
                     value={correoNotif}
                     onChange={(e) => setCorreoNotif(e.target.value)}
                     placeholder="ejemplo@correo.com"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:bg-surface text-sm focus:ring-1 focus:ring-accent outline-none bg-surface"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-surface text-sm focus:ring-1 focus:ring-accent outline-none"
                   />
                   <p className="text-[10px] text-text-muted mt-1 leading-tight">
                     * Aquí recibirás las alertas de vencimiento. Tu correo de
@@ -243,10 +262,12 @@ export const PerfilPage = () => {
                   disabled={
                     loadingCorreo || correoNotif === perfil.correo_notificacion
                   }
-                  className="w-full bg-primary hover:bg-primary/90 text-surface text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                  className="w-full bg-primary hover:bg-primary/90 text-surface text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                 >
                   <Edit className="w-3.5 h-3.5" />
-                  {loadingCorreo ? "Guardando Correo..." : "Actualizar Correo de Alertas"}
+                  {loadingCorreo
+                    ? "Guardando Correo..."
+                    : "Actualizar Correo de Alertas"}
                 </button>
               </form>
             </div>
@@ -257,19 +278,20 @@ export const PerfilPage = () => {
               <div className="flex items-center gap-2 mb-4">
                 <Key className="w-5 h-5 text-accent" />
                 <h3 className="text-lg font-bold text-primary">
-                  Seguridad de la Cuenta
+                  Security de la Cuenta
                 </h3>
               </div>
 
               <form onSubmit={handleActualizarPassword} className="space-y-4">
-                {/* NOTIFICACIÓN REACTIVA SOLID (SRP) */}
                 {notifPass.tipo && (
                   <div className="animate-in fade-in duration-200">
                     <AlertNotification
                       type={notifPass.tipo as AlertType}
                       title={notifPass.titulo}
                       message={notifPass.texto}
-                      onClose={() => setNotifPass({ tipo: "", titulo: "", texto: "" })}
+                      onClose={() =>
+                        setNotifPass({ tipo: "", titulo: "", texto: "" })
+                      }
                     />
                   </div>
                 )}
@@ -284,7 +306,7 @@ export const PerfilPage = () => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Escribe tu nueva clave secreta..."
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-all bg-surface"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-all"
                   />
                   <p className="text-[10px] text-text-muted mt-1">
                     Usa al menos 6 caracteres. Te recomendamos combinar letras y
@@ -295,7 +317,7 @@ export const PerfilPage = () => {
                 <button
                   type="submit"
                   disabled={loadingPass || !newPassword}
-                  className="w-full bg-primary hover:bg-primary/90 text-surface text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-xs"
+                  className="w-full bg-primary hover:bg-primary/90 text-surface text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-xs cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
                   {loadingPass ? "Actualizando..." : "Actualizar Contraseña"}
