@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ClienteForm } from "./ClienteForm";
 import { FichaObligaciones } from "./FichaObligaciones";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 import { useNavigate } from "react-router-dom";
 
 const ClienteCargaMasiva = lazy(() =>
@@ -43,16 +44,22 @@ export const ClientesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
+  const [errorListado, setErrorListado] = useState<string | null>(null);
+
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
   const fetchClientes = async () => {
     try {
       setLoading(true);
+      setErrorListado(null);
       const data = await clientesService.getAll();
       setClientes(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      setErrorListado(
+        "No se pudo establecer comunicación con el servidor para sincronizar el listado de clientes.",
+      );
     } finally {
       setLoading(false);
     }
@@ -73,10 +80,14 @@ export const ClientesPage = () => {
       )
     ) {
       try {
+        setErrorListado(null);
         await clientesService.delete(id);
         fetchClientes();
-      } catch (error) {
-        alert("Error al eliminar el cliente");
+      } catch (error: any) {
+        setErrorListado(
+          error.message ||
+            "Fallo de persistencia al intentar desactivar el registro contable.",
+        );
       }
     }
   };
@@ -154,6 +165,17 @@ export const ClientesPage = () => {
         )}
       </div>
 
+      {errorListado && (
+        <div className="animate-in fade-in duration-200 max-w-4xl">
+          <AlertNotification
+            type="error"
+            title="Error del Sistema"
+            message={errorListado}
+            onClose={() => setErrorListado(null)}
+          />
+        </div>
+      )}
+
       <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs flex flex-col">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
           <div className="relative max-w-md flex-1">
@@ -203,7 +225,7 @@ export const ClientesPage = () => {
                 <tr>
                   <td
                     colSpan={puedeAdministrar ? 5 : 4}
-                    className="px-6 py-8 text-center text-text-muted"
+                    className="px-6 py-8 text-center text-text-muted font-mono text-xs"
                   >
                     Cargando directorio...
                   </td>
@@ -212,7 +234,7 @@ export const ClientesPage = () => {
                 <tr>
                   <td
                     colSpan={puedeAdministrar ? 5 : 4}
-                    className="px-6 py-8 text-center text-text-muted"
+                    className="px-6 py-8 text-center text-text-muted text-xs"
                   >
                     {searchTerm || selectedResponsable
                       ? "No se encontraron clientes con los filtros aplicados."
