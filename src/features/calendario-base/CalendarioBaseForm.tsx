@@ -7,7 +7,10 @@ import {
   type CalendarioBaseConImpuesto,
 } from "./types";
 import { X, Save, CalendarDays } from "lucide-react";
-import { calendarioBaseService } from "./calendarioBaseService";
+import {
+  useCreateCalendarioBase,
+  useUpdateCalendarioBase,
+} from "./useCalendarioBase";
 import { impuestosService } from "../impuestos/impuestosService";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
 import { Loader } from "../../components/Loader";
@@ -29,15 +32,17 @@ export const CalendarioBaseForm = ({
   const [impuestoMeta, setImpuestoMeta] =
     useState<ImpuestoConEspecialista | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
-
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const createMutation = useCreateCalendarioBase();
+  const updateMutation = useUpdateCalendarioBase();
 
   const {
     register,
     handleSubmit,
     setValue,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<CalendarioBaseFormData>({
     resolver: zodResolver(calendarioBaseSchema),
     defaultValues: {
@@ -51,7 +56,6 @@ export const CalendarioBaseForm = ({
 
   useEffect(() => {
     setValue("impuesto_id", impuestoId);
-
     setLoadingMeta(true);
     impuestosService
       .getAll()
@@ -76,23 +80,28 @@ export const CalendarioBaseForm = ({
   }, [fechaAEditar, reset, impuestoId]);
 
   const onSubmit = async (data: CalendarioBaseFormData) => {
-    try {
-      setSubmitError(null);
-      const payload = { ...data, impuesto_id: impuestoId };
+    setSubmitError(null);
+    const payload = { ...data, impuesto_id: impuestoId };
 
-      if (isEditing && fechaAEditar) {
-        await calendarioBaseService.update(fechaAEditar.id, payload);
-      } else {
-        await calendarioBaseService.create(payload);
-      }
-      onSuccess();
-    } catch (error: any) {
-      setSubmitError(
-        error.message ||
-          "Ocurrió un error inesperado al intentar guardar la fecha oficial.",
+    if (isEditing && fechaAEditar) {
+      updateMutation.mutate(
+        { id: fechaAEditar.id, payload },
+        {
+          onSuccess: () => onSuccess(),
+          onError: (err: any) =>
+            setSubmitError(err.message || "Fallo al actualizar el registro."),
+        },
       );
+    } else {
+      createMutation.mutate(payload, {
+        onSuccess: () => onSuccess(),
+        onError: (err: any) =>
+          setSubmitError(err.message || "Fallo al crear el registro contable."),
+      });
     }
   };
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -108,7 +117,7 @@ export const CalendarioBaseForm = ({
           </div>
           <button
             onClick={onClose}
-            className="text-surface/70 hover:text-surface transition-colors"
+            className="text-surface/70 hover:text-surface transition-colors cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
@@ -184,7 +193,11 @@ export const CalendarioBaseForm = ({
                   })}
                   disabled={!requiereDigito}
                   placeholder={requiereDigito ? "0-9" : "Fecha fija"}
-                  className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm ${!requiereDigito ? "bg-gray-100 cursor-not-allowed" : "bg-surface border-gray-300"}`}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm ${
+                    !requiereDigito
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : "bg-surface border-gray-300"
+                  }`}
                 />
                 {errors.digito && (
                   <p className="text-danger text-xs mt-1">
@@ -222,14 +235,14 @@ export const CalendarioBaseForm = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium"
+                className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 text-sm"
+                className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 text-sm cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 {isSubmitting ? "Guardando..." : "Guardar Fecha"}

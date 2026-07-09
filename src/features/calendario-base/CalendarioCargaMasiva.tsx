@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Upload, FileSpreadsheet, FileUp } from "lucide-react";
-import { calendarioBaseService } from "./calendarioBaseService";
+import { useCreateBulkCalendarioBase } from "./useCalendarioBase";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import * as XLSX from "xlsx";
 
@@ -17,12 +17,13 @@ export const CalendarioCargaMasiva = ({
 }: CalendarioCargaMasivaProps) => {
   const [anio, setAnio] = useState(new Date().getFullYear());
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [errorProcesamiento, setErrorProcesamiento] = useState<string | null>(
     null,
   );
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+
+  const bulkMutation = useCreateBulkCalendarioBase();
 
   const procesarFechaExcel = (fechaStr: any) => {
     if (!fechaStr) return "";
@@ -48,84 +49,83 @@ export const CalendarioCargaMasiva = ({
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-      const reader = new FileReader();
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: "binary", cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
 
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: "binary", cellDates: true });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
+          header: 1,
+          raw: false,
+          dateNF: "yyyy-mm-dd",
+        });
 
-          const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
-            header: 1,
-            raw: false,
-            dateNF: "yyyy-mm-dd",
-          });
+        const registrosValidos: any[] = [];
 
-          const registrosValidos = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0 || !row[0]) continue;
 
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length === 0 || !row[0]) continue;
+          const periodo = String(row[0] || "").trim();
+          const digitoStr = String(row[1] || "").trim();
+          const fechaStr = procesarFechaExcel(row[2]);
 
-            const periodo = String(row[0] || "").trim();
-            const digitoStr = String(row[1] || "").trim();
-            const fechaStr = procesarFechaExcel(row[2]);
-
-            if (!periodo || !fechaStr) {
-              throw new Error(
-                `Fila ${i + 1} incompleta: Falta definir el periodo fiscal o la fecha límite.`,
-              );
-            }
-
-            registrosValidos.push({
-              impuesto_id: impuestoId,
-              anio: anio,
-              periodo: periodo,
-              digito:
-                digitoStr === "" || digitoStr.toUpperCase() === "N/A"
-                  ? null
-                  : Number(digitoStr),
-              fecha_vencimiento_oficial: fechaStr,
-            });
-          }
-
-          if (registrosValidos.length === 0) {
+          if (!periodo || !fechaStr) {
             throw new Error(
-              "El archivo no contiene registros válidos para procesar o carece del formato requerido.",
+              `Fila ${i + 1} incompleta: Falta definir el periodo fiscal o la fecha límite.`,
             );
           }
 
-          await calendarioBaseService.createBulk(registrosValidos as any);
-
-          setMensajeExito(
-            `¡Estructura sembrada! Se procesaron e indexaron ${registrosValidos.length} fechas oficiales con éxito.`,
-          );
-
-          setTimeout(() => {
-            onSuccess();
-          }, 1500);
-        } catch (error: any) {
-          setErrorProcesamiento(
-            error.message ||
-              "Error al decodificar la matriz del archivo Excel.",
-          );
-          setIsSubmitting(false);
+          registrosValidos.push({
+            impuesto_id: impuestoId,
+            anio: anio,
+            periodo: periodo,
+            digito:
+              digitoStr === "" || digitoStr.toUpperCase() === "N/A"
+                ? null
+                : Number(digitoStr),
+            fecha_vencimiento_oficial: fechaStr,
+          });
         }
-      };
 
-      reader.readAsBinaryString(archivo);
-    } catch (error: any) {
-      setErrorProcesamiento(
-        error.message ||
-          "Fallo crítico en el hilo de lectura del almacenamiento local.",
-      );
-      setIsSubmitting(false);
-    }
+        if (registrosValidos.length === 0) {
+          throw new Error(
+            "El archivo no contiene registros válidos para procesar o carece del formato requerido.",
+          );
+        }
+
+        bulkMutation.mutate(
+          { registros: registrosValidos, anio },
+          {
+            onSuccess: () => {
+              setMensajeExito(
+                `¡Estructura sembrada! Se procesaron e indexaron ${registrosValidos.length} fechas oficiales con éxito.`,
+              );
+              setTimeout(() => {
+                onSuccess();
+              }, 1500);
+            },
+            onError: (err: any) => {
+              setErrorProcesamiento(
+                err.message || "Fallo de persistencia al impactar Supabase.",
+              );
+            },
+          },
+        );
+      } catch (error: any) {
+        setErrorProcesamiento(
+          error.message || "Error al decodificar la matriz del archivo Excel.",
+        );
+      }
+    };
+
+    reader.readAsBinaryString(archivo);
   };
+
+  const isSubmitting = bulkMutation.isPending;
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -139,7 +139,7 @@ export const CalendarioCargaMasiva = ({
           </div>
           <button
             onClick={onClose}
-            className="text-surface/70 hover:text-surface transition-colors"
+            className="text-surface/70 hover:text-surface transition-colors cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
@@ -202,7 +202,9 @@ export const CalendarioCargaMasiva = ({
               Selecciona tu archivo Excel (.xlsx, .xls)
             </label>
             <label
-              className={`mt-2 flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-accent hover:bg-gray-50 focus:outline-none ${archivo ? "border-accent bg-blue-50/30" : ""}`}
+              className={`mt-2 flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-accent hover:bg-gray-50 focus:outline-none ${
+                archivo ? "border-accent bg-blue-50/30" : ""
+              }`}
             >
               <span className="flex flex-col items-center justify-center space-y-2">
                 <FileUp
@@ -228,14 +230,14 @@ export const CalendarioCargaMasiva = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md transition-colors text-sm font-medium"
+            className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md transition-colors text-sm font-medium cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={handleCargaMasiva}
             disabled={isSubmitting || !archivo || !!mensajeExito}
-            className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+            className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm cursor-pointer"
           >
             <Upload className="w-4 h-4" />
             {isSubmitting ? "Procesando archivo..." : "Subir y Procesar"}
