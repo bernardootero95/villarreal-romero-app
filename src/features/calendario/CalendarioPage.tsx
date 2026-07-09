@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+// src/features/calendario/CalendarioPage.tsx
+import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { vencimientosService, type Vencimiento } from "./vencimientosService";
+import {
+  useVencimientosMes,
+  useActualizarEstadoVencimiento,
+} from "./useVencimientos";
+import type { Vencimiento } from "./vencimientosService";
 import { Loader } from "../../components/Loader";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import {
@@ -15,43 +20,23 @@ import {
 export const CalendarioPage = () => {
   const { perfil } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const [radicados, setRadicados] = useState<Record<string, string>>({});
-  const [guardandoId, setGuardandoId] = useState<string | null>(null);
-
-  const [operError, setOperError] = useState<string | null>(null);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const fetchDatos = async () => {
-    if (!perfil) return;
-    try {
-      setLoading(true);
-      setOperError(null);
-      const data = await vencimientosService.getVencimientosMes(
-        year,
-        month,
-        perfil.id,
-        perfil.cargo,
-      );
-      setVencimientos(data);
-    } catch (error: any) {
-      console.error("Error cargando calendario:", error);
-      setOperError(
-        "No se pudieron sincronizar las fechas tributarias correspondientes al mes seleccionado.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 1. Consumo declarativo del estado de vencimientos con TanStack Query
+  const {
+    data: vencimientos = [],
+    isLoading,
+    error,
+  } = useVencimientosMes(year, month, perfil?.id, perfil?.cargo);
 
-  useEffect(() => {
-    fetchDatos();
-  }, [year, month, perfil]);
+  // 2. Consumo de la mutación para actualizar estado
+  const actualizarEstadoMutation = useActualizarEstadoVencimiento();
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -63,6 +48,7 @@ export const CalendarioPage = () => {
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  // Reducción reactiva de datos derivados basados en la caché de query
   const vencimientosPorDia = vencimientos.reduce(
     (acc, v) => {
       if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
@@ -89,31 +75,37 @@ export const CalendarioPage = () => {
   const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   const handleMarcarPresentado = async (tareaId: string) => {
+    if (!perfil) return;
     const observacionText = radicados[tareaId] || "";
-    try {
-      setGuardandoId(tareaId);
-      setOperError(null);
-      await vencimientosService.actualizarEstado(
-        tareaId,
-        "PRESENTADO",
-        observacionText,
-      );
+    setErrorLocal(null);
 
-      setRadicados((prev) => {
-        const copia = { ...prev };
-        delete copia[tareaId];
-        return copia;
-      });
-
-      await fetchDatos();
-    } catch (error: any) {
-      setOperError(
-        error.message ||
-          "No se pudo actualizar el radicado de la obligación tributaria.",
-      );
-    } finally {
-      setGuardandoId(null);
-    }
+    // Ejecución de la mutación declarativa
+    actualizarEstadoMutation.mutate(
+      {
+        id: tareaId,
+        nuevoEstado: "PRESENTADO",
+        observaciones: observacionText,
+        anio: year,
+        mes: month,
+        usuarioId: perfil.id,
+      },
+      {
+        onSuccess: () => {
+          // Limpia el input del radicado para esa tarea
+          setRadicados((prev) => {
+            const copia = { ...prev };
+            delete copia[tareaId];
+            return copia;
+          });
+        },
+        onError: (err: any) => {
+          setErrorLocal(
+            err.message ||
+              "No se pudo actualizar el radicado de la obligación tributaria.",
+          );
+        },
+      },
+    );
   };
 
   const renderDayModal = () => {
@@ -139,7 +131,7 @@ export const CalendarioPage = () => {
             </div>
             <button
               onClick={() => setSelectedDate(null)}
-              className="text-surface/70 hover:text-surface transition-colors"
+              className="text-surface/70 hover:text-surface transition-colors cursor-pointer"
             >
               <X className="w-6 h-6" />
             </button>
@@ -154,6 +146,9 @@ export const CalendarioPage = () => {
               <div className="space-y-4">
                 {tareasDelDia.map((tarea) => {
                   const esPendiente = tarea.estado_tarea === "PENDIENTE";
+                  const guardandoId =
+                    actualizarEstadoMutation.isPending &&
+                    actualizarEstadoMutation.variables?.id === tarea.id;
 
                   return (
                     <div
@@ -205,11 +200,11 @@ export const CalendarioPage = () => {
                             />
                             <button
                               onClick={() => handleMarcarPresentado(tarea.id)}
-                              disabled={guardandoId === tarea.id}
-                              className="w-full bg-success hover:bg-success/90 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50"
+                              disabled={guardandoId}
+                              className="w-full bg-success hover:bg-success/90 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                             >
                               <CheckSquare className="w-3.5 h-3.5" />
-                              {guardandoId === tarea.id
+                              {guardandoId
                                 ? "Guardando..."
                                 : "Marcar Presentado"}
                             </button>
@@ -227,9 +222,17 @@ export const CalendarioPage = () => {
     );
   };
 
-  if (loading) {
-    return <Loader texto="Sincronizando calendario..." fullScreen={false} />;
+  // Se muestra la pantalla de carga solo cuando se monta inicialmente o cuando no hay datos en caché
+  if (isLoading && !vencimientos.length) {
+    return (
+      <Loader
+        texto="Sincronizando calendario tributario..."
+        fullScreen={false}
+      />
+    );
   }
+
+  const errorAMostrar = error?.message || errorLocal;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -246,32 +249,32 @@ export const CalendarioPage = () => {
         <div className="flex items-center bg-surface border border-gray-200 rounded-lg p-1 shadow-sm">
           <button
             onClick={prevMonth}
-            className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors"
+            className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={goToToday}
-            className="px-4 py-1 text-sm font-semibold text-primary hover:bg-gray-100 rounded transition-colors"
+            className="px-4 py-1 text-sm font-semibold text-primary hover:bg-gray-100 rounded transition-colors cursor-pointer"
           >
             Hoy
           </button>
           <button
             onClick={nextMonth}
-            className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors"
+            className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors cursor-pointer"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {operError && (
+      {errorAMostrar && (
         <div className="animate-in fade-in duration-200 max-w-4xl">
           <AlertNotification
             type="error"
-            title="Error de Operación"
-            message={operError}
-            onClose={() => setOperError(null)}
+            title="Error de Calendario"
+            message={errorAMostrar}
+            onClose={() => setErrorLocal(null)}
           />
         </div>
       )}
