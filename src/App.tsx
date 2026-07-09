@@ -32,12 +32,8 @@ function App() {
                   <Routes>
                     <Route path="/" element={<DashboardPage />} />
 
-                    {/* Ruta de Clientes: Directorio general */}
                     <Route path="/clientes" element={<ClientesPage />} />
 
-                    {/* ENRUTAMIENTO DINÁMICO: 
-                        Ficha profunda indexada por ID de Supabase para Deep Linking nativo 
-                    */}
                     <Route
                       path="/clientes/:id"
                       element={<DetalleClientePage />}
