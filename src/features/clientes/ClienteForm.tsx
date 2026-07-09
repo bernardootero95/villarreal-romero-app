@@ -11,6 +11,7 @@ import { clientesService } from "./clientesService";
 import { usuariosService } from "../usuarios/usuariosService";
 import type { Usuario } from "../usuarios/types";
 import { FichaObligaciones } from "./FichaObligaciones";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 
 interface ClienteFormProps {
   onClose: () => void;
@@ -47,6 +48,8 @@ export const ClienteForm = ({
     null,
   );
   const [mostrarPasoObligaciones, setMostrarPasoObligaciones] = useState(false);
+
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -104,6 +107,7 @@ export const ClienteForm = ({
 
   const onSubmit = async (data: ClienteFormData) => {
     try {
+      setSubmitError(null);
       const datosLimpios = {
         ...data,
         email: data.email?.trim() || null,
@@ -124,7 +128,10 @@ export const ClienteForm = ({
         }
       }
     } catch (error: any) {
-      alert(error.message || "Error al guardar el cliente");
+      setSubmitError(
+        error.message ||
+          "No se pudieron salvar las modificaciones del cliente en la base de datos.",
+      );
     }
   };
 
@@ -160,6 +167,17 @@ export const ClienteForm = ({
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+          {submitError && (
+            <div className="animate-in fade-in duration-200">
+              <AlertNotification
+                type="error"
+                title="Error de Registro"
+                message={submitError}
+                onClose={() => setSubmitError(null)}
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-9 md:col-span-10">
               <label className="block text-sm font-medium text-text-main mb-1">
@@ -168,7 +186,7 @@ export const ClienteForm = ({
               <input
                 {...register("nit")}
                 disabled={isEditing}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code ${errors.nit ? "border-danger" : "border-gray-300"} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface ${errors.nit ? "border-danger" : "border-gray-300"} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="Ej. 900123456"
               />
               {errors.nit && (
@@ -199,7 +217,7 @@ export const ClienteForm = ({
             </label>
             <input
               {...register("razon_social")}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${errors.razon_social ? "border-danger" : "border-gray-300"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.razon_social ? "border-danger" : "border-gray-300"}`}
               placeholder="Nombre de la empresa o persona natural"
             />
             {errors.razon_social && (
@@ -219,7 +237,7 @@ export const ClienteForm = ({
               </label>
               <input
                 {...register("email")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none ${errors.email ? "border-danger" : "border-gray-300"}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.email ? "border-danger" : "border-gray-300"}`}
                 placeholder="facturacion@empresa.com"
               />
               {errors.email && (
@@ -238,7 +256,7 @@ export const ClienteForm = ({
               </label>
               <input
                 {...register("celular")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code ${errors.celular ? "border-danger" : "border-gray-300"}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface ${errors.celular ? "border-danger" : "border-gray-300"}`}
                 placeholder="Ej. 3151234567"
               />
               {errors.celular && (
@@ -276,14 +294,14 @@ export const ClienteForm = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors"
+              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
+              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm"
             >
               {isSubmitting ? (
                 "Guardando..."
