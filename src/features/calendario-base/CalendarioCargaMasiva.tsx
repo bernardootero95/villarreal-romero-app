@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, Upload, FileSpreadsheet, FileUp } from "lucide-react";
 import { calendarioBaseService } from "./calendarioBaseService";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 import * as XLSX from "xlsx";
 
 interface CalendarioCargaMasivaProps {
@@ -18,6 +19,11 @@ export const CalendarioCargaMasiva = ({
   const [archivo, setArchivo] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [errorProcesamiento, setErrorProcesamiento] = useState<string | null>(
+    null,
+  );
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+
   const procesarFechaExcel = (fechaStr: any) => {
     if (!fechaStr) return "";
     const parts = String(fechaStr).split(/[-/]/);
@@ -32,7 +38,15 @@ export const CalendarioCargaMasiva = ({
   };
 
   const handleCargaMasiva = async () => {
-    if (!archivo) return alert("Debes seleccionar un archivo de Excel");
+    setErrorProcesamiento(null);
+    setMensajeExito(null);
+
+    if (!archivo) {
+      setErrorProcesamiento(
+        "Debes seleccionar un archivo válido de Excel (.xlsx, .xls) antes de proceder.",
+      );
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -63,7 +77,7 @@ export const CalendarioCargaMasiva = ({
 
             if (!periodo || !fechaStr) {
               throw new Error(
-                `Fila ${i + 1} incompleta: Falta el periodo o la fecha.`,
+                `Fila ${i + 1} incompleta: Falta definir el periodo fiscal o la fecha límite.`,
               );
             }
 
@@ -81,24 +95,34 @@ export const CalendarioCargaMasiva = ({
 
           if (registrosValidos.length === 0) {
             throw new Error(
-              "El archivo parece estar vacío o no tiene el formato correcto.",
+              "El archivo no contiene registros válidos para procesar o carece del formato requerido.",
             );
           }
 
           await calendarioBaseService.createBulk(registrosValidos as any);
-          alert(
-            `¡Éxito! Se cargaron ${registrosValidos.length} fechas correctamente.`,
+
+          setMensajeExito(
+            `¡Estructura sembrada! Se procesaron e indexaron ${registrosValidos.length} fechas oficiales con éxito.`,
           );
-          onSuccess();
+
+          setTimeout(() => {
+            onSuccess();
+          }, 1500);
         } catch (error: any) {
-          alert(error.message);
+          setErrorProcesamiento(
+            error.message ||
+              "Error al decodificar la matriz del archivo Excel.",
+          );
           setIsSubmitting(false);
         }
       };
 
       reader.readAsBinaryString(archivo);
     } catch (error: any) {
-      alert(error.message);
+      setErrorProcesamiento(
+        error.message ||
+          "Fallo crítico en el hilo de lectura del almacenamiento local.",
+      );
       setIsSubmitting(false);
     }
   };
@@ -121,7 +145,28 @@ export const CalendarioCargaMasiva = ({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+          {errorProcesamiento && (
+            <div className="animate-in fade-in duration-200">
+              <AlertNotification
+                type="error"
+                title="Fallo de Procesamiento"
+                message={errorProcesamiento}
+                onClose={() => setErrorProcesamiento(null)}
+              />
+            </div>
+          )}
+
+          {mensajeExito && (
+            <div className="animate-in fade-in duration-200">
+              <AlertNotification
+                type="success"
+                title="Carga Exitosa"
+                message={mensajeExito}
+              />
+            </div>
+          )}
+
           <div className="max-w-xs">
             <label className="block text-xs font-bold text-text-muted uppercase mb-1">
               Año Fiscal del Reporte
@@ -130,7 +175,7 @@ export const CalendarioCargaMasiva = ({
               type="number"
               value={anio}
               onChange={(e) => setAnio(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
             />
           </div>
 
@@ -183,13 +228,13 @@ export const CalendarioCargaMasiva = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md transition-colors text-sm"
+            className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md transition-colors text-sm font-medium"
           >
             Cancelar
           </button>
           <button
             onClick={handleCargaMasiva}
-            disabled={isSubmitting || !archivo}
+            disabled={isSubmitting || !archivo || !!mensajeExito}
             className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm"
           >
             <Upload className="w-4 h-4" />
