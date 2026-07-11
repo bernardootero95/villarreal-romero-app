@@ -1,14 +1,9 @@
-// src/features/calendario/useVencimientos.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { vencimientosService, type Vencimiento } from "./vencimientosService";
 
-// Función para generar una query key estructurada
 export const getVencimientosQueryKey = (anio: number, mes: number, usuarioId: string) => 
   ["vencimientos", anio, mes, usuarioId] as const;
 
-/**
- * Hook declarativo para obtener los vencimientos de un mes y año específicos
- */
 export const useVencimientosMes = (
   anio: number,
   mes: number,
@@ -18,32 +13,55 @@ export const useVencimientosMes = (
   return useQuery<Vencimiento[], Error>({
     queryKey: getVencimientosQueryKey(anio, mes, usuarioId || ""),
     queryFn: () => vencimientosService.getVencimientosMes(anio, mes, usuarioId!, cargo!),
-    enabled: !!usuarioId && !!cargo, // No se ejecuta la consulta hasta que el perfil esté cargado
-    staleTime: 1000 * 60 * 2, // Considerar frescos por 2 minutos
+    enabled: !!usuarioId && !!cargo,
+    staleTime: 1000 * 60 * 5, 
   });
 };
 
 interface ParamsActualizarEstado {
   id: string;
-  nuevoEstado: string;
+  nuevoEstado: 'PENDIENTE' | 'REVISIÓN' | 'PRESENTADO' | 'VENCIDO';
   observaciones?: string;
-  // Parámetros necesarios para invalidar la caché correcta tras el éxito
   anio: number;
   mes: number;
   usuarioId: string;
 }
 
-/**
- * Hook para mutar y actualizar el estado de una obligación tributaria
- */
 export const useActualizarEstadoVencimiento = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ id, nuevoEstado, observaciones }: ParamsActualizarEstado) =>
-      vencimientosService.actualizarEstado(id, nuevoEstado, observaciones),
-    onSuccess: (_data, variables) => {
-      // Invalidar únicamente la caché del mes y usuario que sufrieron el cambio
+      vencimientosService.actualizarEstado(id, nuevoEstado, observaciones || ""),
+    
+    onMutate: async (variables) => {
+      const queryKey = getVencimientosQueryKey(variables.anio, variables.mes, variables.usuarioId);
+
+      await queryClient.cancelQueries({ queryKey });
+
+      const vencimientosPrevios = queryClient.getQueryData<Vencimiento[]>(queryKey);
+
+      if (vencimientosPrevios) {
+        queryClient.setQueryData<Vencimiento[]>(
+          queryKey,
+          vencimientosPrevios.map((vto) =>
+            vto.id === variables.id
+              ? { ...vto, estado_tarea: variables.nuevoEstado, observaciones: variables.observaciones || null }
+              : vto
+          )
+        );
+      }
+
+      return { vencimientosPrevios, queryKey };
+    },
+
+    onError: (_err, _variables, context) => {
+      if (context?.vencimientosPrevios) {
+        queryClient.setQueryData(context.queryKey, context.vencimientosPrevios);
+      }
+    },
+
+    onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({
         queryKey: getVencimientosQueryKey(variables.anio, variables.mes, variables.usuarioId),
       });
