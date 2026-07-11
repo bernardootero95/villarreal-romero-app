@@ -12,9 +12,21 @@ import {
   ChevronRight,
   Flame,
   ListFilter,
+  AlertTriangle,
 } from "lucide-react";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import { useNavigate } from "react-router-dom";
+
+const calcularDiasRestantes = (fechaLimiteStr: string): number => {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const [anio, mes, dia] = fechaLimiteStr.split("-").map(Number);
+  const fechaVencimiento = new Date(anio, mes - 1, dia);
+
+  const diferenciaTiempo = fechaVencimiento.getTime() - hoy.getTime();
+  return Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24));
+};
 
 export const DashboardPage = () => {
   const { perfil, session } = useAuth();
@@ -26,7 +38,6 @@ export const DashboardPage = () => {
   const hoy = new Date();
   const esIngeniero = perfil?.cargo === "Ingeniero";
 
-  // 1. Sincronización concurrente de métricas y agendas de TanStack Query
   const {
     data: metricas,
     isLoading: loadingMetricas,
@@ -264,10 +275,10 @@ export const DashboardPage = () => {
             </div>
           ) : (
             <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
-              <div className="flex items-center gap-2 text-danger border-b border-gray-100 pb-3">
-                <AlertCircle className="w-5 h-5" />
+              <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
+                <AlertTriangle className="w-5 h-5 text-accent" />
                 <h3 className="text-sm font-title font-bold uppercase tracking-wide">
-                  Alertas Críticas de Vencimiento (Próximos 5 días)
+                  Alertas Críticas de Vencimiento Semafórico
                 </h3>
               </div>
               <div className="divide-y divide-gray-100">
@@ -282,39 +293,55 @@ export const DashboardPage = () => {
                     </p>
                   </div>
                 ) : (
-                  metricas.alertasCriticas?.map((alerta: any) => (
-                    <div
-                      key={alerta.id}
-                      onClick={() =>
-                        navigate(`/clientes/${alerta.clientes.id}`)
-                      }
-                      className="py-3 flex justify-between items-center hover:bg-gray-50/60 px-2 rounded-lg cursor-pointer transition-colors group"
-                    >
-                      <div className="space-y-0.5 max-w-[70%]">
-                        <p className="text-xs font-bold text-primary group-hover:text-accent transition-colors truncate">
-                          {alerta.clientes?.razon_social}
-                        </p>
-                        <p className="text-[11px] text-text-muted truncate">
-                          {alerta.impuestos?.nombre} (Per:{" "}
-                          {alerta.periodo_fiscal})
-                        </p>
+                  metricas.alertasCriticas?.map((alerta: any) => {
+                    const diasRestantes = calcularDiasRestantes(
+                      alerta.fecha_limite,
+                    );
+
+                    // LÓGICA SOLID DE SEMÁFORO: Configuración de estilos dinámicos según el tiempo límite
+                    let semaforoBadge =
+                      "bg-gray-100 text-text-muted border-gray-200";
+                    let semaforoTexto = `${diasRestantes} días`;
+
+                    if (diasRestantes <= 1) {
+                      semaforoBadge =
+                        "bg-danger/10 text-danger border-danger/20 font-extrabold animate-pulse";
+                      semaforoTexto =
+                        diasRestantes === 0 ? "¡VENCE HOY!" : "¡VENCE MAÑANA!";
+                    } else if (diasRestantes <= 3) {
+                      semaforoBadge =
+                        "bg-warning/10 text-warning border-warning/20 font-bold";
+                      semaforoTexto = `Urgente: ${diasRestantes} días`;
+                    }
+
+                    return (
+                      <div
+                        key={alerta.id}
+                        onClick={() =>
+                          navigate(`/clientes/${alerta.clientes.id}`)
+                        }
+                        className="py-3 flex justify-between items-center hover:bg-gray-50/60 px-2 rounded-lg cursor-pointer transition-colors group"
+                      >
+                        <div className="space-y-0.5 max-w-[65%]">
+                          <p className="text-xs font-bold text-primary group-hover:text-accent transition-colors truncate">
+                            {alerta.clientes?.razon_social}
+                          </p>
+                          <p className="text-[11px] text-text-muted truncate">
+                            {alerta.impuestos?.nombre} (Per:{" "}
+                            {alerta.periodo_fiscal})
+                          </p>
+                        </div>
+                        <div className="text-right flex items-center gap-3 shrink-0">
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded border ${semaforoBadge}`}
+                          >
+                            {semaforoTexto}
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-0.5 transition-transform" />
+                        </div>
                       </div>
-                      <div className="text-right flex items-center gap-3">
-                        <span className="text-[11px] font-mono bg-danger/10 text-danger px-2 py-0.5 rounded border border-danger/20 font-bold">
-                          Vence:{" "}
-                          {new Date(alerta.fecha_limite).toLocaleDateString(
-                            "es-CO",
-                            {
-                              day: "2-digit",
-                              month: "short",
-                              timeZone: "UTC",
-                            },
-                          )}
-                        </span>
-                        <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-0.5 transition-transform" />
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
