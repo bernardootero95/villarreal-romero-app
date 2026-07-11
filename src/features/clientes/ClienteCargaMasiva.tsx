@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 import { useCreateBulkClientes, useAsignarImpuestosBulk } from "./useClientes";
-import { usuariosService } from "../usuarios/usuariosService";
-import { impuestosService } from "../impuestos/impuestosService";
+import { useUsuarios } from "../usuarios/useUsuarios"; // <-- Catálogo reactivo integrado
+import { useImpuestos } from "../impuestos/useImpuestos"; // <-- Catálogo reactivo integrado
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import * as XLSX from "xlsx";
 
@@ -42,59 +42,39 @@ export const ClienteCargaMasiva = ({
   const [impuestosSistema, setImpuestosSistema] = useState<
     Record<string, string>
   >({});
-  const [listaImpuestosRaw, setListaImpuestosRaw] = useState<
-    Array<{ nombre: string; periodicidad: string }>
-  >([]);
-
   const [errorProcesamiento, setErrorProcesamiento] = useState<string | null>(
     null,
   );
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
-  // Consumo de mutaciones bajo demanda de TanStack Query
+  // Consumo de mutaciones y queries globales coordinadas
   const createBulkClientesMutation = useCreateBulkClientes();
   const asignarImpuestosBulkMutation = useAsignarImpuestosBulk();
 
+  const { data: usuarios = [], isLoading: loadingUsers } = useUsuarios();
+  const { data: impuestos = [], isLoading: loadingTaxes } = useImpuestos();
+
+  // REFACTOR SOLID (SRP): Derivamos los diccionarios de validación directamente de la caché global compartida
   useEffect(() => {
-    const cargarDiccionarios = async () => {
-      try {
-        setErrorProcesamiento(null);
-        const [users, taxes] = await Promise.all([
-          usuariosService.getAll(),
-          impuestosService.getAll(),
-        ]);
+    if (usuarios.length > 0) {
+      const userMap = usuarios.reduce(
+        (acc, u) => ({
+          ...acc,
+          [u.nombre_completo.toLowerCase().trim()]: u.id,
+        }),
+        {},
+      );
+      setUsuariosSistema(userMap);
+    }
 
-        setListaImpuestosRaw(
-          taxes.map((t) => ({
-            nombre: t.nombre,
-            periodicidad: t.periodicidad,
-          })),
-        );
-
-        const userMap = users.reduce(
-          (acc, u) => ({
-            ...acc,
-            [u.nombre_completo.toLowerCase().trim()]: u.id,
-          }),
-          {},
-        );
-
-        const taxMap = taxes.reduce((acc, i) => {
-          const llaveCompuesta = `${i.nombre.toUpperCase().trim()}|${i.periodicidad.toUpperCase().trim()}`;
-          return { ...acc, [llaveCompuesta]: i.id };
-        }, {});
-
-        setUsuariosSistema(userMap);
-        setImpuestosSistema(taxMap);
-      } catch (err) {
-        console.error("Error inicializando diccionarios de validación:", err);
-        setErrorProcesamiento(
-          "Error al sincronizar los catálogos base necesarios para la validación interna.",
-        );
-      }
-    };
-    cargarDiccionarios();
-  }, []);
+    if (impuestos.length > 0) {
+      const taxMap = impuestos.reduce((acc, i) => {
+        const llaveCompuesta = `${i.nombre.toUpperCase().trim()}|${i.periodicidad.toUpperCase().trim()}`;
+        return { ...acc, [llaveCompuesta]: i.id };
+      }, {});
+      setImpuestosSistema(taxMap);
+    }
+  }, [usuarios, impuestos]);
 
   const handleDescargarModelo = () => {
     try {
@@ -119,18 +99,11 @@ export const ClienteCargaMasiva = ({
 
       const estructuraGuiaImpuestos = [
         ["Nombre del Impuesto", "Periodicidad Permitida"],
-        ...listaImpuestosRaw.map((t) => [
+        ...impuestos.map((t) => [
           t.nombre.toUpperCase(),
           t.periodicidad.toUpperCase(),
         ]),
       ];
-
-      if (estructuraGuiaImpuestos.length === 1) {
-        estructuraGuiaImpuestos.push(
-          ["IVA", "BIMESTRAL"],
-          ["IVA", "CUATRIMESTRAL"],
-        );
-      }
 
       const wb = XLSX.utils.book_new();
       const wsClientes = XLSX.utils.aoa_to_sheet(estructuraClientes);
@@ -209,7 +182,7 @@ export const ClienteCargaMasiva = ({
           const contadorId = usuariosSistema[responsableStr];
           if (!contadorId) {
             throw new Error(
-              `Pestaña 'Clientes' - Fila ${i + 1}: El profesional '${row[4]}' no figura registrado o activo en las firmas de la base de datos.`,
+              `Pestaña 'Clientes' - Fila ${i + 1}: El profesional '${row[4]}' no figura registrado o activo en la firma.`,
             );
           }
 
@@ -236,7 +209,6 @@ export const ClienteCargaMasiva = ({
           );
         }
 
-        // Ejecución secuencial controlada mediante promesas de TanStack Mutations
         const clientesCreados =
           await createBulkClientesMutation.mutateAsync(clientesPayload);
 
@@ -310,6 +282,7 @@ export const ClienteCargaMasiva = ({
     windowReader.readAsBinaryString(archivo);
   };
 
+  const isMetadataLoading = loadingUsers || loadingTaxes;
   const isSubmitting =
     createBulkClientesMutation.isPending ||
     asignarImpuestosBulkMutation.isPending;
@@ -332,10 +305,14 @@ export const ClienteCargaMasiva = ({
           </button>
         </div>
 
-        {isSubmitting ? (
+        {isMetadataLoading || isSubmitting ? (
           <div className="p-12">
             <Loader
-              texto="Estructurando datos y sembrando agendas automatizadas..."
+              texto={
+                isMetadataLoading
+                  ? "Sincronizando catálogos de validación..."
+                  : "Estructurando datos y sembrando agendas..."
+              }
               fullScreen={false}
             />
           </div>
@@ -428,7 +405,7 @@ export const ClienteCargaMasiva = ({
           </div>
         )}
 
-        {!isSubmitting && (
+        {!isSubmitting && !isMetadataLoading && (
           <div className="p-4 border-t border-gray-100 flex justify-end gap-3 shrink-0 bg-gray-50">
             <button
               type="button"
