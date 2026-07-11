@@ -138,6 +138,8 @@ export const DashboardPage = () => {
     );
   }
 
+  const localTodayStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
       <div>
@@ -306,11 +308,14 @@ export const DashboardPage = () => {
                       semaforoBadge =
                         "bg-danger text-white border-danger font-extrabold animate-pulse shadow-sm";
                       semaforoTexto = `VENCIDO (${Math.abs(diasRestantes)}d)`;
-                    } else if (diasRestantes <= 1) {
+                    } else if (diasRestantes === 0) {
+                      semaforoBadge =
+                        "bg-danger/10 text-danger border-danger/20 font-extrabold animate-pulse";
+                      semaforoTexto = "¡VENCE HOY!";
+                    } else if (diasRestantes === 1) {
                       semaforoBadge =
                         "bg-danger/10 text-danger border-danger/20 font-extrabold";
-                      semaforoTexto =
-                        diasRestantes === 0 ? "¡VENCE HOY!" : "¡VENCE MAÑANA!";
+                      semaforoTexto = "¡VENCE MAÑANA!";
                     } else if (diasRestantes <= 3) {
                       semaforoBadge =
                         "bg-warning/10 text-warning border-warning/20 font-bold";
@@ -327,7 +332,7 @@ export const DashboardPage = () => {
                       >
                         <div className="space-y-0.5 max-w-[65%]">
                           <p
-                            className={`text-xs font-bold group-hover:text-accent transition-colors truncate ${diasRestantes < 0 ? "text-danger" : "text-primary"}`}
+                            className={`text-xs font-bold group-hover:text-accent transition-colors truncate ${diasRestantes < 0 ? "text-danger font-extrabold" : "text-primary"}`}
                           >
                             {alerta.clientes?.razon_social}
                           </p>
@@ -404,6 +409,8 @@ export const DashboardPage = () => {
               ).length;
               const esSeleccionado = dia.fechaStr === diaSeleccionado;
 
+              const esDiaPasado = dia.fechaStr < localTodayStr;
+
               return (
                 <button
                   key={dia.fechaStr}
@@ -430,9 +437,11 @@ export const DashboardPage = () => {
                       <span
                         className={`w-1.5 h-1.5 rounded-full ${
                           pendientesDelDia > 0
-                            ? esSeleccionado
-                              ? "bg-accent"
-                              : "bg-amber-500"
+                            ? esDiaPasado
+                              ? "bg-danger animate-pulse"
+                              : esSeleccionado
+                                ? "bg-accent"
+                                : "bg-amber-500"
                             : "bg-success"
                         }`}
                       />
@@ -464,31 +473,41 @@ export const DashboardPage = () => {
                   </p>
                 </div>
               ) : (
-                tareasDiaSeleccionado.map((t) => (
-                  <div
-                    key={t.id}
-                    onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
-                    className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white hover:border-gray-200 transition-all cursor-pointer group"
-                  >
-                    <div className="truncate space-y-0.5 max-w-[70%]">
-                      <p className="font-bold text-primary truncate group-hover:text-accent transition-colors">
-                        {t.clientes?.razon_social}
-                      </p>
-                      <p className="text-text-muted truncate font-medium">
-                        {t.impuestos?.nombre}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wide shrink-0 ${
-                        t.estado_tarea === "PRESENTADO"
-                          ? "bg-success/10 text-success border-success/20"
-                          : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                      }`}
+                tareasDiaSeleccionado.map((t) => {
+                  const esVencidoHistorico =
+                    t.estado_tarea !== "PRESENTADO" &&
+                    t.fecha_limite < localTodayStr;
+
+                  return (
+                    <div
+                      key={t.id}
+                      onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
+                      className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white hover:border-gray-200 transition-all cursor-pointer group"
                     >
-                      {t.estado_tarea}
-                    </span>
-                  </div>
-                ))
+                      <div className="truncate space-y-0.5 max-w-[70%]">
+                        <p
+                          className={`font-bold truncate group-hover:text-accent transition-colors ${esVencidoHistorico ? "text-danger" : "text-primary"}`}
+                        >
+                          {t.clientes?.razon_social}
+                        </p>
+                        <p className="text-text-muted truncate font-medium">
+                          {t.impuestos?.nombre}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wide shrink-0 ${
+                          t.estado_tarea === "PRESENTADO"
+                            ? "bg-success/10 text-success border-success/20"
+                            : esVencidoHistorico
+                              ? "bg-danger text-white border-danger animate-pulse font-extrabold"
+                              : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                        }`}
+                      >
+                        {esVencidoHistorico ? "VENCIDO" : t.estado_tarea}
+                      </span>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

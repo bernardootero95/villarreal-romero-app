@@ -8,12 +8,12 @@ export const dashboardService = {
     const anio = hoy.getFullYear();
     const mes = hoy.getMonth();
 
+    
     const [todosLosClientes, todosLosVencimientos] = await Promise.all([
       clientesService.getAll(),
       vencimientosService.getVencimientosMes(anio, mes, usuarioId, cargo)
     ]);
 
-    
     const esIngeniero = cargo === 'Ingeniero';
     const clientesAsignados = todosLosClientes.filter((c) => {
       if (esIngeniero) return c.estado === 'ACTIVO';
@@ -32,21 +32,32 @@ export const dashboardService = {
       ? Math.round((presentados / totalVencimientosMes) * 100) 
       : 100;
 
-    
     const fechaLimiteAlerta = new Date();
     fechaLimiteAlerta.setDate(hoy.getDate() + 5);
+    const endDateStr = `${fechaLimiteAlerta.getFullYear()}-${String(fechaLimiteAlerta.getMonth() + 1).padStart(2, '0')}-${String(fechaLimiteAlerta.getDate()).padStart(2, '0')}`;
 
-    const alertasCriticas = todosLosVencimientos
-      .filter((v) => {
-        if (v.estado_tarea === 'PRESENTADO') return false;
-        const fechaVencimiento = new Date(v.fecha_limite + "T00:00:00");
-        const fechaHoyPlana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-        return fechaVencimiento >= fechaHoyPlana && fechaVencimiento <= fechaLimiteAlerta;
-      })
-      .sort((a, b) => new Date(a.fecha_limite).getTime() - new Date(b.fecha_limite).getTime())
-      .slice(0, 5);
+    let queryAlertas = supabase
+      .from('vencimientos')
+      .select(`
+        id,
+        fecha_limite,
+        periodo_fiscal,
+        estado_tarea,
+        clientes!inner ( id, razon_social, nit, dv, contador_id, estado ),
+        impuestos ( id, nombre, especialista_id )
+      `)
+      .neq('estado_tarea', 'PRESENTADO')
+      .eq('clientes.estado', 'ACTIVO')
+      .lte('fecha_limite', endDateStr) 
+      .order('fecha_limite', { ascending: true });
 
-    
+    if (!esIngeniero) {
+      queryAlertas = queryAlertas.or(`contador_id.eq.${usuarioId},especialista_id.eq.${usuarioId}`, { foreignTable: 'clientes' });
+    }
+
+    const { data: dataAlertas } = await queryAlertas;
+    const alertasCriticas = (dataAlertas || []).slice(0, 5);
+
     const conteoPorCliente: { [key: string]: { nombre: string; pendientes: number } } = {};
     
     todosLosVencimientos.forEach((v) => {
@@ -74,7 +85,6 @@ export const dashboardService = {
   },
 
   async getDistribucionImpuestos(): Promise<Array<{ id: string; nombre: string; periodicidad: string; empresasContadas: number }>> {
-    
     const { data: impuestos, error: errImp } = await supabase
       .from("impuestos")
       .select("id, nombre, periodicidad")
@@ -83,7 +93,6 @@ export const dashboardService = {
     if (errImp) throw errImp;
     if (!impuestos) return [];
 
-    
     const { data: relaciones, error: errRel } = await supabase
       .from("cliente_impuestos")
       .select("impuesto_id")
@@ -92,7 +101,6 @@ export const dashboardService = {
 
     if (errRel) throw errRel;
 
-    
     return impuestos.map(imp => {
       const conteo = relaciones?.filter(r => r.impuesto_id === imp.id).length || 0;
       return {
