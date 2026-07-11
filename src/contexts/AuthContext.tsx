@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query"; // <-- Importamos el controlador de caché
 import { supabase } from "../lib/supabase";
 import type { Usuario } from "../features/usuarios/types";
 
@@ -25,6 +26,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [perfil, setPerfil] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const queryClient = useQueryClient();
 
   const cargarPerfil = async (userId: string) => {
     try {
@@ -54,21 +57,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+
       if (session?.user) {
         await cargarPerfil(session.user.id);
       } else {
         setPerfil(null);
+        if (event === "SIGNED_OUT") {
+          queryClient.clear();
+        }
       }
       setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [queryClient]);
 
   const signOut = async () => {
+    queryClient.clear();
     await supabase.auth.signOut();
   };
 
