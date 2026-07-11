@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
 import { X, Landmark, Plus, Trash2, ShieldAlert } from "lucide-react";
-import { clienteImpuestosService } from "./clienteImpuestosService";
+import {
+  useClienteImpuestos,
+  useAsignarImpuesto,
+  useDesasignarImpuesto,
+} from "./useClientes";
 import { impuestosService } from "../impuestos/impuestosService";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import type { ClienteConContador } from "./types";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
+import { useEffect, useState } from "react";
 
 interface FichaObligacionesProps {
   cliente: ClienteConContador;
@@ -15,61 +19,59 @@ export const FichaObligaciones = ({
   cliente,
   onClose,
 }: FichaObligacionesProps) => {
-  const [obligaciones, setObligaciones] = useState<any[]>([]);
   const [catImpuestos, setCatImpuestos] = useState<ImpuestoConEspecialista[]>(
     [],
   );
   const [selectedImpuesto, setSelectedImpuesto] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-
+  const [loadingCat, setLoadingCat] = useState(true);
   const [errorFicha, setErrorFicha] = useState<string | null>(null);
+
+  // Consumo declarativo del estado global de asignaciones mediante TanStack Query
+  const { data: obligaciones = [], isLoading: loadingObligaciones } =
+    useClienteImpuestos(cliente.id);
+
+  const asignarMutation = useAsignarImpuesto();
+  const desasignarMutation = useDesasignarImpuesto();
 
   const ultimoDigito = Number(cliente.nit.slice(-1));
 
-  const cargarDatos = async () => {
-    try {
-      setLoading(true);
-      const [misObligaciones, todoElCat] = await Promise.all([
-        clienteImpuestosService.getImpuestosPorCliente(cliente.id),
-        impuestosService.getAll(),
-      ]);
-      setObligaciones(misObligaciones);
-      setCatImpuestos(todoElCat.filter((i) => i.estado === "ACTIVO"));
-    } catch (error) {
-      console.error(error);
-      setErrorFicha(
-        "Error de comunicación al intentar sincronizar la ficha técnica de obligaciones.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    cargarDatos();
-  }, [cliente.id]);
+    const cargarCatalogo = async () => {
+      try {
+        setLoadingCat(true);
+        const todoElCat = await impuestosService.getAll();
+        setCatImpuestos(todoElCat.filter((i) => i.estado === "ACTIVO"));
+      } catch (error) {
+        console.error(error);
+        setErrorFicha(
+          "Error de comunicación al intentar sincronizar el catálogo base de impuestos.",
+        );
+      } finally {
+        setLoadingCat(false);
+      }
+    };
+    cargarCatalogo();
+  }, []);
 
   const handleAsignar = async () => {
     if (!selectedImpuesto) return;
-    try {
-      setSubmitting(true);
-      setErrorFicha(null);
-      await clienteImpuestosService.asignarImpuesto(
-        cliente.id,
-        selectedImpuesto,
-        ultimoDigito,
-      );
-      setSelectedImpuesto("");
-      cargarDatos();
-    } catch (error: any) {
-      setErrorFicha(
-        error.message ||
-          "No se pudo inyectar la nueva obligación en el calendario.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    setErrorFicha(null);
+
+    asignarMutation.mutate(
+      {
+        clienteId: cliente.id,
+        impuestoId: selectedImpuesto,
+        ultimoDigitoNit: ultimoDigito,
+      },
+      {
+        onSuccess: () => setSelectedImpuesto(""),
+        onError: (err: any) =>
+          setErrorFicha(
+            err.message ||
+              "No se pudo inyectar la nueva obligación en el calendario.",
+          ),
+      },
+    );
   };
 
   const handleQuitar = async (asignacionId: string, impuestoId: string) => {
@@ -78,28 +80,26 @@ export const FichaObligaciones = ({
         "¿Confirmas que deseas quitar esta obligación? Se guardará el histórico y se eliminarán del calendario todas las tareas futuras que sigan PENDIENTES.",
       )
     ) {
-      try {
-        setLoading(true);
-        setErrorFicha(null);
-        await clienteImpuestosService.desasignarImpuesto(
-          asignacionId,
-          cliente.id,
-          impuestoId,
-        );
-        cargarDatos();
-      } catch (error: any) {
-        setErrorFicha(
-          error.message ||
-            "Fallo de persistencia al intentar remover la obligación fiscal.",
-        );
-        setLoading(false);
-      }
+      setErrorFicha(null);
+      desasignarMutation.mutate(
+        { asignacionId, clienteId: cliente.id, impuestoId },
+        {
+          onError: (err: any) =>
+            setErrorFicha(
+              err.message ||
+                "Fallo de persistencia al intentar remover la obligación fiscal.",
+            ),
+        },
+      );
     }
   };
 
   const impuestosDisponibles = catImpuestos.filter(
-    (cat) => !obligaciones.some((obl) => obl.impuestos?.id === cat.id),
+    (cat) => !obligaciones.some((obl: any) => obl.impuestos?.id === cat.id),
   );
+
+  const loading = loadingObligaciones || loadingCat;
+  const submitting = asignarMutation.isPending || desasignarMutation.isPending;
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -118,7 +118,7 @@ export const FichaObligaciones = ({
           </div>
           <button
             onClick={onClose}
-            className="text-surface/70 hover:text-surface transition-colors"
+            className="text-surface/70 hover:text-surface transition-colors cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
@@ -160,7 +160,7 @@ export const FichaObligaciones = ({
               <button
                 onClick={handleAsignar}
                 disabled={submitting || !selectedImpuesto}
-                className="bg-primary text-surface px-5 py-2 rounded-md font-semibold text-sm hover:bg-primary/90 transition-all disabled:opacity-50 whitespace-nowrap"
+                className="bg-primary text-surface px-5 py-2 rounded-md font-semibold text-sm hover:bg-primary/90 transition-all disabled:opacity-50 whitespace-nowrap cursor-pointer"
               >
                 Vincular e Inyectar
               </button>
@@ -205,7 +205,7 @@ export const FichaObligaciones = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-sm">
-                    {obligaciones.map((obl) => (
+                    {obligaciones.map((obl: any) => (
                       <tr key={obl.id} className="hover:bg-gray-50/40">
                         <td className="px-4 py-3 font-semibold text-primary">
                           {obl.impuestos?.nombre}
@@ -220,7 +220,8 @@ export const FichaObligaciones = ({
                             onClick={() =>
                               handleQuitar(obl.id, obl.impuestos?.id)
                             }
-                            className="text-text-muted hover:text-danger p-1 transition-colors"
+                            disabled={submitting}
+                            className="text-text-muted hover:text-danger p-1 transition-colors cursor-pointer disabled:opacity-30"
                             title="Quitar obligación"
                           >
                             <Trash2 className="w-4 h-4" />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useClientes, useClienteImpuestos } from "./useClientes";
 import {
   ArrowLeft,
   Building2,
@@ -15,13 +16,10 @@ import {
   FileText,
   Edit2,
 } from "lucide-react";
-import type { ClienteConContador } from "./types";
 import {
   vencimientosService,
   type Vencimiento,
 } from "../calendario/vencimientosService";
-import { clientesService } from "./clientesService";
-import { clienteImpuestosService } from "./clienteImpuestosService";
 import { FichaObligaciones } from "./FichaObligaciones";
 import { ClienteForm } from "./ClienteForm";
 import { AlertNotification } from "../../components/ui/AlertNotification";
@@ -31,73 +29,33 @@ export const DetalleClientePage = () => {
   const navigate = useNavigate();
   const { perfil } = useAuth();
 
-  const [cliente, setCliente] = useState<ClienteConContador | null>(null);
-  const [loadingCliente, setLoadingCliente] = useState(true);
+  // Lectura unificada desde caché reactiva de TanStack Query
+  const {
+    data: clientes = [],
+    isLoading: loadingClientes,
+    error: errorClientes,
+  } = useClientes();
+  const { data: impuestosCargo = [], isLoading: loadingImpuestos } =
+    useClienteImpuestos(id!);
+
   const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
   const [loadingVencimientos, setLoadingVencimientos] = useState(true);
-
   const [showObligacionesModal, setShowObligacionesModal] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [errorVencimientos, setErrorVencimientos] = useState<string | null>(
+    null,
+  );
 
-  const [impuestosCargo, setImpuestosCargo] = useState<any[]>([]);
-  const [loadingImpuestos, setLoadingImpuestos] = useState(true);
-
-  const [errorCarga, setErrorCarga] = useState<string | null>(null);
-
+  const cliente = clientes.find((c) => c.id === id);
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
-
-  const fetchClienteData = async () => {
-    if (!id) return;
-    try {
-      setLoadingCliente(true);
-      setErrorCarga(null);
-      const data = await clientesService.getAll();
-      const encontrado = data.find((c) => c.id === id);
-      if (encontrado) {
-        setCliente(encontrado);
-      } else {
-        setErrorCarga(
-          "La firma seleccionada no existe en el sistema o fue removida de los archivos.",
-        );
-      }
-    } catch (error: any) {
-      console.error("Error cargando metadatos de empresa:", error);
-      setErrorCarga(
-        "Fallo técnico al recuperar los metadatos corporativos del cliente.",
-      );
-    } finally {
-      setLoadingCliente(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchClienteData();
-  }, [id]);
-
-  const cargarImpuestosA_Cargo = async () => {
-    if (!id) return;
-    try {
-      setLoadingImpuestos(true);
-      const misObligaciones =
-        await clienteImpuestosService.getImpuestosPorCliente(id);
-      setImpuestosCargo(misObligaciones);
-    } catch (error) {
-      console.error("Error cargando obligaciones reales:", error);
-    } finally {
-      setLoadingImpuestos(false);
-    }
-  };
-
-  useEffect(() => {
-    cargarImpuestosA_Cargo();
-  }, [id]);
 
   useEffect(() => {
     if (!id) return;
     const cargarVencimientosCliente = async () => {
       try {
         setLoadingVencimientos(true);
+        setErrorVencimientos(null);
         const hoy = new Date();
         const data = await vencimientosService.getVencimientosMes(
           hoy.getFullYear(),
@@ -105,20 +63,21 @@ export const DetalleClientePage = () => {
           "",
           "Gerente",
         );
-
         const filtrados = data.filter((v) => v.clientes.id === id);
         setVencimientos(filtrados);
       } catch (error) {
         console.error("Error al cargar los vencimientos del cliente:", error);
+        setErrorVencimientos(
+          "No se pudieron coordinar las agendas de vencimientos del mes en curso.",
+        );
       } finally {
         setLoadingVencimientos(false);
       }
     };
-
     cargarVencimientosCliente();
   }, [id]);
 
-  if (loadingCliente) {
+  if (loadingClientes) {
     return (
       <div className="text-center p-8 text-text-muted text-sm font-semibold font-mono uppercase tracking-wider animate-pulse">
         Consultando bóveda de cliente...
@@ -139,7 +98,7 @@ export const DetalleClientePage = () => {
         </p>
         <button
           onClick={() => navigate("/clientes")}
-          className="bg-primary text-surface text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all shadow-xs"
+          className="bg-primary text-surface text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
         >
           Regresar al Directorio
         </button>
@@ -160,36 +119,34 @@ export const DetalleClientePage = () => {
     }
   };
 
+  const errorAMostrar = errorClientes?.message || errorVencimientos;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       <div className="flex justify-between items-center">
         <button
           onClick={() => navigate("/clientes")}
-          className="flex items-center gap-2 text-sm font-medium text-text-muted hover:text-primary transition-colors group"
+          className="flex items-center gap-2 text-sm font-medium text-text-muted hover:text-primary transition-colors group cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />{" "}
           Volver
         </button>
-
         {puedeAdministrar && (
           <button
             onClick={() => setShowForm(true)}
-            className="border border-gray-200 bg-surface hover:bg-gray-50 text-text-main text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-2xs"
+            className="border border-gray-200 bg-surface hover:bg-gray-50 text-text-main text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
           >
-            <Edit2 className="w-3.5 h-3.5 text-text-muted" />
-            Editar Información
+            <Edit2 className="w-3.5 h-3.5 text-text-muted" /> Editar Información
           </button>
         )}
       </div>
 
-      {/* LÓGICA SOLID (SRP): Notificación reactiva inyectada ante errores de carga asíncrona */}
-      {errorCarga && (
+      {errorAMostrar && (
         <div className="animate-in fade-in duration-200 max-w-4xl">
           <AlertNotification
-            type="warning"
-            title="Advertencia de Registro"
-            message={errorCarga}
-            onClose={() => setErrorCarga(null)}
+            type="error"
+            title="Excepción de Control"
+            message={errorAMostrar}
           />
         </div>
       )}
@@ -205,18 +162,13 @@ export const DetalleClientePage = () => {
             </h1>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${
-              cliente.estado === "ACTIVO"
-                ? "bg-success/10 text-success border-success/20"
-                : "bg-danger/10 text-danger border-danger/20"
-            }`}
+            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${cliente.estado === "ACTIVO" ? "bg-success/10 text-success border-success/20" : "bg-danger/10 text-danger border-danger/20"}`}
           >
             <div
               className={`w-2 h-2 rounded-full ${cliente.estado === "ACTIVO" ? "bg-success" : "bg-danger"}`}
-            />
+            />{" "}
             CLIENTE {cliente.estado}
           </span>
         </div>
@@ -290,7 +242,7 @@ export const DetalleClientePage = () => {
                 {puedeAdministrar && (
                   <button
                     onClick={() => setShowObligacionesModal(true)}
-                    className="text-xs font-semibold bg-primary text-surface px-3 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm"
+                    className="text-xs font-semibold bg-primary text-surface px-3 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" /> Gestionar Obligaciones
                   </button>
@@ -304,13 +256,12 @@ export const DetalleClientePage = () => {
               ) : impuestosCargo.length === 0 ? (
                 <div className="p-4 rounded-lg bg-gray-50 border border-gray-100 text-center">
                   <p className="text-xs text-text-muted italic">
-                    Esta empresa no tiene obligaciones tributarias configuradas
-                    a su cargo.
+                    Esta empresa no tiene obligaciones configuradas.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {impuestosCargo.map((obl) => (
+                  {impuestosCargo.map((obl: any) => (
                     <div
                       key={obl.id}
                       className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg border border-gray-100 shadow-2xs"
@@ -339,7 +290,6 @@ export const DetalleClientePage = () => {
               Vencimientos del Mes
             </h3>
           </div>
-
           <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
             {loadingVencimientos ? (
               <p className="text-xs text-text-muted text-center py-4">
@@ -368,7 +318,6 @@ export const DetalleClientePage = () => {
                       {vencimiento.estado_tarea}
                     </span>
                   </div>
-
                   <div className="flex items-center justify-between text-[11px] text-text-muted font-mono pt-1 border-t border-gray-200/60">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-text-muted" />
@@ -391,10 +340,7 @@ export const DetalleClientePage = () => {
       {showObligacionesModal && puedeAdministrar && (
         <FichaObligaciones
           cliente={cliente}
-          onClose={() => {
-            setShowObligacionesModal(false);
-            cargarImpuestosA_Cargo();
-          }}
+          onClose={() => setShowObligacionesModal(false)}
         />
       )}
 
@@ -402,10 +348,7 @@ export const DetalleClientePage = () => {
         <ClienteForm
           clienteAEditar={cliente}
           onClose={() => setShowForm(false)}
-          onSuccess={() => {
-            setShowForm(false);
-            fetchClienteData();
-          }}
+          onSuccess={() => setShowForm(false)}
         />
       )}
     </div>

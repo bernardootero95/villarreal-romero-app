@@ -7,7 +7,7 @@ import {
   type ClienteConContador,
 } from "./types";
 import { X, Save, Building2, ArrowRight } from "lucide-react";
-import { clientesService } from "./clientesService";
+import { useCreateCliente, useUpdateCliente } from "./useClientes";
 import { usuariosService } from "../usuarios/usuariosService";
 import type { Usuario } from "../usuarios/types";
 import { FichaObligaciones } from "./FichaObligaciones";
@@ -21,17 +21,14 @@ interface ClienteFormProps {
 
 const calcularDV = (nit: string): number | null => {
   if (!nit || !/^[0-9]+$/.test(nit)) return null;
-
   const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
   let x = 0;
   let y = 0;
   const z = nit.length;
-
   for (let i = 0; i < z; i++) {
     y = parseInt(nit.charAt(i), 10);
     x += y * vpri[z - 1 - i];
   }
-
   const y1 = x % 11;
   return y1 > 1 ? 11 - y1 : y1;
 };
@@ -43,13 +40,15 @@ export const ClienteForm = ({
 }: ClienteFormProps) => {
   const [contadores, setContadores] = useState<Usuario[]>([]);
   const [loadingContadores, setLoadingContadores] = useState(true);
-
   const [clienteCreado, setClienteCreado] = useState<ClienteConContador | null>(
     null,
   );
   const [mostrarPasoObligaciones, setMostrarPasoObligaciones] = useState(false);
-
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Inyección de mutaciones controladas por TanStack Query
+  const createClienteMutation = useCreateCliente();
+  const updateClienteMutation = useUpdateCliente();
 
   const {
     register,
@@ -57,7 +56,7 @@ export const ClienteForm = ({
     watch,
     setValue,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<ClienteFormData>({
     resolver: zodResolver(clienteSchema),
     defaultValues: { estado: "ACTIVO" },
@@ -106,45 +105,45 @@ export const ClienteForm = ({
   }, []);
 
   const onSubmit = async (data: ClienteFormData) => {
-    try {
-      setSubmitError(null);
-      const datosLimpios = {
-        ...data,
-        email: data.email?.trim() || null,
-        celular: data.celular?.trim() || null,
-      };
+    setSubmitError(null);
+    const datosLimpios = {
+      ...data,
+      email: data.email?.trim() || null,
+      celular: data.celular?.trim() || null,
+    };
 
-      if (clienteAEditar) {
-        await clientesService.update(clienteAEditar.id, datosLimpios);
-        onSuccess();
-      } else {
-        const nuevoCliente = await clientesService.create(datosLimpios);
-
-        if (nuevoCliente) {
-          setClienteCreado(nuevoCliente);
-          setMostrarPasoObligaciones(true);
-        } else {
-          onSuccess();
-        }
-      }
-    } catch (error: any) {
-      setSubmitError(
-        error.message ||
-          "No se pudieron salvar las modificaciones del cliente en la base de datos.",
+    if (clienteAEditar) {
+      updateClienteMutation.mutate(
+        { id: clienteAEditar.id, payload: datosLimpios },
+        {
+          onSuccess: () => onSuccess(),
+          onError: (err: any) =>
+            setSubmitError(err.message || "Fallo al actualizar el cliente."),
+        },
       );
+    } else {
+      createClienteMutation.mutate(datosLimpios, {
+        onSuccess: (nuevoCliente) => {
+          if (nuevoCliente) {
+            setClienteCreado(nuevoCliente as ClienteConContador);
+            setMostrarPasoObligaciones(true);
+          } else {
+            onSuccess();
+          }
+        },
+        onError: (err: any) =>
+          setSubmitError(err.message || "No se pudo registrar el cliente."),
+      });
     }
   };
 
   const isEditing = !!clienteAEditar;
+  const isSubmitting =
+    createClienteMutation.isPending || updateClienteMutation.isPending;
 
   if (mostrarPasoObligaciones && clienteCreado) {
     return (
-      <FichaObligaciones
-        cliente={clienteCreado}
-        onClose={() => {
-          onSuccess();
-        }}
-      />
+      <FichaObligaciones cliente={clienteCreado} onClose={() => onSuccess()} />
     );
   }
 
@@ -160,7 +159,7 @@ export const ClienteForm = ({
           </div>
           <button
             onClick={onClose}
-            className="text-surface/70 hover:text-surface transition-colors"
+            className="text-surface/70 hover:text-surface transition-colors cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
@@ -186,7 +185,9 @@ export const ClienteForm = ({
               <input
                 {...register("nit")}
                 disabled={isEditing}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface ${errors.nit ? "border-danger" : "border-gray-300"} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface ${
+                  errors.nit ? "border-danger" : "border-gray-300"
+                } ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
                 placeholder="Ej. 900123456"
               />
               {errors.nit && (
@@ -202,7 +203,9 @@ export const ClienteForm = ({
                 {...register("dv", { valueAsNumber: true })}
                 type="number"
                 readOnly
-                className={`w-full px-3 py-2 border rounded-md outline-none data-code text-center bg-gray-100 cursor-not-allowed ${errors.dv ? "border-danger" : "border-gray-300"}`}
+                className={`w-full px-3 py-2 border rounded-md outline-none data-code text-center bg-gray-100 cursor-not-allowed ${
+                  errors.dv ? "border-danger" : "border-gray-300"
+                }`}
                 placeholder="-"
               />
               <p className="text-[10px] text-text-muted mt-1 text-center">
@@ -217,7 +220,9 @@ export const ClienteForm = ({
             </label>
             <input
               {...register("razon_social")}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.razon_social ? "border-danger" : "border-gray-300"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
+                errors.razon_social ? "border-danger" : "border-gray-300"
+              }`}
               placeholder="Nombre de la empresa o persona natural"
             />
             {errors.razon_social && (
@@ -237,7 +242,9 @@ export const ClienteForm = ({
               </label>
               <input
                 {...register("email")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.email ? "border-danger" : "border-gray-300"}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
+                  errors.email ? "border-danger" : "border-gray-300"
+                }`}
                 placeholder="facturacion@empresa.com"
               />
               {errors.email && (
@@ -256,7 +263,9 @@ export const ClienteForm = ({
               </label>
               <input
                 {...register("celular")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface ${errors.celular ? "border-danger" : "border-gray-300"}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface ${
+                  errors.celular ? "border-danger" : "border-gray-300"
+                }`}
                 placeholder="Ej. 3151234567"
               />
               {errors.celular && (
@@ -274,7 +283,9 @@ export const ClienteForm = ({
             <select
               {...register("contador_id")}
               disabled={loadingContadores}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.contador_id ? "border-danger" : "border-gray-300"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
+                errors.contador_id ? "border-danger" : "border-gray-300"
+              }`}
             >
               <option value="">Seleccione un responsable...</option>
               {contadores.map((user) => (
@@ -294,26 +305,24 @@ export const ClienteForm = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium"
+              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm cursor-pointer"
             >
               {isSubmitting ? (
                 "Guardando..."
               ) : isEditing ? (
                 <>
-                  <Save className="w-4 h-4" />
-                  Actualizar Cliente
+                  <Save className="w-4 h-4" /> Actualizar Cliente
                 </>
               ) : (
                 <>
-                  Continuar a Impuestos
-                  <ArrowRight className="w-4 h-4" />
+                  Continuar a Impuestos <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
