@@ -298,14 +298,17 @@ export const DashboardPage = () => {
                       alerta.fecha_limite,
                     );
 
-                    // LÓGICA SOLID DE SEMÁFORO: Configuración de estilos dinámicos según el tiempo límite
                     let semaforoBadge =
                       "bg-gray-100 text-text-muted border-gray-200";
                     let semaforoTexto = `${diasRestantes} días`;
 
-                    if (diasRestantes <= 1) {
+                    if (diasRestantes < 0) {
                       semaforoBadge =
-                        "bg-danger/10 text-danger border-danger/20 font-extrabold animate-pulse";
+                        "bg-danger text-white border-danger font-extrabold animate-pulse shadow-sm";
+                      semaforoTexto = `VENCIDO (${Math.abs(diasRestantes)}d)`;
+                    } else if (diasRestantes <= 1) {
+                      semaforoBadge =
+                        "bg-danger/10 text-danger border-danger/20 font-extrabold";
                       semaforoTexto =
                         diasRestantes === 0 ? "¡VENCE HOY!" : "¡VENCE MAÑANA!";
                     } else if (diasRestantes <= 3) {
@@ -323,7 +326,9 @@ export const DashboardPage = () => {
                         className="py-3 flex justify-between items-center hover:bg-gray-50/60 px-2 rounded-lg cursor-pointer transition-colors group"
                       >
                         <div className="space-y-0.5 max-w-[65%]">
-                          <p className="text-xs font-bold text-primary group-hover:text-accent transition-colors truncate">
+                          <p
+                            className={`text-xs font-bold group-hover:text-accent transition-colors truncate ${diasRestantes < 0 ? "text-danger" : "text-primary"}`}
+                          >
                             {alerta.clientes?.razon_social}
                           </p>
                           <p className="text-[11px] text-text-muted truncate">
@@ -333,7 +338,7 @@ export const DashboardPage = () => {
                         </div>
                         <div className="text-right flex items-center gap-3 shrink-0">
                           <span
-                            className={`text-[10px] font-mono px-2 py-0.5 rounded border ${semaforoBadge}`}
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase tracking-wider ${semaforoBadge}`}
                           >
                             {semaforoTexto}
                           </span>
