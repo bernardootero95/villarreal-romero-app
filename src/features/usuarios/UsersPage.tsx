@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { type Usuario } from "./types";
-import { usuariosService } from "./usuariosService";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useUsuarios, useDeleteUsuario } from "./useUsuarios";
+import type { Usuario } from "./types";
 import {
   UserPlus,
   Search,
@@ -13,42 +13,29 @@ import {
 } from "lucide-react";
 import { UserForm } from "./UserForm";
 import { ResetPasswordModal } from "./ResetPasswordModal";
+import { AlertNotification } from "../../components/ui/AlertNotification";
 
 export const UsersPage = () => {
   const { perfil } = useAuth();
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // Gestión asíncrona de datos desde TanStack Query
+  const { data: usuarios = [], isLoading, error } = useUsuarios();
+  const deleteUsuarioMutation = useDeleteUsuario();
+
   const [showForm, setShowForm] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Estado para capturar el objetivo de cambio remoto de clave
   const [usuarioClaveTarget, setUsuarioClaveTarget] = useState<Usuario | null>(
     null,
   );
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
+  const [exitoLocal, setExitoLocal] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 5;
 
-  // LÓGICA SOLID: El control de redefinición técnica se asocia únicamente a los roles de infraestructura
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
-
-  const fetchUsuarios = async () => {
-    try {
-      setLoading(true);
-      const data = await usuariosService.getAll();
-      setUsuarios(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsuarios();
-  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -60,12 +47,21 @@ export const UsersPage = () => {
         "¿Estás seguro de desactivar este usuario? El sistema cambiará su estado a INACTIVO y registrará el movimiento en la auditoría.",
       )
     ) {
-      try {
-        await usuariosService.delete(id);
-        fetchUsuarios();
-      } catch (error) {
-        alert("Error al desactivar el miembro del equipo");
-      }
+      setErrorLocal(null);
+      setExitoLocal(null);
+
+      deleteUsuarioMutation.mutate(id, {
+        onSuccess: () => {
+          setExitoLocal(
+            "El miembro del equipo ha sido revocado de forma correcta.",
+          );
+        },
+        onError: (err: any) => {
+          setErrorLocal(
+            err.message || "Fallo técnico al desactivar el miembro del equipo.",
+          );
+        },
+      });
     }
   };
 
@@ -93,6 +89,8 @@ export const UsersPage = () => {
     startIndex + ITEMS_PER_PAGE,
   );
 
+  const errorAMostrar = error?.message || errorLocal;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -106,14 +104,36 @@ export const UsersPage = () => {
         </div>
         <button
           onClick={handleCreate}
-          className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm"
+          className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm cursor-pointer text-sm font-semibold"
         >
           <UserPlus className="w-5 h-5" />
           Nuevo Usuario
         </button>
       </div>
 
-      <div className="card-container !p-0 overflow-hidden flex flex-col">
+      {errorAMostrar && (
+        <div className="animate-in fade-in duration-200 max-w-4xl">
+          <AlertNotification
+            type="error"
+            title="Fallo de Sincronización"
+            message={errorAMostrar}
+            onClose={() => setErrorLocal(null)}
+          />
+        </div>
+      )}
+
+      {exitoLocal && (
+        <div className="animate-in fade-in duration-200 max-w-4xl">
+          <AlertNotification
+            type="success"
+            title="Cambio Guardado"
+            message={exitoLocal}
+            onClose={() => setExitoLocal(null)}
+          />
+        </div>
+      )}
+
+      <div className="card-container !p-0 overflow-hidden flex flex-col bg-surface border border-gray-200 rounded-xl shadow-xs">
         <div className="p-4 border-b border-gray-100 bg-gray-50/50">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -136,12 +156,12 @@ export const UsersPage = () => {
                 <th className="px-6 py-4 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
+            <tbody className="divide-y divide-gray-100 text-sm">
+              {isLoading ? (
                 <tr>
                   <td
                     colSpan={4}
-                    className="px-6 py-8 text-center text-text-muted"
+                    className="px-6 py-12 text-center text-text-muted font-mono text-xs uppercase animate-pulse"
                   >
                     Cargando equipo...
                   </td>
@@ -150,7 +170,7 @@ export const UsersPage = () => {
                 <tr>
                   <td
                     colSpan={4}
-                    className="px-6 py-8 text-center text-text-muted"
+                    className="px-6 py-12 text-center text-text-muted text-xs"
                   >
                     {searchTerm
                       ? "No se encontraron usuarios que coincidan con la búsqueda."
@@ -210,7 +230,7 @@ export const UsersPage = () => {
                         {puedeAdministrar && user.id !== perfil?.id && (
                           <button
                             onClick={() => setUsuarioClaveTarget(user)}
-                            className="text-text-muted hover:text-accent p-2 transition-colors bg-gray-50 hover:bg-accent/10 rounded-md border border-gray-100"
+                            className="text-text-muted hover:text-accent p-2 transition-colors bg-gray-50 hover:bg-accent/10 rounded-md border border-gray-100 cursor-pointer"
                             title="Sobreescribir Contraseña Remotamente"
                           >
                             <KeyRound className="w-4 h-4" />
@@ -219,7 +239,7 @@ export const UsersPage = () => {
 
                         <button
                           onClick={() => handleEdit(user)}
-                          className="text-text-muted hover:text-accent p-2 transition-colors"
+                          className="text-text-muted hover:text-accent p-2 transition-colors cursor-pointer"
                           title="Editar usuario"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -227,7 +247,8 @@ export const UsersPage = () => {
 
                         <button
                           onClick={() => handleDelete(user.id)}
-                          className="text-text-muted hover:text-danger p-2 transition-colors"
+                          disabled={deleteUsuarioMutation.isPending}
+                          className="text-text-muted hover:text-danger p-2 transition-colors cursor-pointer disabled:opacity-30"
                           title="Desactivar usuario"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -241,7 +262,7 @@ export const UsersPage = () => {
           </table>
         </div>
 
-        {!loading && usuariosFiltrados.length > 0 && (
+        {!isLoading && usuariosFiltrados.length > 0 && (
           <div className="p-4 border-t border-gray-100 bg-surface flex items-center justify-between text-sm">
             <span className="text-text-muted">
               Mostrando{" "}
@@ -266,7 +287,7 @@ export const UsersPage = () => {
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Página anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -279,7 +300,7 @@ export const UsersPage = () => {
                   setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                 }
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Página siguiente"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -299,7 +320,6 @@ export const UsersPage = () => {
           onSuccess={() => {
             setShowForm(false);
             setUsuarioEditando(null);
-            fetchUsuarios();
           }}
         />
       )}
