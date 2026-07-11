@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
-import { clientesService } from "../clientes/clientesService";
-import type { ClienteConContador } from "../clientes/types";
+import { useClientes } from "../clientes/useClientes";
 import {
   AlertNotification,
   type AlertType,
@@ -46,8 +45,8 @@ export const PerfilPage = () => {
     texto: "",
   });
 
-  const [misClientes, setMisClientes] = useState<ClienteConContador[]>([]);
-  const [loadingClientes, setLoadingClientes] = useState(true);
+  const { data: todosLosClientes = [], isLoading: loadingClientes } =
+    useClientes();
 
   useEffect(() => {
     if (perfil?.correo_notificacion) {
@@ -55,28 +54,11 @@ export const PerfilPage = () => {
     }
   }, [perfil]);
 
-  useEffect(() => {
-    const cargarMisClientes = async () => {
-      if (!perfil?.id) return;
-      try {
-        setLoadingClientes(true);
-        const todosLosClientes = await clientesService.getAll();
-        const filtrados = todosLosClientes.filter(
-          (c) => c.contador_id === perfil.id && c.estado === "ACTIVO",
-        );
-        setMisClientes(filtrados);
-      } catch (error) {
-        console.error("Error cargando portafolio de clientes:", error);
-      } finally {
-        // CORREGIDO: Cambiado 'verify' por 'finally' para corregir la sintaxis de TypeScript y el error 500
-        setLoadingClientes(false);
-      }
-    };
-
-    cargarMisClientes();
-  }, [perfil?.id]);
-
   if (!perfil) return null;
+
+  const misClientes = todosLosClientes.filter(
+    (c) => c.contador_id === perfil.id && c.estado === "ACTIVO",
+  );
 
   const handleActualizarPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,7 +189,7 @@ export const PerfilPage = () => {
                   Estado de la Cuenta
                 </p>
                 <p className="text-sm font-bold text-success flex items-center justify-center gap-1.5 mt-0.5">
-                  <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                  <span className="w-2 h-2 rounded-full bg-success"></span>
                   {perfil.estado}
                 </p>
               </div>
@@ -278,7 +260,7 @@ export const PerfilPage = () => {
               <div className="flex items-center gap-2 mb-4">
                 <Key className="w-5 h-5 text-accent" />
                 <h3 className="text-lg font-bold text-primary">
-                  Security de la Cuenta
+                  Seguridad de la Cuenta
                 </h3>
               </div>
 
