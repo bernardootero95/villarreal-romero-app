@@ -22,7 +22,7 @@ import { useNavigate } from "react-router-dom";
 const ClienteCargaMasiva = lazy(() =>
   import("./ClienteCargaMasiva").then((module) => ({
     default: module.ClienteCargaMasiva,
-  }))
+  })),
 );
 
 export const ClientesPage = () => {
@@ -35,8 +35,10 @@ export const ClientesPage = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
-  const [clienteEditando, setClienteEditando] = useState<ClienteConContador | null>(null);
-  const [clienteObligaciones, setClienteObligaciones] = useState<ClienteConContador | null>(null);
+  const [clienteEditando, setClienteEditando] =
+    useState<ClienteConContador | null>(null);
+  const [clienteObligaciones, setClienteObligaciones] =
+    useState<ClienteConContador | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResponsable, setSelectedResponsable] = useState("");
@@ -44,21 +46,25 @@ export const ClientesPage = () => {
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 5;
 
-  const puedeAdministrar = perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
+  const puedeAdministrar =
+    perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
   const handleDelete = async (id: string) => {
     if (
       window.confirm(
-        "¿Estás seguro de desactivar a este cliente? Se mantendrá en el registro de auditoría."
+        "¿Estás seguro de desactivar a este cliente? Se mantendrá en el registro de auditoría.",
       )
     ) {
       deleteClienteMutation.mutate(id, {
         onError: (err: any) => {
-          setErrorLocal(err.message || "Fallo de persistencia al intentar desactivar el registro contable.");
+          setErrorLocal(
+            err.message ||
+              "Fallo de persistencia al intentar desactivar el registro contable.",
+          );
         },
         onSuccess: () => {
           setErrorLocal(null);
-        }
+        },
       });
     }
   };
@@ -77,8 +83,8 @@ export const ClientesPage = () => {
     new Set(
       clientes
         .map((c) => c.usuarios?.nombre_completo)
-        .filter((nombre): nombre is string => !!nombre)
-    )
+        .filter((nombre): nombre is string => !!nombre),
+    ),
   ).sort();
 
   const clientesFiltrados = clientes.filter((c) => {
@@ -87,18 +93,22 @@ export const ClientesPage = () => {
       c.nit.includes(searchTerm);
 
     const matchesResponsable =
-      selectedResponsable === "" || c.usuarios?.nombre_completo === selectedResponsable;
+      selectedResponsable === "" ||
+      c.usuarios?.nombre_completo === selectedResponsable;
 
     return matchesSearch && matchesResponsable;
   });
 
   clientesFiltrados.sort((a, b) =>
-    a.razon_social.localeCompare(b.razon_social, "es", { sensitivity: "base" })
+    a.razon_social.localeCompare(b.razon_social, "es", { sensitivity: "base" }),
   );
 
   const totalPages = Math.ceil(clientesFiltrados.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedClientes = clientesFiltrados.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const paginatedClientes = clientesFiltrados.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE,
+  );
 
   const errorAMostrar = error?.message || errorLocal;
 
@@ -106,8 +116,12 @@ export const ClientesPage = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-title font-bold text-primary">Directorio de Clientes</h1>
-          <p className="text-text-muted">Gestión de empresas y asignación de responsables contables.</p>
+          <h1 className="text-2xl font-title font-bold text-primary">
+            Directorio de Clientes
+          </h1>
+          <p className="text-text-muted">
+            Gestión de empresas y asignación de responsables contables.
+          </p>
         </div>
 
         {puedeAdministrar && (
@@ -130,7 +144,12 @@ export const ClientesPage = () => {
 
       {errorAMostrar && (
         <div className="animate-in fade-in duration-200 max-w-4xl">
-          <AlertNotification type="error" title="Error del Sistema" message={errorAMostrar} onClose={() => setErrorLocal(null)} />
+          <AlertNotification
+            type="error"
+            title="Error del Sistema"
+            message={errorAMostrar}
+            onClose={() => setErrorLocal(null)}
+          />
         </div>
       )}
 
@@ -140,7 +159,10 @@ export const ClientesPage = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
               value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Buscar por Razón Social o NIT..."
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none"
             />
@@ -150,12 +172,17 @@ export const ClientesPage = () => {
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted select-none pointer-events-none" />
             <select
               value={selectedResponsable}
-              onChange={(e) => { setSelectedResponsable(e.target.value); setCurrentPage(1); }}
+              onChange={(e) => {
+                setSelectedResponsable(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none appearance-none text-text-main font-medium cursor-pointer"
             >
               <option value="">Todos los Responsables</option>
               {listaResponsables.map((resp) => (
-                <option key={resp} value={resp}>{resp}</option>
+                <option key={resp} value={resp}>
+                  {resp}
+                </option>
               ))}
             </select>
           </div>
@@ -169,46 +196,78 @@ export const ClientesPage = () => {
                 <th className="px-6 py-4 font-semibold">NIT</th>
                 <th className="px-6 py-4 font-semibold">Responsable</th>
                 <th className="px-6 py-4 font-semibold">Estado</th>
-                {puedeAdministrar && <th className="px-6 py-4 font-semibold text-right">Acciones</th>}
+                {puedeAdministrar && (
+                  <th className="px-6 py-4 font-semibold text-right">
+                    Acciones
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
               {isLoading ? (
                 <tr>
-                  <td colSpan={puedeAdministrar ? 5 : 4} className="px-6 py-12 text-center text-text-muted font-mono text-xs uppercase tracking-wider animate-pulse">
+                  <td
+                    colSpan={puedeAdministrar ? 5 : 4}
+                    className="px-6 py-12 text-center text-text-muted font-mono text-xs uppercase tracking-wider animate-pulse"
+                  >
                     Cargando directorio...
                   </td>
                 </tr>
-              ) : paginatedClientes.length === 0 ? (
+              ) : clientesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={puedeAdministrar ? 5 : 4} className="px-6 py-12 text-center text-text-muted text-xs">
-                    {searchTerm || selectedResponsable ? "No se encontraron clientes con los filtros aplicados." : "No hay clientes registrados."}
+                  <td
+                    colSpan={puedeAdministrar ? 5 : 4}
+                    className="px-6 py-12 text-center text-text-muted text-xs"
+                  >
+                    {searchTerm || selectedResponsable
+                      ? "No se encontraron clientes con los filtros aplicados."
+                      : "No hay clientes registrados."}
                   </td>
                 </tr>
               ) : (
                 paginatedClientes.map((cliente) => (
-                  <tr key={cliente.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr
+                    key={cliente.id}
+                    className="hover:bg-gray-50/50 transition-colors"
+                  >
                     <td className="px-6 py-4">
-                      <div onClick={() => navigate(`/clientes/${cliente.id}`)} className="flex items-center gap-3 cursor-pointer group">
+                      <div
+                        onClick={() => navigate(`/clientes/${cliente.id}`)}
+                        className="flex items-center gap-3 cursor-pointer group"
+                      >
                         <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 group-hover:bg-primary group-hover:text-surface transition-all">
                           <Building2 className="w-4 h-4" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-semibold text-primary group-hover:text-accent transition-colors">{cliente.razon_social}</span>
-                          <span className="text-xs text-text-muted">{cliente.email || "Sin correo"}</span>
-                          <span className="text-[11px] text-text-muted font-mono mt-0.5">Cel: {cliente.celular || "No registrado"}</span>
+                          <span className="font-semibold text-primary group-hover:text-accent transition-colors">
+                            {cliente.razon_social}
+                          </span>
+                          <span className="text-xs text-text-muted">
+                            {cliente.email || "Sin correo"}
+                          </span>
+                          <span className="text-[11px] text-text-muted font-mono mt-0.5">
+                            Cel: {cliente.celular || "No registrado"}
+                          </span>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="data-code bg-gray-100 px-2 py-1 rounded text-sm">{cliente.nit}-{cliente.dv}</span>
+                      <span className="data-code bg-gray-100 px-2 py-1 rounded text-sm">
+                        {cliente.nit}-{cliente.dv}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-text-main font-medium">{cliente.usuarios?.nombre_completo || "Sin asignar"}</span>
+                      <span className="text-sm text-text-main font-medium">
+                        {cliente.usuarios?.nombre_completo || "Sin asignar"}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`flex items-center gap-1.5 text-xs font-bold ${cliente.estado === "ACTIVO" ? "text-success" : "text-danger"}`}>
-                        <div className={`w-2 h-2 rounded-full ${cliente.estado === "ACTIVO" ? "bg-success" : "bg-danger"}`} />
+                      <span
+                        className={`flex items-center gap-1.5 text-xs font-bold ${cliente.estado === "ACTIVO" ? "text-success" : "text-danger"}`}
+                      >
+                        <div
+                          className={`w-2 h-2 rounded-full ${cliente.estado === "ACTIVO" ? "bg-success" : "bg-danger"}`}
+                        />
                         {cliente.estado}
                       </span>
                     </td>
@@ -223,10 +282,19 @@ export const ClientesPage = () => {
                             <Landmark className="w-4 h-4" />
                           </button>
                           <div className="w-px h-6 bg-gray-200 mx-1"></div>
-                          <button onClick={() => handleEdit(cliente)} className="text-text-muted hover:text-accent p-2 transition-colors cursor-pointer" title="Editar cliente">
+                          <button
+                            onClick={() => handleEdit(cliente)}
+                            className="text-text-muted hover:text-accent p-2 transition-colors cursor-pointer"
+                            title="Editar cliente"
+                          >
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDelete(cliente.id)} disabled={deleteClienteMutation.isPending} className="text-text-muted hover:text-danger p-2 transition-colors cursor-pointer disabled:opacity-30" title="Desactivar cliente">
+                          <button
+                            onClick={() => handleDelete(cliente.id)}
+                            disabled={deleteClienteMutation.isPending}
+                            className="text-text-muted hover:text-danger p-2 transition-colors cursor-pointer disabled:opacity-30"
+                            title="Desactivar cliente"
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -239,18 +307,48 @@ export const ClientesPage = () => {
           </table>
         </div>
 
-        {!isLoading && HallaronRegistros => 0 && (
+        {/* CORREGIDO: Removido 'HallaronRegistros => 0' por la expresión matemática válida de arreglos */}
+        {!isLoading && clientesFiltrados.length > 0 && (
           <div className="p-4 border-t border-gray-100 bg-surface flex items-center justify-between text-sm">
             <span className="text-text-muted">
-              Mostrando <span className="font-semibold text-text-main">{startIndex + 1}</span> a <span className="font-semibold text-text-main">{Math.min(startIndex + ITEMS_PER_PAGE, clientesFiltrados.length)}</span> de <span className="font-semibold text-text-main">{clientesFiltrados.length}</span> clientes
+              Mostrando{" "}
+              <span className="font-semibold text-text-main">
+                {startIndex + 1}
+              </span>{" "}
+              a{" "}
+              <span className="font-semibold text-text-main">
+                {Math.min(
+                  startIndex + ITEMS_PER_PAGE,
+                  clientesFiltrados.length,
+                )}
+              </span>{" "}
+              de{" "}
+              <span className="font-semibold text-text-main">
+                {clientesFiltrados.length}
+              </span>{" "}
+              clientes
             </span>
 
             <div className="flex items-center gap-2">
-              <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer" title="Página anterior">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                title="Página anterior"
+              >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-text-muted font-medium px-2">Página {currentPage} de {totalPages}</span>
-              <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer" title="Página siguiente">
+              <span className="text-text-muted font-medium px-2">
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                title="Página siguiente"
+              >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -261,19 +359,39 @@ export const ClientesPage = () => {
       {showForm && (
         <ClienteForm
           clienteAEditar={clienteEditando}
-          onClose={() => { setShowForm(false); setClienteEditando(null); }}
-          onSuccess={() => { setShowForm(false); setClienteEditando(null); }}
+          onClose={() => {
+            setShowForm(false);
+            setClienteEditando(null);
+          }}
+          onSuccess={() => {
+            setShowForm(false);
+            setClienteEditando(null);
+          }}
         />
       )}
 
       {showBulk && (
-        <Suspense fallback={<div className="fixed inset-0 bg-primary/20 backdrop-blur-xs flex items-center justify-center z-50"><div className="bg-surface p-6 rounded-lg shadow-xl font-mono text-xs uppercase animate-pulse">Invocando analizador XLSX...</div></div>}>
-          <ClienteCargaMasiva onClose={() => setShowBulk(false)} onSuccess={() => setShowBulk(false)} />
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 bg-primary/20 backdrop-blur-xs flex items-center justify-center z-50">
+              <div className="bg-surface p-6 rounded-lg shadow-xl font-mono text-xs uppercase animate-pulse">
+                Invocando analizador XLSX...
+              </div>
+            </div>
+          }
+        >
+          <ClienteCargaMasiva
+            onClose={() => setShowBulk(false)}
+            onSuccess={() => setShowBulk(false)}
+          />
         </Suspense>
       )}
 
       {clienteObligaciones && (
-        <FichaObligaciones cliente={clienteObligaciones} onClose={() => setClienteObligaciones(null)} />
+        <FichaObligaciones
+          cliente={clienteObligaciones}
+          onClose={() => setClienteObligaciones(null)}
+        />
       )}
     </div>
   );
