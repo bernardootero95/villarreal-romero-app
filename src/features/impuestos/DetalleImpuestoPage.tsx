@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useImpuestos } from "./useImpuestos";
+import {
+  useCalendarioBase,
+  useDeleteCalendarioBase,
+} from "../calendario-base/useCalendarioBase";
 import {
   ArrowLeft,
   Calendar,
@@ -14,9 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { impuestosService } from "./impuestosService";
-import { calendarioBaseService } from "../calendario-base/calendarioBaseService";
-import type { ImpuestoConEspecialista } from "./types";
 import type { CalendarioBaseConImpuesto } from "../calendario-base/types";
 
 import { CalendarioBaseForm } from "../calendario-base/CalendarioBaseForm";
@@ -30,68 +32,30 @@ export const DetalleImpuestoPage = () => {
   const navigate = useNavigate();
   const { perfil } = useAuth();
 
-  const [impuesto, setImpuesto] = useState<ImpuestoConEspecialista | null>(
-    null,
-  );
-  const [fechasBase, setFechasBase] = useState<CalendarioBaseConImpuesto[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const [anioFiltro, setAnioFiltro] = useState(new Date().getFullYear());
   const [periodoFiltro, setPeriodoFiltro] = useState<string>("TODOS");
-
   const [paginaActual, setPaginaActual] = useState(1);
 
   const [showForm, setShowForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [fechaEditando, setFechaEditando] =
     useState<CalendarioBaseConImpuesto | null>(null);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
-  const [errorOperativo, setErrorOperativo] = useState<string | null>(null);
+  // Sincronización de datos estructurados de caché mediante TanStack Query
+  const {
+    data: impuestos = [],
+    isLoading: loadingImpuesto,
+    error: errorImpuesto,
+  } = useImpuestos();
+  const { data: fechasBase = [], isLoading: loadingCalendario } =
+    useCalendarioBase(anioFiltro);
 
+  const deleteFechaMutation = useDeleteCalendarioBase();
+
+  const impuesto = impuestos.find((i) => i.id === id);
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
-
-  const cargarImpuesto = async () => {
-    if (!id) return;
-    try {
-      setErrorOperativo(null);
-      const data = await impuestosService.getAll();
-      const encontrado = data.find((i) => i.id === id);
-      if (encontrado) setImpuesto(encontrado);
-    } catch (error) {
-      console.error("Error cargando metadatos del impuesto:", error);
-      setErrorOperativo(
-        "No se pudieron recuperar las propiedades de configuración del impuesto seleccionado.",
-      );
-    }
-  };
-
-  const cargarCalendarioBase = async () => {
-    if (!id) return;
-    try {
-      setLoading(true);
-      setErrorOperativo(null);
-      const data = await calendarioBaseService.getAll(anioFiltro);
-      const filtradasPorImpuesto = data.filter((f) => f.impuesto_id === id);
-      setFechasBase(filtradasPorImpuesto);
-      setPaginaActual(1);
-    } catch (error) {
-      console.error("Error cargando matriz de fechas:", error);
-      setErrorOperativo(
-        "Fallo de red al intentar sincronizar la matriz base de vencimientos oficiales.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    cargarImpuesto();
-  }, [id]);
-
-  useEffect(() => {
-    cargarCalendarioBase();
-  }, [id, anioFiltro]);
 
   const handleDeleteFecha = async (fechaId: string) => {
     if (
@@ -99,16 +63,20 @@ export const DetalleImpuestoPage = () => {
         "¿Deseas eliminar esta fecha oficial? Solo podrás hacerlo si no ha sido usada para generar vencimientos reales a clientes.",
       )
     ) {
-      try {
-        setErrorOperativo(null);
-        await calendarioBaseService.delete(fechaId);
-        cargarCalendarioBase();
-      } catch (error: any) {
-        setErrorOperativo(
-          error.message ||
-            "Fallo de persistencia: La fecha oficial seleccionada se encuentra vinculada a obligaciones activas.",
-        );
-      }
+      deleteFechaMutation.mutate(
+        { id: fechaId, anio: anioFiltro },
+        {
+          onError: (err: any) => {
+            setErrorLocal(
+              err.message ||
+                "Fallo de persistencia: La fecha oficial se encuentra vinculada a obligaciones activas.",
+            );
+          },
+          onSuccess: () => {
+            setErrorLocal(null);
+          },
+        },
+      );
     }
   };
 
@@ -117,6 +85,7 @@ export const DetalleImpuestoPage = () => {
   ).sort();
 
   const fechasFiltradas = fechasBase.filter((f) => {
+    if (f.impuesto_id !== id) return false;
     if (periodoFiltro === "TODOS") return true;
     return f.periodo === periodoFiltro;
   });
@@ -126,13 +95,20 @@ export const DetalleImpuestoPage = () => {
 
   const indiceInicial = (paginaActual - 1) * REGISTROS_POR_PAGINA;
   const indiceFinal = indiceInicial + REGISTROS_POR_PAGINA;
-
   const fechasPaginadas = fechasFiltradas.slice(indiceInicial, indiceFinal);
 
   const handlePeriodoChange = (valor: string) => {
     setPeriodoFiltro(valor);
     setPaginaActual(1);
   };
+
+  if (loadingImpuesto) {
+    return (
+      <div className="text-center p-8 text-text-muted text-sm font-semibold font-mono uppercase tracking-wider animate-pulse">
+        Sincronizando catálogo impositivo...
+      </div>
+    );
+  }
 
   if (!impuesto) {
     return (
@@ -147,7 +123,7 @@ export const DetalleImpuestoPage = () => {
         </p>
         <button
           onClick={() => navigate("/impuestos")}
-          className="bg-primary text-surface text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all shadow-xs"
+          className="bg-primary text-surface text-xs font-semibold px-4 py-2 rounded-lg hover:bg-primary/90 transition-all shadow-xs cursor-pointer"
         >
           Regresar al Catálogo
         </button>
@@ -155,12 +131,18 @@ export const DetalleImpuestoPage = () => {
     );
   }
 
+  const errorAMostrar =
+    errorImpuesto?.message ||
+    errorLocal ||
+    (deleteFechaMutation.error as any)?.message;
+  const loading = loadingCalendario;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       <div className="flex justify-between items-center">
         <button
           onClick={() => navigate("/impuestos")}
-          className="flex items-center gap-2 text-sm font-medium text-text-muted hover:text-primary transition-colors group"
+          className="flex items-center gap-2 text-sm font-medium text-text-muted hover:text-primary transition-colors group cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Volver al Catálogo
@@ -170,7 +152,7 @@ export const DetalleImpuestoPage = () => {
           <div className="flex gap-2">
             <button
               onClick={() => setShowBulkForm(true)}
-              className="bg-surface border border-gray-200 text-text-main px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-xs font-semibold shadow-2xs"
+              className="bg-surface border border-gray-200 text-text-main px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-xs font-semibold shadow-2xs cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5 text-accent" />
               Carga Masiva Excel
@@ -180,7 +162,7 @@ export const DetalleImpuestoPage = () => {
                 setFechaEditando(null);
                 setShowForm(true);
               }}
-              className="bg-primary text-surface px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all text-xs font-semibold shadow-sm"
+              className="bg-primary text-surface px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all text-xs font-semibold shadow-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               Agregar Periodo / Fecha
@@ -189,13 +171,13 @@ export const DetalleImpuestoPage = () => {
         )}
       </div>
 
-      {errorOperativo && (
+      {errorAMostrar && (
         <div className="animate-in fade-in duration-200 max-w-4xl">
           <AlertNotification
             type="error"
             title="Excepción de Control"
-            message={errorOperativo}
-            onClose={() => setErrorOperativo(null)}
+            message={errorAMostrar}
+            onClose={() => setErrorLocal(null)}
           />
         </div>
       )}
@@ -241,8 +223,9 @@ export const DetalleImpuestoPage = () => {
               value={anioFiltro}
               onChange={(e) => {
                 setAnioFiltro(Number(e.target.value));
+                setPaginaActual(1);
               }}
-              className="border border-gray-200 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main"
+              className="border border-gray-200 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main cursor-pointer"
             >
               {[2024, 2025, 2026, 2027].map((a) => (
                 <option key={a} value={a}>
@@ -259,7 +242,7 @@ export const DetalleImpuestoPage = () => {
             <select
               value={periodoFiltro}
               onChange={(e) => handlePeriodoChange(e.target.value)}
-              className="border border-gray-200 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main"
+              className="border border-gray-200 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main cursor-pointer"
             >
               <option value="TODOS">Todos los periodos</option>
               {periodosDisponibles.map((p) => (
@@ -343,14 +326,15 @@ export const DetalleImpuestoPage = () => {
                             setFechaEditando(f);
                             setShowForm(true);
                           }}
-                          className="text-text-muted hover:text-accent p-1.5 transition-colors"
+                          className="text-text-muted hover:text-accent p-1.5 transition-colors cursor-pointer"
                           title="Editar fecha oficial"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteFecha(f.id)}
-                          className="text-text-muted hover:text-danger p-1.5 transition-colors"
+                          disabled={deleteFechaMutation.isPending}
+                          className="text-text-muted hover:text-danger p-1.5 transition-colors cursor-pointer disabled:opacity-30"
                           title="Eliminar fecha base"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -389,7 +373,7 @@ export const DetalleImpuestoPage = () => {
                     setPaginaActual((prev) => Math.max(prev - 1, 1))
                   }
                   disabled={paginaActual === 1}
-                  className="p-1.5 rounded-md border border-gray-200 bg-white text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-1.5 rounded-md border border-gray-200 bg-white text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -403,7 +387,7 @@ export const DetalleImpuestoPage = () => {
                     setPaginaActual((prev) => Math.min(prev + 1, totalPaginas))
                   }
                   disabled={paginaActual === totalPaginas}
-                  className="p-1.5 rounded-md border border-gray-200 bg-white text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-1.5 rounded-md border border-gray-200 bg-white text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -424,7 +408,6 @@ export const DetalleImpuestoPage = () => {
           onSuccess={() => {
             setShowForm(false);
             setFechaEditando(null);
-            cargarCalendarioBase();
           }}
         />
       )}
@@ -435,7 +418,6 @@ export const DetalleImpuestoPage = () => {
           onClose={() => setShowBulkForm(false)}
           onSuccess={() => {
             setShowBulkForm(false);
-            cargarCalendarioBase();
           }}
         />
       )}

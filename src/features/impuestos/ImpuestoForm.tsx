@@ -9,6 +9,8 @@ import {
   REGLAS_VENCIMIENTO,
 } from "./types";
 import { X, Save, Landmark } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { IMPUESTOS_QUERY_KEY } from "./useImpuestos";
 import { impuestosService } from "./impuestosService";
 import { usuariosService } from "../usuarios/usuariosService";
 import type { Usuario } from "../usuarios/types";
@@ -27,8 +29,9 @@ export const ImpuestoForm = ({
 }: ImpuestoFormProps) => {
   const [especialistas, setEspecialistas] = useState<Usuario[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
-
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -77,6 +80,8 @@ export const ImpuestoForm = ({
       } else {
         await impuestosService.create(data);
       }
+      // Sincronización proactiva de la caché de TanStack Query
+      queryClient.invalidateQueries({ queryKey: IMPUESTOS_QUERY_KEY });
       onSuccess();
     } catch (error: any) {
       setSubmitError(
@@ -98,7 +103,7 @@ export const ImpuestoForm = ({
           </div>
           <button
             onClick={onClose}
-            className="text-surface/70 hover:text-surface transition-colors"
+            className="text-surface/70 hover:text-surface transition-colors cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
@@ -122,7 +127,9 @@ export const ImpuestoForm = ({
             </label>
             <input
               {...register("nombre")}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.nombre ? "border-danger" : "border-gray-300"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
+                errors.nombre ? "border-danger" : "border-gray-300"
+              }`}
               placeholder="Ej. IVA Bimestral, ICA Medellín..."
             />
             {errors.nombre && (
@@ -139,7 +146,9 @@ export const ImpuestoForm = ({
               </label>
               <select
                 {...register("periodicidad")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.periodicidad ? "border-danger" : "border-gray-300"}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
+                  errors.periodicidad ? "border-danger" : "border-gray-300"
+                }`}
               >
                 <option value="">Seleccione...</option>
                 {PERIODICIDADES.map((p) => (
@@ -161,7 +170,9 @@ export const ImpuestoForm = ({
               </label>
               <select
                 {...register("regla_vencimiento")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.regla_vencimiento ? "border-danger" : "border-gray-300"}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
+                  errors.regla_vencimiento ? "border-danger" : "border-gray-300"
+                }`}
               >
                 <option value="">Seleccione...</option>
                 {REGLAS_VENCIMIENTO.map((r) => (
@@ -188,7 +199,9 @@ export const ImpuestoForm = ({
             <select
               {...register("especialista_id")}
               disabled={loadingUsers}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${errors.especialista_id ? "border-danger" : "border-gray-300"}`}
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
+                errors.especialista_id ? "border-danger" : "border-gray-300"
+              }`}
             >
               <option value="">Ninguno (Responsabilidad del Contador)</option>
               {especialistas.map((user) => (
@@ -207,14 +220,14 @@ export const ImpuestoForm = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium"
+              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm cursor-pointer"
             >
               <Save className="w-4 h-4" />
               {isSubmitting

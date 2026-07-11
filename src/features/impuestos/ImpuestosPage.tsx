@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { impuestosService } from "./impuestosService";
+import { useImpuestos, useDesactivarImpuesto } from "./useImpuestos";
 import type { ImpuestoConEspecialista } from "./types";
 import { Search, Trash2, Plus, Edit2, Eye } from "lucide-react";
 import { ImpuestoForm } from "./ImpuestoForm";
@@ -10,37 +10,19 @@ import { useNavigate } from "react-router-dom";
 export const ImpuestosPage = () => {
   const { perfil } = useAuth();
   const navigate = useNavigate();
-  const [impuestos, setImpuestos] = useState<ImpuestoConEspecialista[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // Gestión de estado global asíncrono administrado por TanStack Query
+  const { data: impuestos = [], isLoading, error } = useImpuestos();
+  const desactivarMutation = useDesactivarImpuesto();
+
   const [showForm, setShowForm] = useState(false);
   const [impuestoEditando, setImpuestoEditando] =
     useState<ImpuestoConEspecialista | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-
-  const [errorCatalogo, setErrorCatalogo] = useState<string | null>(null);
+  const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
-
-  const fetchImpuestos = async () => {
-    try {
-      setLoading(true);
-      setErrorCatalogo(null);
-      const data = await impuestosService.getAll();
-      setImpuestos(data);
-    } catch (error) {
-      console.error(error);
-      setErrorCatalogo(
-        "No se pudo establecer conexión para sincronizar el catálogo de impuestos tributarios.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchImpuestos();
-  }, []);
 
   const handleDelete = async (id: string) => {
     if (
@@ -48,16 +30,17 @@ export const ImpuestosPage = () => {
         "¿Estás seguro de desactivar este impuesto? No afectará a los vencimientos ya generados, pero no se podrá asignar a clientes nuevos.",
       )
     ) {
-      try {
-        setErrorCatalogo(null);
-        await impuestosService.delete(id);
-        fetchImpuestos();
-      } catch (error: any) {
-        setErrorCatalogo(
-          error.message ||
-            "Fallo de persistencia al intentar desactivar el impuesto seleccionado.",
-        );
-      }
+      desactivarMutation.mutate(id, {
+        onError: (err: any) => {
+          setErrorLocal(
+            err.message ||
+              "Fallo de persistencia al intentar desactivar el impuesto.",
+          );
+        },
+        onSuccess: () => {
+          setErrorLocal(null);
+        },
+      });
     }
   };
 
@@ -77,6 +60,8 @@ export const ImpuestosPage = () => {
       i.periodicidad.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  const errorAMostrar = error?.message || errorLocal;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -92,21 +77,20 @@ export const ImpuestosPage = () => {
         {puedeAdministrar && (
           <button
             onClick={handleCreate}
-            className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm text-sm font-semibold"
+            className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm text-sm font-semibold cursor-pointer"
           >
-            <Plus className="w-5 h-5" />
-            Nuevo Impuesto
+            <Plus className="w-5 h-5" /> Nuevo Impuesto
           </button>
         )}
       </div>
 
-      {errorCatalogo && (
+      {errorAMostrar && (
         <div className="animate-in fade-in duration-200 max-w-4xl">
           <AlertNotification
             type="error"
             title="Error de Catálogo"
-            message={errorCatalogo}
-            onClose={() => setErrorCatalogo(null)}
+            message={errorAMostrar}
+            onClose={() => setErrorLocal(null)}
           />
         </div>
       )}
@@ -138,7 +122,7 @@ export const ImpuestosPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
-              {loading ? (
+              {isLoading ? (
                 <tr>
                   <td
                     colSpan={5}
@@ -187,10 +171,18 @@ export const ImpuestosPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`flex items-center gap-1.5 text-xs font-bold ${impuesto.estado === "ACTIVO" ? "text-success" : "text-danger"}`}
+                        className={`flex items-center gap-1.5 text-xs font-bold ${
+                          impuesto.estado === "ACTIVO"
+                            ? "text-success"
+                            : "text-danger"
+                        }`}
                       >
                         <div
-                          className={`w-2 h-2 rounded-full ${impuesto.estado === "ACTIVO" ? "bg-success" : "bg-danger"}`}
+                          className={`w-2 h-2 rounded-full ${
+                            impuesto.estado === "ACTIVO"
+                              ? "bg-success"
+                              : "bg-danger"
+                          }`}
                         />
                         {impuesto.estado}
                       </span>
@@ -199,7 +191,7 @@ export const ImpuestosPage = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => navigate(`/impuestos/${impuesto.id}`)}
-                          className="text-text-muted hover:text-accent p-2 transition-colors"
+                          className="text-text-muted hover:text-accent p-2 transition-colors cursor-pointer"
                           title="Ver Calendario Base Completo"
                         >
                           <Eye className="w-4 h-4" />
@@ -209,14 +201,15 @@ export const ImpuestosPage = () => {
                           <>
                             <button
                               onClick={() => handleEdit(impuesto)}
-                              className="text-text-muted hover:text-accent p-2 transition-colors"
+                              className="text-text-muted hover:text-accent p-2 transition-colors cursor-pointer"
                               title="Editar impuesto"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(impuesto.id)}
-                              className="text-text-muted hover:text-danger p-2 transition-colors"
+                              disabled={desactivarMutation.isPending}
+                              className="text-text-muted hover:text-danger p-2 transition-colors cursor-pointer disabled:opacity-30"
                               title="Desactivar impuesto"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -243,7 +236,6 @@ export const ImpuestosPage = () => {
           onSuccess={() => {
             setShowForm(false);
             setImpuestoEditando(null);
-            fetchImpuestos();
           }}
         />
       )}
