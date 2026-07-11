@@ -1,4 +1,3 @@
-// src/features/calendario/CalendarioPage.tsx
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import {
@@ -28,14 +27,12 @@ export const CalendarioPage = () => {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // 1. Consumo declarativo del estado de vencimientos con TanStack Query
   const {
     data: vencimientos = [],
     isLoading,
     error,
   } = useVencimientosMes(year, month, perfil?.id, perfil?.cargo);
 
-  // 2. Consumo de la mutación para actualizar estado
   const actualizarEstadoMutation = useActualizarEstadoVencimiento();
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
@@ -48,7 +45,6 @@ export const CalendarioPage = () => {
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  // Reducción reactiva de datos derivados basados en la caché de query
   const vencimientosPorDia = vencimientos.reduce(
     (acc, v) => {
       if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
@@ -79,7 +75,6 @@ export const CalendarioPage = () => {
     const observacionText = radicados[tareaId] || "";
     setErrorLocal(null);
 
-    // Ejecución de la mutación declarativa
     actualizarEstadoMutation.mutate(
       {
         id: tareaId,
@@ -91,7 +86,6 @@ export const CalendarioPage = () => {
       },
       {
         onSuccess: () => {
-          // Limpia el input del radicado para esa tarea
           setRadicados((prev) => {
             const copia = { ...prev };
             delete copia[tareaId];
@@ -222,7 +216,6 @@ export const CalendarioPage = () => {
     );
   };
 
-  // Se muestra la pantalla de carga solo cuando se monta inicialmente o cuando no hay datos en caché
   if (isLoading && !vencimientos.length) {
     return (
       <Loader
@@ -233,6 +226,10 @@ export const CalendarioPage = () => {
   }
 
   const errorAMostrar = error?.message || errorLocal;
+
+  // REFACTOR SOLID (Precisión Horaria): Calculamos el string del día de hoy usando el reloj local del dispositivo del cliente
+  const localDate = new Date();
+  const dateStrToday = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -305,7 +302,7 @@ export const CalendarioPage = () => {
           {days.map((day) => {
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const tareasDelDia = vencimientosPorDia[dateStr] || [];
-            const isToday = new Date().toISOString().split("T")[0] === dateStr;
+            const isToday = dateStrToday === dateStr;
 
             const pendientes = tareasDelDia.filter(
               (t) => t.estado_tarea === "PENDIENTE",

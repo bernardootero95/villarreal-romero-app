@@ -24,10 +24,12 @@ export interface Vencimiento {
 
 export const vencimientosService = {
   async getVencimientosMes(anio: number, mes: number, usuarioId: string, cargo: string) {
-    const startDate = new Date(anio, mes, 1).toISOString().split('T')[0];
-    const endDate = new Date(anio, mes + 1, 0).toISOString().split('T')[0];
-
+    const mesFormateado = String(mes + 1).padStart(2, '0');
+    const startDate = `${anio}-${mesFormateado}-01`;
     
+    const ultimoDia = new Date(anio, mes + 1, 0).getDate();
+    const endDate = `${anio}-${mesFormateado}-${String(ultimoDia).padStart(2, '0')}`;
+
     const { data, error } = await supabase
       .from('vencimientos')
       .select(`
@@ -56,12 +58,9 @@ export const vencimientosService = {
     return vencimientosPermitidos as Vencimiento[];
   },
 
-  
   async actualizarEstado(id: string, nuevoEstado: string, observaciones: string = '') {
-    
     const { data: previo } = await supabase.from('vencimientos').select('*').eq('id', id).single();
 
-    
     const { data, error } = await supabase
       .from('vencimientos')
       .update({ 
@@ -75,7 +74,6 @@ export const vencimientosService = {
 
     if (error) throw error;
 
-    
     await usuariosService.registrarAuditoria('GESTIONAR_TAREA', 'VENCIMIENTOS', id, previo, data);
     return data;
   }

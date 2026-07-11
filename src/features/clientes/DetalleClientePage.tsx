@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useClientes, useClienteImpuestos } from "./useClientes";
+import { useVencimientosMes } from "../calendario/useVencimientos";
 import {
   ArrowLeft,
   Building2,
@@ -16,10 +17,6 @@ import {
   FileText,
   Edit2,
 } from "lucide-react";
-import {
-  vencimientosService,
-  type Vencimiento,
-} from "../calendario/vencimientosService";
 import { FichaObligaciones } from "./FichaObligaciones";
 import { ClienteForm } from "./ClienteForm";
 import { AlertNotification } from "../../components/ui/AlertNotification";
@@ -29,53 +26,33 @@ export const DetalleClientePage = () => {
   const navigate = useNavigate();
   const { perfil } = useAuth();
 
-  // Lectura unificada desde caché reactiva de TanStack Query
+  const [showObligacionesModal, setShowObligacionesModal] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+
   const {
     data: clientes = [],
     isLoading: loadingClientes,
     error: errorClientes,
   } = useClientes();
+
   const { data: impuestosCargo = [], isLoading: loadingImpuestos } =
     useClienteImpuestos(id!);
 
-  const [vencimientos, setVencimientos] = useState<Vencimiento[]>([]);
-  const [loadingVencimientos, setLoadingVencimientos] = useState(true);
-  const [showObligacionesModal, setShowObligacionesModal] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [errorVencimientos, setErrorVencimientos] = useState<string | null>(
-    null,
+  const hoy = new Date();
+  const {
+    data: todosLosVencimientos = [],
+    isLoading: loadingVencimientos,
+    error: errorVencimientos,
+  } = useVencimientosMes(
+    hoy.getFullYear(),
+    hoy.getMonth(),
+    perfil?.id,
+    perfil?.cargo,
   );
 
   const cliente = clientes.find((c) => c.id === id);
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
-
-  useEffect(() => {
-    if (!id) return;
-    const cargarVencimientosCliente = async () => {
-      try {
-        setLoadingVencimientos(true);
-        setErrorVencimientos(null);
-        const hoy = new Date();
-        const data = await vencimientosService.getVencimientosMes(
-          hoy.getFullYear(),
-          hoy.getMonth(),
-          "",
-          "Gerente",
-        );
-        const filtrados = data.filter((v) => v.clientes.id === id);
-        setVencimientos(filtrados);
-      } catch (error) {
-        console.error("Error al cargar los vencimientos del cliente:", error);
-        setErrorVencimientos(
-          "No se pudieron coordinar las agendas de vencimientos del mes en curso.",
-        );
-      } finally {
-        setLoadingVencimientos(false);
-      }
-    };
-    cargarVencimientosCliente();
-  }, [id]);
 
   if (loadingClientes) {
     return (
@@ -106,6 +83,8 @@ export const DetalleClientePage = () => {
     );
   }
 
+  const vencimientos = todosLosVencimientos.filter((v) => v.clientes.id === id);
+
   const getBadgeStyles = (estado: string) => {
     switch (estado) {
       case "PRESENTADO":
@@ -119,7 +98,7 @@ export const DetalleClientePage = () => {
     }
   };
 
-  const errorAMostrar = errorClientes?.message || errorVencimientos;
+  const errorAMostrar = errorClientes?.message || errorVencimientos?.message;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
