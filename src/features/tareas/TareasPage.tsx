@@ -129,17 +129,22 @@ export const TareasPage = () => {
             const esVencida =
               !esCompletada && tarea.fecha_limite < localTodayStr;
 
-            // Semáforo dinámico
-            let badgeStyle = "bg-blue-100 text-blue-700 border-blue-200";
+            // Semáforo dinámico de la Etiqueta (Badge)
+            let badgeStyle = "bg-amber-100 text-amber-700 border-amber-200";
             let badgeText = "PENDIENTE";
+
+            // Semáforo dinámico de la Tarjeta (Bordes)
+            let cardStyle = "border-amber-400 bg-surface";
 
             if (esCompletada) {
               badgeStyle = "bg-success/10 text-success border-success/20";
               badgeText = "COMPLETADA";
+              cardStyle = "border-success/60 bg-surface"; // Borde verde
             } else if (esVencida) {
               badgeStyle =
                 "bg-danger text-white border-danger animate-pulse shadow-sm";
               badgeText = "VENCIDA";
+              cardStyle = "border-danger bg-danger/5"; // Borde rojo y fondo ligeramente tintado
             }
 
             const isCompleting =
@@ -149,7 +154,7 @@ export const TareasPage = () => {
             return (
               <div
                 key={tarea.id}
-                className={`bg-surface border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group ${esVencida ? "border-danger/30 bg-danger/5" : "border-gray-200"}`}
+                className={`border-2 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group ${cardStyle}`}
               >
                 <div>
                   <div className="flex justify-between items-start mb-2">
