@@ -16,6 +16,7 @@ import { CalendarioPage } from "./features/calendario/CalendarioPage";
 import { PerfilPage } from "./features/perfil/PerfilPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { DetalleImpuestoPage } from "./features/impuestos/DetalleImpuestoPage";
+import { TareasPage } from "./features/tareas/TareasPage"; // <-- IMPORTACIÓN NUEVA
 
 function App() {
   return (
@@ -31,22 +32,22 @@ function App() {
                 <Layout>
                   <Routes>
                     <Route path="/" element={<DashboardPage />} />
-
                     <Route path="/clientes" element={<ClientesPage />} />
-
                     <Route
                       path="/clientes/:id"
                       element={<DetalleClientePage />}
                     />
-
                     <Route path="/impuestos" element={<ImpuestosPage />} />
                     <Route
                       path="/impuestos/:id"
                       element={<DetalleImpuestoPage />}
                     />
                     <Route path="perfil" element={<PerfilPage />} />
-
                     <Route path="/calendario" element={<CalendarioPage />} />
+
+                    {/* RUTA DE TAREAS */}
+                    <Route path="/tareas" element={<TareasPage />} />
+
                     <Route
                       path="/usuarios"
                       element={
@@ -57,7 +58,6 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
-
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Layout>

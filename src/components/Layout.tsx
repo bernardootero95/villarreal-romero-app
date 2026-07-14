@@ -8,6 +8,7 @@ import {
   Building2,
   Landmark,
   UserCircle,
+  ClipboardList, // <-- NUEVO ICONO
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Footer } from "./Footer";
@@ -41,6 +42,12 @@ export const Layout = ({ children }: LayoutProps) => {
       icon: <Landmark className="w-5 h-5" />,
       label: "Impuestos",
       path: "/impuestos",
+    },
+    // NUEVO MÓDULO DE TAREAS
+    {
+      icon: <ClipboardList className="w-5 h-5" />,
+      label: "Tareas",
+      path: "/tareas",
     },
     {
       icon: <Users className="w-5 h-5" />,
@@ -90,7 +97,7 @@ export const Layout = ({ children }: LayoutProps) => {
                 <button
                   key={index}
                   onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md transition-all text-left duration-200 ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md transition-all text-left duration-200 cursor-pointer ${
                     isActive
                       ? "bg-surface/10 text-accent border-l-4 border-accent"
                       : "text-surface/80 hover:bg-surface/5 hover:text-surface"
@@ -109,7 +116,7 @@ export const Layout = ({ children }: LayoutProps) => {
         <div className="p-4 border-t border-surface/10">
           <button
             onClick={signOut}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md text-surface/70 hover:bg-danger/20 hover:text-danger-light transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md text-surface/70 hover:bg-danger/20 hover:text-danger-light transition-colors text-left cursor-pointer"
           >
             <LogOut className="w-5 h-5 text-surface/50" />
             <span className="font-body">Cerrar Sesión</span>
