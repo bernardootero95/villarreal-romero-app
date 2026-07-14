@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { CamposBase } from "../usuarios/types";
 
-// LÓGICA SOLID: Simplificación del dominio a un sistema binario de tareas
 export const ESTADOS_TAREA = ["PENDIENTE", "COMPLETADA"] as const;
 
 export const tareaSchema = z.object({
@@ -9,7 +8,7 @@ export const tareaSchema = z.object({
   descripcion: z.string().optional(),
   fecha_limite: z.string().min(1, "La fecha límite es obligatoria"),
   usuario_id: z.string().uuid("Debes asignar la tarea a un usuario"),
-  estado: z.enum(ESTADOS_TAREA).default("PENDIENTE"),
+  estado: z.enum(ESTADOS_TAREA),
 });
 
 export type TareaFormData = z.infer<typeof tareaSchema>;

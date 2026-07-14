@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tareasService } from "./tareasService";
-import type { TareaFormData, Tarea } from "./types";
+import type { TareaFormData } from "./types";
 
 export const TAREAS_QUERY_KEY = ["tareas"] as const;
 
@@ -37,15 +37,13 @@ export const useDeleteTarea = () => {
   });
 };
 
-// Optimistic Update para el estado (rápido en UI)
 export const useActualizarEstadoTarea = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ id, estado }: { id: string; estado: string }) => tareasService.updateEstado(id, estado),
-    onMutate: async (variables) => {
+    onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: TAREAS_QUERY_KEY });
-      // Aquí se podría guardar el snapshot para rollback, simplificado para mantener el código limpio.
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: TAREAS_QUERY_KEY });
