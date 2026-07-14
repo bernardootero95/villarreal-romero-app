@@ -4,7 +4,9 @@ import {
   useVencimientosMes,
   useActualizarEstadoVencimiento,
 } from "./useVencimientos";
+import { useTareas, useActualizarEstadoTarea } from "../tareas/useTareas";
 import type { Vencimiento } from "./vencimientosService";
+import type { Tarea } from "../tareas/types";
 import { Loader } from "../../components/Loader";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import {
@@ -14,6 +16,8 @@ import {
   X,
   CheckCircle,
   CheckSquare,
+  CheckCircle2,
+  ClipboardList,
 } from "lucide-react";
 
 export const CalendarioPage = () => {
@@ -27,13 +31,22 @@ export const CalendarioPage = () => {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
+  // 1. Consulta de Vencimientos Tributarios
   const {
     data: vencimientos = [],
-    isLoading,
-    error,
+    isLoading: loadingVencimientos,
+    error: errorVencimientos,
   } = useVencimientosMes(year, month, perfil?.id, perfil?.cargo);
 
+  // 2. Consulta de Tareas Internas
+  const {
+    data: tareas = [],
+    isLoading: loadingTareas,
+    error: errorTareas,
+  } = useTareas(perfil?.id, perfil?.cargo);
+
   const actualizarEstadoMutation = useActualizarEstadoVencimiento();
+  const actualizarEstadoTareaMutation = useActualizarEstadoTarea();
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
@@ -45,6 +58,7 @@ export const CalendarioPage = () => {
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  // Agrupación en memoria de Vencimientos
   const vencimientosPorDia = vencimientos.reduce(
     (acc, v) => {
       if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
@@ -52,6 +66,16 @@ export const CalendarioPage = () => {
       return acc;
     },
     {} as Record<string, Vencimiento[]>,
+  );
+
+  // Agrupación en memoria de Tareas
+  const tareasPorDia = tareas.reduce(
+    (acc, t) => {
+      if (!acc[t.fecha_limite]) acc[t.fecha_limite] = [];
+      acc[t.fecha_limite].push(t);
+      return acc;
+    },
+    {} as Record<string, Tarea[]>,
   );
 
   const meses = [
@@ -104,7 +128,11 @@ export const CalendarioPage = () => {
 
   const renderDayModal = () => {
     if (!selectedDate) return null;
-    const tareasDelDia = vencimientosPorDia[selectedDate] || [];
+
+    // Extracción de datos para el día seleccionado
+    const vtosDelDia = vencimientosPorDia[selectedDate] || [];
+    const tareasDelDia = tareasPorDia[selectedDate] || [];
+
     const fechaObj = new Date(selectedDate + "T12:00:00");
     const fechaFormateada = fechaObj.toLocaleDateString("es-CO", {
       weekday: "long",
@@ -112,6 +140,8 @@ export const CalendarioPage = () => {
       month: "long",
       year: "numeric",
     });
+
+    const estaVacio = vtosDelDia.length === 0 && tareasDelDia.length === 0;
 
     return (
       <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -131,7 +161,7 @@ export const CalendarioPage = () => {
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50 space-y-4">
+          <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50 space-y-6">
             {errorLocal && (
               <div className="animate-in fade-in duration-200">
                 <AlertNotification
@@ -143,83 +173,159 @@ export const CalendarioPage = () => {
               </div>
             )}
 
-            {tareasDelDia.length === 0 ? (
+            {estaVacio ? (
               <p className="text-center text-text-muted py-8 text-xs font-semibold">
-                No hay vencimientos programados para este día.
+                No hay actividades programadas para este día.
               </p>
             ) : (
-              <div className="space-y-4">
-                {tareasDelDia.map((tarea) => {
-                  const esPendiente = tarea.estado_tarea === "PENDIENTE";
-                  const guardandoId =
-                    actualizarEstadoMutation.isPending &&
-                    actualizarEstadoMutation.variables?.id === tarea.id;
+              <>
+                {/* SECCIÓN 1: Vencimientos Tributarios */}
+                {vtosDelDia.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-primary border-b border-gray-200 pb-2">
+                      Vencimientos Oficiales
+                    </h3>
+                    {vtosDelDia.map((tarea) => {
+                      const esPendiente =
+                        tarea.estado_tarea === "PENDIENTE" ||
+                        tarea.estado_tarea === "REVISIÓN";
+                      const guardandoId =
+                        actualizarEstadoMutation.isPending &&
+                        actualizarEstadoMutation.variables?.id === tarea.id;
 
-                  return (
-                    <div
-                      key={tarea.id}
-                      className="bg-surface border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100"
-                    >
-                      <div className="flex-1 space-y-1">
-                        <h4 className="font-bold text-primary text-base leading-tight">
-                          {tarea.clientes.razon_social}
-                        </h4>
-                        <p className="text-xs text-text-muted font-mono">
-                          NIT: {tarea.clientes.nit}-{tarea.clientes.dv}
-                        </p>
+                      return (
+                        <div
+                          key={tarea.id}
+                          className="bg-surface border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100"
+                        >
+                          <div className="flex-1 space-y-1">
+                            <h4 className="font-bold text-primary text-base leading-tight">
+                              {tarea.clientes.razon_social}
+                            </h4>
+                            <p className="text-xs text-text-muted font-mono">
+                              NIT: {tarea.clientes.nit}-{tarea.clientes.dv}
+                            </p>
 
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <span className="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded font-semibold">
-                            {tarea.impuestos.nombre}
-                          </span>
-                          <span className="text-xs text-text-muted font-medium bg-gray-100 px-2 py-0.5 rounded">
-                            Periodo: {tarea.periodo_fiscal}
-                          </span>
-                        </div>
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              <span className="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded font-semibold">
+                                {tarea.impuestos.nombre}
+                              </span>
+                              <span className="text-xs text-text-muted font-medium bg-gray-100 px-2 py-0.5 rounded">
+                                Periodo: {tarea.periodo_fiscal}
+                              </span>
+                            </div>
 
-                        {!esPendiente && tarea.observaciones && (
-                          <p className="text-xs text-success bg-success/5 border border-success/10 px-2 py-1 rounded mt-2 font-medium">
-                            <b>Radicado / Notas:</b> {tarea.observaciones}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
-                        {tarea.estado_tarea === "PRESENTADO" ? (
-                          <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full border border-success/10">
-                            <CheckCircle className="w-4 h-4" /> Presentado
-                          </span>
-                        ) : (
-                          <div className="w-full space-y-2">
-                            <input
-                              type="text"
-                              value={radicados[tarea.id] || ""}
-                              onChange={(e) =>
-                                setRadicados({
-                                  ...radicados,
-                                  [tarea.id]: e.target.value,
-                                })
-                              }
-                              placeholder="N° Radicado de la DIAN..."
-                              className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-surface outline-none focus:ring-1 focus:ring-accent"
-                            />
-                            <button
-                              onClick={() => handleMarcarPresentado(tarea.id)}
-                              disabled={guardandoId}
-                              className="w-full bg-success hover:bg-success/90 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-                            >
-                              <CheckSquare className="w-3.5 h-3.5" />
-                              {guardandoId
-                                ? "Guardando..."
-                                : "Marcar Presentado"}
-                            </button>
+                            {!esPendiente && tarea.observaciones && (
+                              <p className="text-xs text-success bg-success/5 border border-success/10 px-2 py-1 rounded mt-2 font-medium">
+                                <b>Radicado / Notas:</b> {tarea.observaciones}
+                              </p>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+
+                          <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
+                            {tarea.estado_tarea === "PRESENTADO" ? (
+                              <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full border border-success/10">
+                                <CheckCircle className="w-4 h-4" /> Presentado
+                              </span>
+                            ) : (
+                              <div className="w-full space-y-2">
+                                <input
+                                  type="text"
+                                  value={radicados[tarea.id] || ""}
+                                  onChange={(e) =>
+                                    setRadicados({
+                                      ...radicados,
+                                      [tarea.id]: e.target.value,
+                                    })
+                                  }
+                                  placeholder="N° Radicado de la DIAN..."
+                                  className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-surface outline-none focus:ring-1 focus:ring-accent"
+                                />
+                                <button
+                                  onClick={() =>
+                                    handleMarcarPresentado(tarea.id)
+                                  }
+                                  disabled={guardandoId}
+                                  className="w-full bg-success hover:bg-success/90 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                                >
+                                  <CheckSquare className="w-3.5 h-3.5" />
+                                  {guardandoId
+                                    ? "Guardando..."
+                                    : "Marcar Presentado"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* SECCIÓN 2: Tareas Internas */}
+                {tareasDelDia.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-primary border-b border-gray-200 pb-2 flex items-center gap-1.5">
+                      <ClipboardList className="w-4 h-4 text-accent" /> Tareas
+                      Internas
+                    </h3>
+                    {tareasDelDia.map((tarea) => {
+                      const guardandoId =
+                        actualizarEstadoTareaMutation.isPending &&
+                        actualizarEstadoTareaMutation.variables?.id ===
+                          tarea.id;
+
+                      return (
+                        <div
+                          key={tarea.id}
+                          className="bg-surface border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100"
+                        >
+                          <div className="flex-1 space-y-1">
+                            <h4 className="font-bold text-primary text-base leading-tight">
+                              {tarea.titulo}
+                            </h4>
+                            {tarea.descripcion && (
+                              <p className="text-xs text-text-muted">
+                                {tarea.descripcion}
+                              </p>
+                            )}
+                            {(perfil?.cargo === "Gerente" ||
+                              perfil?.cargo === "Ingeniero") && (
+                              <p className="text-[10px] text-accent font-bold uppercase mt-1 tracking-wider">
+                                Asignado a: {tarea.usuarios?.nombre_completo}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
+                            {tarea.estado === "COMPLETADA" ? (
+                              <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full border border-success/10">
+                                <CheckCircle2 className="w-4 h-4" /> Completada
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  actualizarEstadoTareaMutation.mutate({
+                                    id: tarea.id,
+                                    estado: "COMPLETADA",
+                                  })
+                                }
+                                disabled={guardandoId}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                              >
+                                <CheckSquare className="w-3.5 h-3.5" />
+                                {guardandoId
+                                  ? "Guardando..."
+                                  : "Marcar Completada"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -227,16 +333,18 @@ export const CalendarioPage = () => {
     );
   };
 
-  if (isLoading && !vencimientos.length) {
+  const isLoading = loadingVencimientos || loadingTareas;
+
+  if (isLoading && !vencimientos.length && !tareas.length) {
     return (
       <Loader
-        texto="Sincronizando calendario tributario..."
+        texto="Sincronizando calendario tributario y tareas..."
         fullScreen={false}
       />
     );
   }
 
-  const errorAMostrar = error?.message;
+  const errorAMostrar = errorVencimientos?.message || errorTareas?.message;
   const localDate = new Date();
   const dateStrToday = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
@@ -245,10 +353,10 @@ export const CalendarioPage = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-title font-bold text-primary">
-            Calendario Tributario
+            Calendario Corporativo
           </h1>
           <p className="text-text-muted">
-            Vista general de obligaciones y vencimientos.
+            Agenda general de obligaciones formales y tareas internas asignadas.
           </p>
         </div>
 
@@ -278,7 +386,7 @@ export const CalendarioPage = () => {
         <div className="animate-in fade-in duration-200 max-w-4xl">
           <AlertNotification
             type="error"
-            title="Error de Calendario"
+            title="Error de Sincronización"
             message={errorAMostrar}
           />
         </div>
@@ -286,7 +394,7 @@ export const CalendarioPage = () => {
 
       <div className="card-container !p-0 overflow-hidden bg-surface shadow-lg border border-gray-200 rounded-xl">
         <div className="p-4 border-b border-gray-100 bg-gray-50/80 text-center">
-          <h2 className="text-xl font-title font-bold text-primary">
+          <h2 className="text-xl font-title font-bold text-primary capitalize">
             {meses[month]} {year}
           </h2>
         </div>
@@ -309,11 +417,17 @@ export const CalendarioPage = () => {
 
           {days.map((day) => {
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const tareasDelDia = vencimientosPorDia[dateStr] || [];
+
+            // Datos del día
+            const vtosDelDia = vencimientosPorDia[dateStr] || [];
+            const tareasDelDia = tareasPorDia[dateStr] || [];
             const isToday = dateStrToday === dateStr;
 
-            const pendientes = tareasDelDia.filter(
-              (t) => t.estado_tarea === "PENDIENTE",
+            const pendientesVto = vtosDelDia.filter(
+              (t) => t.estado_tarea !== "PRESENTADO",
+            ).length;
+            const pendientesTarea = tareasDelDia.filter(
+              (t) => t.estado === "PENDIENTE",
             ).length;
 
             return (
@@ -330,27 +444,33 @@ export const CalendarioPage = () => {
                   </span>
                 </div>
 
-                <div className="mt-2 flex-1 overflow-hidden flex flex-col gap-1">
-                  {tareasDelDia.length > 0 ? (
-                    <>
-                      <div className="flex flex-wrap gap-1">
-                        {tareasDelDia.slice(0, 4).map((t, i) => (
-                          <div
-                            key={i}
-                            className={`w-2 h-2 rounded-full ${t.estado_tarea === "PRESENTADO" ? "bg-success" : "bg-danger"}`}
-                          />
-                        ))}
-                      </div>
+                <div className="mt-2 flex-1 overflow-hidden flex flex-col justify-end gap-1.5 pb-1">
+                  {/* Etiqueta Vencimientos Oficiales */}
+                  {vtosDelDia.length > 0 && (
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
+                        pendientesVto === 0
+                          ? "bg-success/10 text-success"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {vtosDelDia.length} Vto{vtosDelDia.length > 1 ? "s" : ""}
+                    </span>
+                  )}
 
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded mt-auto w-fit ${pendientes === 0 ? "bg-success/10 text-success" : "bg-amber-100 text-text-main"}`}
-                      >
-                        {tareasDelDia.length} vto
-                        {tareasDelDia.length > 1 ? "s" : ""}{" "}
-                        {pendientes > 0 && `(${pendientes} P)`}
-                      </span>
-                    </>
-                  ) : null}
+                  {/* Etiqueta Tareas Internas */}
+                  {tareasDelDia.length > 0 && (
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
+                        pendientesTarea === 0
+                          ? "bg-blue-50 text-blue-600"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {tareasDelDia.length} Tarea
+                      {tareasDelDia.length > 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
               </div>
             );
