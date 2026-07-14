@@ -33,6 +33,13 @@ export const TareasPage = () => {
   const [tareaEditando, setTareaEditando] = useState<Tarea | null>(null);
   const [filtroEstado, setFiltroEstado] = useState<string>("TODAS");
 
+  const puedeAdministrar =
+    perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
+
+  // Cálculo del día actual local para evaluar tareas vencidas en tiempo real
+  const localDate = new Date();
+  const localTodayStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+
   const tareasFiltradas = tareas.filter(
     (t) => filtroEstado === "TODAS" || t.estado === filtroEstado,
   );
@@ -43,15 +50,19 @@ export const TareasPage = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm("¿Seguro que deseas eliminar esta tarea?")) {
+    if (
+      window.confirm(
+        "¿Seguro que deseas eliminar esta tarea de la planificación?",
+      )
+    ) {
       deleteMutation.mutate(id);
     }
   };
 
-  const toggleEstado = (id: string, estadoActual: string) => {
-    const nuevoEstado =
-      estadoActual === "COMPLETADA" ? "PENDIENTE" : "COMPLETADA";
-    estadoMutation.mutate({ id, estado: nuevoEstado });
+  const completarTarea = (id: string, estadoActual: string) => {
+    // REGLA DE NEGOCIO: Una vez completada, queda inmutable
+    if (estadoActual === "COMPLETADA") return;
+    estadoMutation.mutate({ id, estado: "COMPLETADA" });
   };
 
   if (isLoading) return <Loader texto="Sincronizando tareas..." />;
@@ -67,15 +78,17 @@ export const TareasPage = () => {
             Control de asignaciones y actividades pendientes.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setTareaEditando(null);
-            setShowForm(true);
-          }}
-          className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm text-sm font-semibold cursor-pointer"
-        >
-          <Plus className="w-5 h-5" /> Nueva Tarea
-        </button>
+        {puedeAdministrar && (
+          <button
+            onClick={() => {
+              setTareaEditando(null);
+              setShowForm(true);
+            }}
+            className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm text-sm font-semibold cursor-pointer"
+          >
+            <Plus className="w-5 h-5" /> Nueva Tarea
+          </button>
+        )}
       </div>
 
       {error && (
@@ -87,7 +100,6 @@ export const TareasPage = () => {
       )}
 
       <div className="flex gap-2 border-b border-gray-200 pb-4">
-        {/* REFACTOR: Eliminado el estado EN_PROGRESO de los filtros */}
         {["TODAS", "PENDIENTE", "COMPLETADA"].map((est) => (
           <button
             key={est}
@@ -112,72 +124,113 @@ export const TareasPage = () => {
             </p>
           </div>
         ) : (
-          tareasFiltradas.map((tarea) => (
-            <div
-              key={tarea.id}
-              className="bg-surface border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group"
-            >
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-primary font-title leading-tight">
-                    {tarea.titulo}
-                  </h3>
-                  <button
-                    onClick={() => toggleEstado(tarea.id, tarea.estado)}
-                    className="shrink-0 cursor-pointer"
-                  >
-                    <CheckCircle2
-                      className={`w-6 h-6 transition-colors ${tarea.estado === "COMPLETADA" ? "text-success" : "text-gray-300 hover:text-success/50"}`}
-                    />
-                  </button>
-                </div>
-                {tarea.descripcion && (
-                  <p className="text-xs text-text-muted line-clamp-3 mb-4">
-                    {tarea.descripcion}
-                  </p>
-                )}
-              </div>
+          tareasFiltradas.map((tarea) => {
+            const esCompletada = tarea.estado === "COMPLETADA";
+            const esVencida =
+              !esCompletada && tarea.fecha_limite < localTodayStr;
 
-              <div className="border-t border-gray-100 pt-3 mt-4 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="flex items-center gap-1.5 text-[11px] font-mono text-text-muted">
-                    <Clock className="w-3.5 h-3.5" />
-                    Vence:{" "}
-                    {new Date(
-                      tarea.fecha_limite + "T12:00:00",
-                    ).toLocaleDateString("es-CO")}
-                  </span>
-                  {perfil?.cargo === "Gerente" ||
-                  perfil?.cargo === "Ingeniero" ? (
-                    <p className="text-[10px] text-accent font-bold uppercase tracking-wider mt-1">
-                      Asignado a: {tarea.usuarios?.nombre_completo}
+            // Semáforo dinámico
+            let badgeStyle = "bg-blue-100 text-blue-700 border-blue-200";
+            let badgeText = "PENDIENTE";
+
+            if (esCompletada) {
+              badgeStyle = "bg-success/10 text-success border-success/20";
+              badgeText = "COMPLETADA";
+            } else if (esVencida) {
+              badgeStyle =
+                "bg-danger text-white border-danger animate-pulse shadow-sm";
+              badgeText = "VENCIDA";
+            }
+
+            const isCompleting =
+              estadoMutation.isPending &&
+              estadoMutation.variables?.id === tarea.id;
+
+            return (
+              <div
+                key={tarea.id}
+                className={`bg-surface border rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group ${esVencida ? "border-danger/30 bg-danger/5" : "border-gray-200"}`}
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3
+                      className={`font-bold font-title leading-tight pr-2 ${esCompletada ? "text-text-muted line-through" : "text-primary"}`}
+                    >
+                      {tarea.titulo}
+                    </h3>
+                    <button
+                      onClick={() => completarTarea(tarea.id, tarea.estado)}
+                      disabled={esCompletada || isCompleting}
+                      className="shrink-0 cursor-pointer disabled:cursor-not-allowed"
+                      title={
+                        esCompletada
+                          ? "Tarea ya finalizada"
+                          : "Marcar como completada"
+                      }
+                    >
+                      <CheckCircle2
+                        className={`w-6 h-6 transition-colors ${esCompletada ? "text-success" : esVencida ? "text-danger hover:text-success" : "text-gray-300 hover:text-success/50"}`}
+                      />
+                    </button>
+                  </div>
+                  {tarea.descripcion && (
+                    <p
+                      className={`text-xs line-clamp-3 mb-4 ${esCompletada ? "text-text-muted/60" : "text-text-muted"}`}
+                    >
+                      {tarea.descripcion}
                     </p>
-                  ) : null}
+                  )}
+                  <span
+                    className={`text-[10px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wider ${badgeStyle}`}
+                  >
+                    {badgeText}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleEdit(tarea)}
-                    className="p-1.5 text-text-muted hover:text-accent bg-gray-50 rounded cursor-pointer"
-                    title="Editar tarea"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(tarea.id)}
-                    className="p-1.5 text-text-muted hover:text-danger bg-gray-50 rounded cursor-pointer"
-                    title="Eliminar tarea"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                <div className="border-t border-gray-100 pt-3 mt-4 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span
+                      className={`flex items-center gap-1.5 text-[11px] font-mono ${esVencida ? "text-danger font-bold" : "text-text-muted"}`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      Vence:{" "}
+                      {new Date(
+                        tarea.fecha_limite + "T12:00:00",
+                      ).toLocaleDateString("es-CO")}
+                    </span>
+                    {puedeAdministrar ? (
+                      <p className="text-[10px] text-accent font-bold uppercase tracking-wider">
+                        Asignado a: {tarea.usuarios?.nombre_completo}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {puedeAdministrar && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleEdit(tarea)}
+                        className="p-1.5 text-text-muted hover:text-accent bg-gray-50 rounded cursor-pointer"
+                        title="Editar tarea"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(tarea.id)}
+                        className="p-1.5 text-text-muted hover:text-danger bg-gray-50 rounded cursor-pointer"
+                        title="Eliminar tarea"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      {showForm && (
+      {showForm && puedeAdministrar && (
         <TareaForm
           tareaAEditar={tareaEditando}
           onClose={() => setShowForm(false)}

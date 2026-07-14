@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 export const CalendarioPage = () => {
-  const { perfil } = useAuth();
+  const { perfil, session } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -31,19 +31,17 @@ export const CalendarioPage = () => {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // 1. Consulta de Vencimientos Tributarios
   const {
     data: vencimientos = [],
     isLoading: loadingVencimientos,
     error: errorVencimientos,
-  } = useVencimientosMes(year, month, perfil?.id, perfil?.cargo);
+  } = useVencimientosMes(year, month, session?.user?.id, perfil?.cargo);
 
-  // 2. Consulta de Tareas Internas
   const {
     data: tareas = [],
     isLoading: loadingTareas,
     error: errorTareas,
-  } = useTareas(perfil?.id, perfil?.cargo);
+  } = useTareas(session?.user?.id, perfil?.cargo);
 
   const actualizarEstadoMutation = useActualizarEstadoVencimiento();
   const actualizarEstadoTareaMutation = useActualizarEstadoTarea();
@@ -58,7 +56,9 @@ export const CalendarioPage = () => {
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  // Agrupación en memoria de Vencimientos
+  const localDate = new Date();
+  const dateStrToday = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+
   const vencimientosPorDia = vencimientos.reduce(
     (acc, v) => {
       if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
@@ -68,7 +68,6 @@ export const CalendarioPage = () => {
     {} as Record<string, Vencimiento[]>,
   );
 
-  // Agrupación en memoria de Tareas
   const tareasPorDia = tareas.reduce(
     (acc, t) => {
       if (!acc[t.fecha_limite]) acc[t.fecha_limite] = [];
@@ -95,18 +94,18 @@ export const CalendarioPage = () => {
   const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   const handleMarcarPresentado = async (tareaId: string) => {
-    if (!perfil) return;
-    const observationText = radicados[tareaId] || "";
+    if (!session?.user?.id) return;
+    const observacionText = radicados[tareaId] || "";
     setErrorLocal(null);
 
     actualizarEstadoMutation.mutate(
       {
         id: tareaId,
         nuevoEstado: "PRESENTADO",
-        observaciones: observationText,
+        observaciones: observacionText,
         anio: year,
         mes: month,
-        usuarioId: perfil.id,
+        usuarioId: session.user.id,
       },
       {
         onSuccess: () => {
@@ -129,7 +128,6 @@ export const CalendarioPage = () => {
   const renderDayModal = () => {
     if (!selectedDate) return null;
 
-    // Extracción de datos para el día seleccionado
     const vtosDelDia = vencimientosPorDia[selectedDate] || [];
     const tareasDelDia = tareasPorDia[selectedDate] || [];
 
@@ -275,13 +273,19 @@ export const CalendarioPage = () => {
                         actualizarEstadoTareaMutation.variables?.id ===
                           tarea.id;
 
+                      const esCompletada = tarea.estado === "COMPLETADA";
+                      const esVencida =
+                        !esCompletada && tarea.fecha_limite < dateStrToday;
+
                       return (
                         <div
                           key={tarea.id}
-                          className="bg-surface border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100"
+                          className={`bg-surface border rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100 ${esVencida ? "border-danger/30 bg-danger/5" : "border-gray-200"}`}
                         >
                           <div className="flex-1 space-y-1">
-                            <h4 className="font-bold text-primary text-base leading-tight">
+                            <h4
+                              className={`font-bold text-base leading-tight ${esCompletada ? "text-text-muted line-through" : "text-primary"}`}
+                            >
                               {tarea.titulo}
                             </h4>
                             {tarea.descripcion && (
@@ -289,16 +293,24 @@ export const CalendarioPage = () => {
                                 {tarea.descripcion}
                               </p>
                             )}
-                            {(perfil?.cargo === "Gerente" ||
-                              perfil?.cargo === "Ingeniero") && (
-                              <p className="text-[10px] text-accent font-bold uppercase mt-1 tracking-wider">
-                                Asignado a: {tarea.usuarios?.nombre_completo}
-                              </p>
-                            )}
+
+                            <div className="flex gap-2 items-center mt-2">
+                              {esVencida && (
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-danger text-white border-danger animate-pulse tracking-wider">
+                                  VENCIDA
+                                </span>
+                              )}
+                              {(perfil?.cargo === "Gerente" ||
+                                perfil?.cargo === "Ingeniero") && (
+                                <span className="text-[10px] text-accent font-bold uppercase tracking-wider">
+                                  A: {tarea.usuarios?.nombre_completo}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
-                            {tarea.estado === "COMPLETADA" ? (
+                            {esCompletada ? (
                               <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full border border-success/10">
                                 <CheckCircle2 className="w-4 h-4" /> Completada
                               </span>
@@ -338,15 +350,14 @@ export const CalendarioPage = () => {
   if (isLoading && !vencimientos.length && !tareas.length) {
     return (
       <Loader
-        texto="Sincronizando calendario tributario y tareas..."
+        texto="Sincronizando agenda tributaria y tareas..."
         fullScreen={false}
       />
     );
   }
 
-  const errorAMostrar = errorVencimientos?.message || errorTareas?.message;
-  const localDate = new Date();
-  const dateStrToday = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+  const errorAMostrar =
+    errorVencimientos?.message || errorTareas?.message || errorLocal;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -388,6 +399,7 @@ export const CalendarioPage = () => {
             type="error"
             title="Error de Sincronización"
             message={errorAMostrar}
+            onClose={() => setErrorLocal(null)}
           />
         </div>
       )}
@@ -418,7 +430,6 @@ export const CalendarioPage = () => {
           {days.map((day) => {
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-            // Datos del día
             const vtosDelDia = vencimientosPorDia[dateStr] || [];
             const tareasDelDia = tareasPorDia[dateStr] || [];
             const isToday = dateStrToday === dateStr;
@@ -445,7 +456,6 @@ export const CalendarioPage = () => {
                 </div>
 
                 <div className="mt-2 flex-1 overflow-hidden flex flex-col justify-end gap-1.5 pb-1">
-                  {/* Etiqueta Vencimientos Oficiales */}
                   {vtosDelDia.length > 0 && (
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
@@ -458,7 +468,6 @@ export const CalendarioPage = () => {
                     </span>
                   )}
 
-                  {/* Etiqueta Tareas Internas */}
                   {tareasDelDia.length > 0 && (
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
