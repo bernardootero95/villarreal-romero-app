@@ -12,43 +12,43 @@ serve(async (req) => {
   }
 
   try {
-    // Inicializamos cliente administrativo con Service Role para saltar políticas RLS de lectura
+    // 1. Inicialización de Clientes (Supabase + Resend Key)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+    
+    // Obtenemos la llave de Resend desde los secretos del entorno
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    if (!RESEND_API_KEY) {
+      throw new Error("No se ha configurado la variable de entorno RESEND_API_KEY.");
+    }
 
     const hoy = new Date()
     const hoyStr = hoy.toISOString().split('T')[0]
 
-    // 1. Consultar todos los usuarios activos que tengan correo de notificación parametrizado
+    // 2. Extracción de Usuarios Activos
     const { data: usuarios, error: errUsers } = await supabaseAdmin
       .from('usuarios')
       .select('id, nombre_completo, correo_notificacion')
       .eq('estado', 'ACTIVO')
       .is('eliminado', null)
 
-    if (errUsers || !usuarios) throw new Error("Fallo recuperando el catálogo de usuarios: " + errUsers?.message)
+    if (errUsers || !usuarios) throw new Error("Fallo recuperando usuarios: " + errUsers?.message)
 
-    // Calculamos el umbral crítico futuro (Próximos 3 días)
+    // Umbral crítico: 3 días a futuro
     const fechaCritica = new Date()
     fechaCritica.setDate(hoy.getDate() + 3)
     const limiteFuturoStr = fechaCritica.toISOString().split('T')[0]
 
-    // 2. Extraer todas las obligaciones DIAN del mes inconclusas (Atrasadas e inmediatas)
-    const { data: vencimientos, error: errVtos } = await supabaseAdmin
+    // 3. Extracción de Vencimientos DIAN y Tareas Internas
+    const { data: vencimientos } = await supabaseAdmin
       .from('vencimientos')
-      .select(`
-        fecha_limite,
-        periodo_fiscal,
-        clientes!inner ( razon_social, contador_id ),
-        impuestos ( nombre, especialista_id )
-      `)
+      .select(`fecha_limite, periodo_fiscal, clientes!inner(razon_social, contador_id), impuestos(nombre, especialista_id)`)
       .neq('estado_tarea', 'PRESENTADO')
       .lte('fecha_limite', limiteFuturoStr)
 
-    // 3. Extraer todas las Tareas Internas pendientes
-    const { data: tareas, error: errTareas } = await supabaseAdmin
+    const { data: tareas } = await supabaseAdmin
       .from('tareas')
       .select('titulo, fecha_limite, usuario_id')
       .eq('estado', 'PENDIENTE')
@@ -56,11 +56,11 @@ serve(async (req) => {
 
     let totalCorreosEnviados = 0
 
-    // 4. Mapear y procesar la agenda específica por cada miembro del equipo (SRP)
+    // 4. Orquestación y Despacho por Usuario
     for (const usuario of usuarios) {
       if (!usuario.correo_notificacion) continue
 
-      // Validar si ya se le envió un reporte de alerta el día de hoy para mitigar spam de reintentos
+      // Control de Duplicados
       const { data: yaEnviado } = await supabaseAdmin
         .from('notificaciones_enviadas')
         .select('id')
@@ -71,86 +71,75 @@ serve(async (req) => {
 
       if (yaEnviado) continue
 
-      // Filtrar vencimientos donde el usuario sea Contador Responsable o Especialista del Impuesto
       const vtosAsignados = (vencimientos || []).filter((v: any) => 
         v.clientes.contador_id === usuario.id || v.impuestos.especialista_id === usuario.id
       )
-
-      // Filtrar sus tareas internas pendientes
       const tareasAsignadas = (tareas || []).filter((t: any) => t.usuario_id === usuario.id)
 
       if (vtosAsignados.length === 0 && tareasAsignadas.length === 0) continue
 
-      // Construcción del cuerpo del reporte en HTML limpio y corporativo
+      // Construcción del HTML Corporativo
       let htmlContent = `
         <div style="font-family: Arial, sans-serif; color: #1E2A3A; max-width: 600px; margin: 0 auto; border: 1px solid #E2E8F0; border-radius: 12px; overflow: hidden;">
           <div style="background-color: #0D2E5E; padding: 24px; text-align: center; color: #FFFFFF;">
-            <h2 style="margin: 0; font-family: 'Raleway', sans-serif; font-size: 20px;">Villarreal-Romero Asesorías Contables</h2>
-            <p style="margin: 4px 0 0 0; color: #C9A84C; font-size: 12px; font-weight: bold; tracking-wide: uppercase;">Resumen Diario de Obligaciones</p>
+            <h2 style="margin: 0; font-size: 20px;">Villarreal-Romero Asesorías Contables</h2>
+            <p style="margin: 4px 0 0 0; color: #C9A84C; font-size: 12px; font-weight: bold; text-transform: uppercase;">Resumen Diario de Obligaciones</p>
           </div>
           <div style="padding: 24px; background-color: #FFFFFF;">
             <p style="font-size: 14px; margin-top: 0;">Estimado(a) <strong>${usuario.nombre_completo}</strong>,</p>
-            <p style="font-size: 13px; color: #6B7A8D; line-height: 1.5;">A continuación, se detalla el estado de control de actividades críticas pendientes bajo tu responsabilidad en la plataforma:</p>
+            <p style="font-size: 13px; color: #6B7A8D; line-height: 1.5;">Este es el estado de control de actividades críticas bajo tu responsabilidad:</p>
       `
 
       if (vtosAsignados.length > 0) {
-        htmlContent += `
-          <h3 style="color: #0D2E5E; font-size: 14px; margin-top: 20px; border-bottom: 2px solid #F4F6F9; padding-bottom: 6px;">⚠️ VENCIMIENTOS TRIBUTARIOS DEL PERIODO</h3>
-          <ul style="padding-left: 20px; margin-top: 10px; font-size: 13px; line-height: 1.6;">
-        `
+        htmlContent += `<h3 style="color: #0D2E5E; font-size: 14px; border-bottom: 2px solid #F4F6F9; padding-bottom: 6px;">⚠️ VENCIMIENTOS OFICIALES</h3><ul style="font-size: 13px;">`
         vtosAsignados.forEach((v: any) => {
           const esAtrasado = v.fecha_limite < hoyStr
-          const marcaEstilo = esAtrasado ? 'color: #C0392B; font-weight: bold;' : 'color: #1E2A3A;'
-          htmlContent += `
-            <li style="margin-bottom: 8px; ${marcaEstilo}">
-              [${v.fecha_limite}] ${v.clientes.razon_social} — ${v.impuestos.nombre} (Per: ${v.periodo_fiscal}) ${esAtrasado ? '<strong>(VENCIDO)</strong>' : ''}
-            </li>
-          `
+          htmlContent += `<li style="margin-bottom: 8px; ${esAtrasado ? 'color: #C0392B; font-weight: bold;' : ''}">[${v.fecha_limite}] ${v.clientes.razon_social} — ${v.impuestos.nombre} ${esAtrasado ? '(VENCIDO)' : ''}</li>`
         })
         htmlContent += `</ul>`
       }
 
       if (tareasAsignadas.length > 0) {
-        htmlContent += `
-          <h3 style="color: #0D2E5E; font-size: 14px; margin-top: 24px; border-bottom: 2px solid #F4F6F9; padding-bottom: 6px;">📋 TAREAS INTERNAS PENDIENTES</h3>
-          <ul style="padding-left: 20px; margin-top: 10px; font-size: 13px; line-height: 1.6; color: #1E2A3A;">
-        `
+        htmlContent += `<h3 style="color: #0D2E5E; font-size: 14px; border-bottom: 2px solid #F4F6F9; padding-bottom: 6px;">📋 TAREAS INTERNAS</h3><ul style="font-size: 13px;">`
         tareasAsignadas.forEach((t: any) => {
           const esAtrasada = t.fecha_limite < hoyStr
-          htmlContent += `
-            <li style="margin-bottom: 8px; ${esAtrasada ? 'color: #C0392B;' : ''}">
-              [Límite: ${t.fecha_limite}] ${t.titulo} ${esAtrasada ? '<strong>(Atrasada)</strong>' : ''}
-            </li>
-          `
+          htmlContent += `<li style="margin-bottom: 8px; ${esAtrasada ? 'color: #C0392B;' : ''}">[${t.fecha_limite}] ${t.titulo} ${esAtrasada ? '<strong>(Atrasada)</strong>' : ''}</li>`
         })
         htmlContent += `</ul>`
       }
 
       htmlContent += `
-            <p style="font-size: 12px; color: #6B7A8D; margin-top: 32px; border-top: 1px solid #E2E8F0; pt: 12px; text-align: center;">
-              Este es un recordatorio automático generado por el Sistema de Gestión de Villarreal-Romero. Por favor no respondas a este correo.
+            <p style="font-size: 12px; color: #6B7A8D; margin-top: 32px; border-top: 1px solid #E2E8F0; padding-top: 12px; text-align: center;">
+              Mensaje automático del Sistema de Gestión Villarreal-Romero.
             </p>
           </div>
         </div>
       `
 
-      // 5. Despacho mediante el proveedor SMTP configurado en el ecosistema (Utiliza los tokens de Supabase Auth nativos)
-      // Nota: Si usas Resend, SendGrid o Mailgun por API, puedes reemplazar este fetch por su endpoint HTTP directamente aquí.
-      const { error: sendError } = await supabaseAdmin.auth.admin.inviteUserByEmail(usuario.correo_notificacion, {
-        redirectTo: Deno.env.get('SITE_URL') ?? 'http://localhost:3000',
-        data: {
-          custom_html: htmlContent, // Si tu proveedor soporta inyección HTML, o bien usa el despachador SMTP nativo configurado en config.toml
-          subject_override: `Villarreal-Romero: Resumen de Obligaciones Pendientes (${hoyStr})`
-        }
-      })
+      // 5. Invocación limpia a la API de Resend
+      const resendReq = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Villarreal-Romero Alertas <onboarding@resend.dev>', // Usamos el correo de pruebas de Resend por defecto
+          to: [usuario.correo_notificacion],
+          subject: `Resumen de Obligaciones Pendientes (${hoyStr})`,
+          html: htmlContent
+        })
+      });
 
-      // Para este ejemplo de producción, asumimos que tienes enlazado un microservicio SMTP o HTTP API (como Resend).
-      // Despachamos un log de auditoría interna para congelar futuros envíos del día
-      if (!sendError) {
+      if (resendReq.ok) {
+        // Registramos en bitácora para no duplicar correos
         await supabaseAdmin
           .from('notificaciones_enviadas')
           .insert([{ usuario_id: usuario.id, tipo_alerta: 'DIARIA_CRITICA', correo_destino: usuario.correo_notificacion }])
         totalCorreosEnviados++
+      } else {
+        const errorText = await resendReq.text();
+        console.error(`Error enviando correo a ${usuario.correo_notificacion}:`, errorText);
       }
     }
 
