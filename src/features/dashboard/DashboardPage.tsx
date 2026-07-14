@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDashboardMetricas, useDashboardDistribucion } from "./useDashboard";
 import { useVencimientosMes } from "../calendario/useVencimientos";
+import { Loader } from "../../components/Loader"; // <-- Importado el componente centralizado de carga
 import {
   Building2,
   Calendar,
@@ -17,6 +18,7 @@ import {
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import { useNavigate } from "react-router-dom";
 
+// UTILIDAD SOLID (SRP): Función pura aislada para calcular días de diferencia sin alterar renderizados
 const calcularDiasRestantes = (fechaLimiteStr: string): number => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -107,11 +109,13 @@ export const DashboardPage = () => {
     loadingVencimientos ||
     (esIngeniero && loadingDistribucion);
 
+  // REFACTOR SOLID: Vinculado el Loader reutilizable de la firma con su animación de isotipo oficial
   if (isLoading) {
     return (
-      <div className="text-center p-12 text-text-muted text-sm font-semibold font-mono uppercase tracking-wider animate-pulse">
-        Sincronizando panel de control contable...
-      </div>
+      <Loader
+        texto="Sincronizando panel de control operativo..."
+        fullScreen={false}
+      />
     );
   }
 
