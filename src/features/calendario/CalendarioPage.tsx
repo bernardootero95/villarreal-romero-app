@@ -72,14 +72,14 @@ export const CalendarioPage = () => {
 
   const handleMarcarPresentado = async (tareaId: string) => {
     if (!perfil) return;
-    const observacionText = radicados[tareaId] || "";
+    const observationText = radicados[tareaId] || "";
     setErrorLocal(null);
 
     actualizarEstadoMutation.mutate(
       {
         id: tareaId,
         nuevoEstado: "PRESENTADO",
-        observaciones: observacionText,
+        observaciones: observationText,
         anio: year,
         mes: month,
         usuarioId: perfil.id,
@@ -115,7 +115,7 @@ export const CalendarioPage = () => {
 
     return (
       <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
+        <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col max-h-[85vh]">
           <div className="bg-primary p-4 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-2 text-surface">
               <CalendarIcon className="w-5 h-5" />
@@ -132,6 +132,17 @@ export const CalendarioPage = () => {
           </div>
 
           <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50 space-y-4">
+            {errorLocal && (
+              <div className="animate-in fade-in duration-200">
+                <AlertNotification
+                  type="error"
+                  title="Fallo de Modificación"
+                  message={errorLocal}
+                  onClose={() => setErrorLocal(null)}
+                />
+              </div>
+            )}
+
             {tareasDelDia.length === 0 ? (
               <p className="text-center text-text-muted py-8 text-xs font-semibold">
                 No hay vencimientos programados para este día.
@@ -225,9 +236,7 @@ export const CalendarioPage = () => {
     );
   }
 
-  const errorAMostrar = error?.message || errorLocal;
-
-  // REFACTOR SOLID (Precisión Horaria): Calculamos el string del día de hoy usando el reloj local del dispositivo del cliente
+  const errorAMostrar = error?.message;
   const localDate = new Date();
   const dateStrToday = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
@@ -271,7 +280,6 @@ export const CalendarioPage = () => {
             type="error"
             title="Error de Calendario"
             message={errorAMostrar}
-            onClose={() => setErrorLocal(null)}
           />
         </div>
       )}
