@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDashboardMetricas, useDashboardDistribucion } from "./useDashboard";
 import { useVencimientosMes } from "../calendario/useVencimientos";
-import { Loader } from "../../components/Loader"; // <-- Importado el componente centralizado de carga
+import { useTareas } from "../tareas/useTareas"; // <-- INTEGRADO EL HOOK DE OBLIGACIONES INTERNAS
+import { Loader } from "../../components/Loader";
 import {
   Building2,
   Calendar,
@@ -14,6 +15,7 @@ import {
   Flame,
   ListFilter,
   AlertTriangle,
+  ClipboardList,
 } from "lucide-react";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import { useNavigate } from "react-router-dom";
@@ -40,6 +42,7 @@ export const DashboardPage = () => {
   const hoy = new Date();
   const esIngeniero = perfil?.cargo === "Ingeniero";
 
+  // 1. Consumo Concurrente y Limpio de Estados Globales Indexados
   const {
     data: metricas,
     isLoading: loadingMetricas,
@@ -53,6 +56,11 @@ export const DashboardPage = () => {
       session?.user?.id,
       perfil?.cargo,
     );
+
+  const { data: tareas = [], isLoading: loadingTareas } = useTareas(
+    session?.user?.id,
+    perfil?.cargo,
+  ); // <-- Inyección del nuevo catálogo asíncrono
 
   const { data: resumenImpuestos = [], isLoading: loadingDistribucion } =
     useDashboardDistribucion(esIngeniero && !!perfil);
@@ -97,9 +105,15 @@ export const DashboardPage = () => {
     calcularSemanaActual();
   }, []);
 
-  const tareasDiaSeleccionado = vencimientosSemana.filter(
+  // 2. Filtrado Reactivo en memoria (Derivación de datos O(1) basada en Caché)
+  const vtosDiaSeleccionado = vencimientosSemana.filter(
     (v) => v.fecha_limite === diaSeleccionado,
   );
+
+  const tareasDiaSeleccionado = tareas.filter(
+    (t) => t.fecha_limite === diaSeleccionado,
+  );
+
   const infoDiaSeleccionado = diasSemana.find(
     (d) => d.fechaStr === diaSeleccionado,
   );
@@ -107,9 +121,9 @@ export const DashboardPage = () => {
   const isLoading =
     loadingMetricas ||
     loadingVencimientos ||
+    loadingTareas ||
     (esIngeniero && loadingDistribucion);
 
-  // REFACTOR SOLID: Vinculado el Loader reutilizable de la firma con su animación de isotipo oficial
   if (isLoading) {
     return (
       <Loader
@@ -143,6 +157,8 @@ export const DashboardPage = () => {
   }
 
   const localTodayStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+  const totalActividadesDia =
+    vtosDiaSeleccionado.length + tareasDiaSeleccionado.length;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -393,6 +409,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
+        {/* PANEL DERECHO: Agenda Unificada Semanal y Diaria */}
         <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4 flex flex-col h-full">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
@@ -405,14 +422,22 @@ export const DashboardPage = () => {
 
           <div className="grid grid-cols-7 gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-100 shrink-0">
             {diasSemana.map((dia) => {
-              const tareasDelDia = vencimientosSemana.filter(
+              const vtosDelDia = vencimientosSemana.filter(
                 (v) => v.fecha_limite === dia.fechaStr,
               );
-              const pendientesDelDia = tareasDelDia.filter(
+              const tareasDelDia = tareas.filter(
+                (t) => t.fecha_limite === dia.fechaStr,
+              );
+
+              const pendientesVto = vtosDelDia.filter(
                 (t) => t.estado_tarea !== "PRESENTADO",
               ).length;
-              const esSeleccionado = dia.fechaStr === diaSeleccionado;
+              const pendientesTarea = tareasDelDia.filter(
+                (t) => t.estado !== "COMPLETADA",
+              ).length;
+              const tienePendientes = pendientesVto > 0 || pendientesTarea > 0;
 
+              const esSeleccionado = dia.fechaStr === diaSeleccionado;
               const esDiaPasado = dia.fechaStr < localTodayStr;
 
               return (
@@ -436,17 +461,20 @@ export const DashboardPage = () => {
                     {dia.numeroDia}
                   </span>
 
+                  {/* Punto Semafórico Unificado */}
                   <div className="mt-1.5 flex gap-0.5 justify-center min-h-[6px]">
-                    {tareasDelDia.length > 0 ? (
+                    {vtosDelDia.length > 0 || tareasDelDia.length > 0 ? (
                       <span
                         className={`w-1.5 h-1.5 rounded-full ${
-                          pendientesDelDia > 0
+                          tienePendientes
                             ? esDiaPasado
-                              ? "bg-danger animate-pulse"
-                              : esSeleccionado
-                                ? "bg-accent"
-                                : "bg-amber-500"
-                            : "bg-success"
+                              ? "bg-danger animate-pulse" // Vencido acumulado histórico
+                              : pendientesVto > 0
+                                ? esSeleccionado
+                                  ? "bg-accent"
+                                  : "bg-amber-500" // Obligación legal DIAN próxima
+                                : "bg-blue-500" // Tarea interna pendiente
+                            : "bg-success" // Todo completado el día correspondiente
                         }`}
                       />
                     ) : (
@@ -460,7 +488,7 @@ export const DashboardPage = () => {
 
           <div className="flex-1 flex flex-col space-y-3 pt-1">
             <div className="flex justify-between items-center text-[10px] text-text-muted font-mono uppercase tracking-wider px-0.5 shrink-0">
-              <span>Vencimientos del día:</span>
+              <span>Actividades del día:</span>
               <span className="font-bold text-primary bg-gray-100 px-1.5 py-0.5 rounded">
                 {infoDiaSeleccionado
                   ? `${infoDiaSeleccionado.nombre} ${infoDiaSeleccionado.numeroDia}`
@@ -469,49 +497,99 @@ export const DashboardPage = () => {
             </div>
 
             <div className="overflow-y-auto space-y-2 pr-1 flex-1">
-              {tareasDiaSeleccionado.length === 0 ? (
+              {totalActividadesDia === 0 ? (
                 <div className="text-center py-12 text-text-muted space-y-2 border border-dashed border-gray-100 rounded-xl bg-gray-50/30">
                   <AlertCircle className="w-5 h-5 text-text-muted/40 mx-auto" />
                   <p className="text-[11px] font-medium">
-                    No se registran tareas corporativas para este día.
+                    No se registran actividades para este día.
                   </p>
                 </div>
               ) : (
-                tareasDiaSeleccionado.map((t) => {
-                  const esVencidoHistorico =
-                    t.estado_tarea !== "PRESENTADO" &&
-                    t.fecha_limite < localTodayStr;
-
-                  return (
-                    <div
-                      key={t.id}
-                      onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
-                      className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white hover:border-gray-200 transition-all cursor-pointer group"
-                    >
-                      <div className="truncate space-y-0.5 max-w-[70%]">
-                        <p
-                          className={`font-bold truncate group-hover:text-accent transition-colors ${esVencidoHistorico ? "text-danger" : "text-primary"}`}
-                        >
-                          {t.clientes?.razon_social}
-                        </p>
-                        <p className="text-text-muted truncate font-medium">
-                          {t.impuestos?.nombre}
-                        </p>
-                      </div>
-                      <span
-                        className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wide shrink-0 ${
-                          t.estado_tarea === "PRESENTADO"
-                            ? "bg-success/10 text-success border-success/20"
-                            : esVencidoHistorico
-                              ? "bg-danger text-white border-danger animate-pulse font-extrabold"
-                              : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                        }`}
+                <>
+                  {/* Renderizado de Vencimientos DIAN del Día */}
+                  {vtosDiaSeleccionado.map((t) => {
+                    const esVencidoHistorico =
+                      t.estado_tarea !== "PRESENTADO" &&
+                      t.fecha_limite < localTodayStr;
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
+                        className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white hover:border-gray-200 transition-all cursor-pointer group"
                       >
-                        {esVencidoHistorico ? "VENCIDO" : t.estado_tarea}
-                      </span>
-                    </div>
-                  );
-                })
+                        <div className="truncate space-y-0.5 max-w-[70%]">
+                          <p
+                            className={`font-bold truncate group-hover:text-accent transition-colors ${esVencidoHistorico ? "text-danger" : "text-primary"}`}
+                          >
+                            {t.clientes?.razon_social}
+                          </p>
+                          <p className="text-text-muted truncate font-medium">
+                            {t.impuestos?.nombre}
+                          </p>
+                        </div>
+                        <span
+                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wide shrink-0 ${
+                            t.estado_tarea === "PRESENTADO"
+                              ? "bg-success/10 text-success border-success/20"
+                              : esVencidoHistorico
+                                ? "bg-danger text-white border-danger animate-pulse font-extrabold"
+                                : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                          }`}
+                        >
+                          {esVencidoHistorico ? "VENCIDO" : t.estado_tarea}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {/* Renderizado de Tareas Internas del Día */}
+                  {tareasDiaSeleccionado.map((t) => {
+                    const esCompletada = t.estado === "COMPLETADA";
+                    const esVencida =
+                      !esCompletada && t.fecha_limite < localTodayStr;
+
+                    let badgeStyle =
+                      "bg-amber-100 text-amber-700 border-amber-200";
+                    let badgeText = "PENDIENTE";
+
+                    if (esCompletada) {
+                      badgeStyle =
+                        "bg-success/10 text-success border-success/20";
+                      badgeText = "COMPLETADA";
+                    } else if (esVencida) {
+                      badgeStyle =
+                        "bg-danger text-white border-danger animate-pulse font-extrabold";
+                      badgeText = "VENCIDA";
+                    }
+
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => navigate("/tareas")}
+                        className={`p-3 border-2 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white transition-all cursor-pointer group ${esVencida ? "border-danger bg-danger/5" : esCompletada ? "border-success/40 bg-gray-50/50" : "border-amber-300 bg-gray-50"}`}
+                      >
+                        <div className="truncate space-y-0.5 max-w-[70%]">
+                          <p
+                            className={`font-bold truncate group-hover:text-accent transition-colors flex items-center gap-1 ${esCompletada ? "text-text-muted line-through" : esVencida ? "text-danger" : "text-primary"}`}
+                          >
+                            <ClipboardList className="w-3 h-3 text-text-muted shrink-0" />
+                            {t.titulo}
+                          </p>
+                          {esIngeniero && (
+                            <p className="text-[9px] text-text-muted font-semibold truncate">
+                              Asignado a: {t.usuarios?.nombre_completo}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={`text-[9px] font-extrabold px-2 py-0.5 rounded border uppercase tracking-wide shrink-0 ${badgeStyle}`}
+                        >
+                          {badgeText}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </>
               )}
             </div>
           </div>
