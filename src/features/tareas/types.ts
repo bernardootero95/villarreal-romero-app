@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { CamposBase } from "../usuarios/types";
 
-export const ESTADOS_TAREA = ["PENDIENTE", "EN_PROGRESO", "COMPLETADA"] as const;
+// LÓGICA SOLID: Simplificación del dominio a un sistema binario de tareas
+export const ESTADOS_TAREA = ["PENDIENTE", "COMPLETADA"] as const;
 
 export const tareaSchema = z.object({
   titulo: z.string().min(3, "El título debe tener al menos 3 caracteres"),

@@ -87,7 +87,8 @@ export const TareasPage = () => {
       )}
 
       <div className="flex gap-2 border-b border-gray-200 pb-4">
-        {["TODAS", "PENDIENTE", "EN_PROGRESO", "COMPLETADA"].map((est) => (
+        {/* REFACTOR: Eliminado el estado EN_PROGRESO de los filtros */}
+        {["TODAS", "PENDIENTE", "COMPLETADA"].map((est) => (
           <button
             key={est}
             onClick={() => setFiltroEstado(est)}
@@ -97,7 +98,7 @@ export const TareasPage = () => {
                 : "bg-gray-100 text-text-muted hover:bg-gray-200"
             }`}
           >
-            {est.replace(/_/g, " ")}
+            {est}
           </button>
         ))}
       </div>
@@ -148,7 +149,7 @@ export const TareasPage = () => {
                   </span>
                   {perfil?.cargo === "Gerente" ||
                   perfil?.cargo === "Ingeniero" ? (
-                    <p className="text-[10px] text-accent font-bold uppercase tracking-wider">
+                    <p className="text-[10px] text-accent font-bold uppercase tracking-wider mt-1">
                       Asignado a: {tarea.usuarios?.nombre_completo}
                     </p>
                   ) : null}
@@ -158,12 +159,14 @@ export const TareasPage = () => {
                   <button
                     onClick={() => handleEdit(tarea)}
                     className="p-1.5 text-text-muted hover:text-accent bg-gray-50 rounded cursor-pointer"
+                    title="Editar tarea"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(tarea.id)}
                     className="p-1.5 text-text-muted hover:text-danger bg-gray-50 rounded cursor-pointer"
+                    title="Eliminar tarea"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
