@@ -9,6 +9,7 @@ import type { Vencimiento } from "./vencimientosService";
 import type { Tarea } from "../tareas/types";
 import { Loader } from "../../components/Loader";
 import { AlertNotification } from "../../components/ui/AlertNotification";
+import { TareaForm } from "../tareas/TareaForm"; // <-- IMPORTAMOS EL FORMULARIO REUTILIZABLE
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ import {
   CheckSquare,
   CheckCircle2,
   ClipboardList,
+  Plus, // <-- Icono para el botón
 } from "lucide-react";
 
 export const CalendarioPage = () => {
@@ -28,15 +30,20 @@ export const CalendarioPage = () => {
   const [radicados, setRadicados] = useState<Record<string, string>>({});
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
+  // Estado para controlar la visibilidad del modal de creación de tareas
+  const [showTareaForm, setShowTareaForm] = useState(false);
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
+  // 1. Consulta de Vencimientos Tributarios
   const {
     data: vencimientos = [],
     isLoading: loadingVencimientos,
     error: errorVencimientos,
   } = useVencimientosMes(year, month, session?.user?.id, perfil?.cargo);
 
+  // 2. Consulta de Tareas Internas
   const {
     data: tareas = [],
     isLoading: loadingTareas,
@@ -59,6 +66,7 @@ export const CalendarioPage = () => {
   const localDate = new Date();
   const dateStrToday = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
+  // Agrupación en memoria de Vencimientos
   const vencimientosPorDia = vencimientos.reduce(
     (acc, v) => {
       if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
@@ -68,6 +76,7 @@ export const CalendarioPage = () => {
     {} as Record<string, Vencimiento[]>,
   );
 
+  // Agrupación en memoria de Tareas
   const tareasPorDia = tareas.reduce(
     (acc, t) => {
       if (!acc[t.fecha_limite]) acc[t.fecha_limite] = [];
@@ -128,6 +137,7 @@ export const CalendarioPage = () => {
   const renderDayModal = () => {
     if (!selectedDate) return null;
 
+    // Extracción de datos para el día seleccionado
     const vtosDelDia = vencimientosPorDia[selectedDate] || [];
     const tareasDelDia = tareasPorDia[selectedDate] || [];
 
@@ -356,12 +366,11 @@ export const CalendarioPage = () => {
     );
   }
 
-  const errorAMostrar =
-    errorVencimientos?.message || errorTareas?.message || errorLocal;
+  const errorAMostrar = errorVencimientos?.message || errorTareas?.message;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-title font-bold text-primary">
             Calendario Corporativo
@@ -371,25 +380,35 @@ export const CalendarioPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center bg-surface border border-gray-200 rounded-lg p-1 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          {/* BOTÓN NUEVA TAREA AÑADIDO Y ENLAZADO */}
           <button
-            onClick={prevMonth}
-            className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors cursor-pointer"
+            onClick={() => setShowTareaForm(true)}
+            className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm text-sm font-semibold cursor-pointer w-full sm:w-auto"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <Plus className="w-4 h-4" /> Nueva Tarea
           </button>
-          <button
-            onClick={goToToday}
-            className="px-4 py-1 text-sm font-semibold text-primary hover:bg-gray-100 rounded transition-colors cursor-pointer"
-          >
-            Hoy
-          </button>
-          <button
-            onClick={nextMonth}
-            className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors cursor-pointer"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center bg-surface border border-gray-200 rounded-lg p-1 shadow-sm w-full sm:w-auto justify-between">
+            <button
+              onClick={prevMonth}
+              className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={goToToday}
+              className="px-4 py-1 text-sm font-semibold text-primary hover:bg-gray-100 rounded transition-colors cursor-pointer"
+            >
+              Hoy
+            </button>
+            <button
+              onClick={nextMonth}
+              className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors cursor-pointer"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -430,6 +449,7 @@ export const CalendarioPage = () => {
           {days.map((day) => {
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
+            // Datos del día
             const vtosDelDia = vencimientosPorDia[dateStr] || [];
             const tareasDelDia = tareasPorDia[dateStr] || [];
             const isToday = dateStrToday === dateStr;
@@ -456,6 +476,7 @@ export const CalendarioPage = () => {
                 </div>
 
                 <div className="mt-2 flex-1 overflow-hidden flex flex-col justify-end gap-1.5 pb-1">
+                  {/* Etiqueta Vencimientos Oficiales */}
                   {vtosDelDia.length > 0 && (
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
@@ -468,6 +489,7 @@ export const CalendarioPage = () => {
                     </span>
                   )}
 
+                  {/* Etiqueta Tareas Internas */}
                   {tareasDelDia.length > 0 && (
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
@@ -488,6 +510,14 @@ export const CalendarioPage = () => {
       </div>
 
       {renderDayModal()}
+
+      {/* RENDERIZADO DEL FORMULARIO DE TAREA REUTILIZADO */}
+      {showTareaForm && (
+        <TareaForm
+          onClose={() => setShowTareaForm(false)}
+          onSuccess={() => setShowTareaForm(false)}
+        />
+      )}
     </div>
   );
 };
