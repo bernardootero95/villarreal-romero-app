@@ -4,20 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#0D2E5E",
-        accent: "#C9A84C",
-        background: "#F4F6F9",
-        surface: "#FFFFFF",
-        success: "#1A7A4A",
-        warning: "#E07B2A",
-        danger: "#C0392B",
-        "text-main": "#1E2A3A",
-        "text-muted": "#6B7A8D",
-      },
-      fontFamily: {
-        title: ["Raleway", "sans-serif"],
-        body: ["Inter", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        // Enlazamos la clase de Tailwind con nuestra variable inyectada.
+        // El segundo valor es un fallback de seguridad (Azul corporativo).
+        primary: "var(--color-primary, #0D2E5E)",
       },
     },
   },
