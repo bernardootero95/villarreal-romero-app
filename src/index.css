@@ -1,24 +1,35 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400&family=JetBrains+Mono:wght@400;500&family=Raleway:wght@500;600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Este color será sobrescrito dinámicamente por src/main.tsx en producción */
   --color-primary: #0d2e5e;
+  --color-accent: #c9a84c;
 }
 
-body {
-  background-color: #f8fafc;
-  color: #1e293b;
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    "Noto Sans",
-    sans-serif;
+@layer base {
+  body {
+    @apply bg-background text-text-main font-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-title text-primary;
+  }
+}
+
+@layer components {
+  .data-code {
+    @apply font-mono text-text-main tracking-tight;
+  }
+
+  .card-container {
+    @apply bg-surface rounded-lg shadow-sm border border-gray-200 p-6;
+  }
 }
