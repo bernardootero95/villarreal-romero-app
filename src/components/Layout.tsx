@@ -22,10 +22,8 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const empresaNombre =
-    import.meta.env.VITE_EMPRESA_NOMBRE || "Villarreal-Romero";
-  const empresaSlogan =
-    import.meta.env.VITE_EMPRESA_SLOGAN || "Asesorías Contables";
+  const empresaNombre = import.meta.env.VITE_EMPRESA_NOMBRE;
+  const empresaSlogan = import.meta.env.VITE_EMPRESA_SLOGAN;
 
   const menuItems = [
     {
