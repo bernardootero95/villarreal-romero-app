@@ -8,7 +8,7 @@ import {
   Building2,
   Landmark,
   UserCircle,
-  ClipboardList, // <-- NUEVO ICONO
+  ClipboardList,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Footer } from "./Footer";
@@ -21,6 +21,13 @@ export const Layout = ({ children }: LayoutProps) => {
   const { signOut, perfil } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Inyección de variables de entorno para Marca Blanca (White-labeling)
+  const logoUrl = import.meta.env.VITE_LOGO_URL || "";
+  const empresaNombre =
+    import.meta.env.VITE_EMPRESA_NOMBRE || "Villarreal-Romero";
+  const empresaSlogan =
+    import.meta.env.VITE_EMPRESA_SLOGAN || "Asesorías Contables";
 
   const menuItems = [
     {
@@ -43,7 +50,6 @@ export const Layout = ({ children }: LayoutProps) => {
       label: "Impuestos",
       path: "/impuestos",
     },
-    // NUEVO MÓDULO DE TAREAS
     {
       icon: <ClipboardList className="w-5 h-5" />,
       label: "Tareas",
@@ -72,12 +78,24 @@ export const Layout = ({ children }: LayoutProps) => {
       <aside className="w-64 bg-primary text-surface flex flex-col justify-between shadow-md z-10 flex-shrink-0 h-full">
         <div>
           <div className="p-6 border-b border-surface/10">
-            <h2 className="text-xl font-title font-semibold text-surface tracking-wide">
-              Villarreal-Romero
-            </h2>
-            <p className="text-xs text-accent mt-1 font-body font-medium uppercase tracking-wider">
-              Asesorías Contables
-            </p>
+            {/* Lógica de Renderizado Condicional para el Branding */}
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={`Logo de ${empresaNombre}`}
+                className="h-12 w-auto object-contain mb-2"
+              />
+            ) : (
+              <>
+                <h2 className="text-xl font-title font-semibold text-surface tracking-wide">
+                  {empresaNombre}
+                </h2>
+                <p className="text-xs text-accent mt-1 font-body font-medium uppercase tracking-wider">
+                  {empresaSlogan}
+                </p>
+              </>
+            )}
+
             {perfil && (
               <div className="mt-3 pt-2 border-t border-surface/5">
                 <p className="text-xs text-surface font-semibold truncate">
