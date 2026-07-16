@@ -22,8 +22,6 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Inyección de variables de entorno para Marca Blanca (White-labeling)
-  const logoUrl = import.meta.env.VITE_LOGO_URL || "";
   const empresaNombre =
     import.meta.env.VITE_EMPRESA_NOMBRE || "Villarreal-Romero";
   const empresaSlogan =
@@ -78,24 +76,12 @@ export const Layout = ({ children }: LayoutProps) => {
       <aside className="w-64 bg-primary text-surface flex flex-col justify-between shadow-md z-10 flex-shrink-0 h-full">
         <div>
           <div className="p-6 border-b border-surface/10">
-            {/* Lógica de Renderizado Condicional para el Branding */}
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={`Logo de ${empresaNombre}`}
-                className="h-12 w-auto object-contain mb-2"
-              />
-            ) : (
-              <>
-                <h2 className="text-xl font-title font-semibold text-surface tracking-wide">
-                  {empresaNombre}
-                </h2>
-                <p className="text-xs text-accent mt-1 font-body font-medium uppercase tracking-wider">
-                  {empresaSlogan}
-                </p>
-              </>
-            )}
-
+            <h2 className="text-xl font-title font-semibold text-surface tracking-wide">
+              {empresaNombre}
+            </h2>
+            <p className="text-xs text-accent mt-1 font-body font-medium uppercase tracking-wider">
+              {empresaSlogan}
+            </p>
             {perfil && (
               <div className="mt-3 pt-2 border-t border-surface/5">
                 <p className="text-xs text-surface font-semibold truncate">
