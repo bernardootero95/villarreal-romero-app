@@ -42,8 +42,8 @@ export const ClientesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResponsable, setSelectedResponsable] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
-  const ITEMS_PER_PAGE = 6;
 
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
@@ -102,11 +102,11 @@ export const ClientesPage = () => {
     a.razon_social.localeCompare(b.razon_social, "es", { sensitivity: "base" }),
   );
 
-  const totalPages = Math.ceil(clientesFiltrados.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const totalPages = Math.ceil(clientesFiltrados.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedClientes = clientesFiltrados.slice(
     startIndex,
-    startIndex + ITEMS_PER_PAGE,
+    startIndex + itemsPerPage,
   );
 
   const errorAMostrar = error?.message || errorLocal;
@@ -307,25 +307,47 @@ export const ClientesPage = () => {
         </div>
 
         {!isLoading && clientesFiltrados.length > 0 && (
-          <div className="p-4 border-t border-text-muted/20 bg-surface flex items-center justify-between text-sm">
-            <span className="text-text-muted">
-              Mostrando{" "}
-              <span className="font-semibold text-text-main">
-                {startIndex + 1}
-              </span>{" "}
-              a{" "}
-              <span className="font-semibold text-text-main">
-                {Math.min(
-                  startIndex + ITEMS_PER_PAGE,
-                  clientesFiltrados.length,
-                )}
-              </span>{" "}
-              de{" "}
-              <span className="font-semibold text-text-main">
-                {clientesFiltrados.length}
-              </span>{" "}
-              clientes
-            </span>
+          <div className="p-4 border-t border-text-muted/20 bg-surface flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
+            <div className="flex flex-col sm:flex-row items-center gap-4 text-text-muted">
+              <span>
+                Mostrando{" "}
+                <span className="font-semibold text-text-main">
+                  {startIndex + 1}
+                </span>{" "}
+                a{" "}
+                <span className="font-semibold text-text-main">
+                  {Math.min(
+                    startIndex + itemsPerPage,
+                    clientesFiltrados.length,
+                  )}
+                </span>{" "}
+                de{" "}
+                <span className="font-semibold text-text-main">
+                  {clientesFiltrados.length}
+                </span>{" "}
+                clientes
+              </span>
+
+              <div className="flex items-center gap-2 sm:border-l border-text-muted/20 sm:pl-4">
+                <label htmlFor="itemsPerPage" className="text-text-muted">
+                  Registros:
+                </label>
+                <select
+                  id="itemsPerPage"
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1); // Volver a la primera página al cambiar la cantidad
+                  }}
+                  className="bg-surface border border-text-muted/30 text-text-main rounded-md focus:ring-1 focus:ring-accent outline-none cursor-pointer py-1 px-2"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={20}>20</option>
+                </select>
+              </div>
+            </div>
 
             <div className="flex items-center gap-2">
               <button
