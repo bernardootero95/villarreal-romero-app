@@ -64,7 +64,7 @@ export const DetalleClientePage = () => {
 
   if (!cliente) {
     return (
-      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-gray-200 rounded-xl shadow-sm my-12 space-y-4 animate-in fade-in duration-200">
+      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-text-muted/20 rounded-xl shadow-sm my-12 space-y-4 animate-in fade-in duration-200">
         <AlertCircle className="w-12 h-12 text-danger mx-auto stroke-[1.5]" />
         <h3 className="text-lg font-bold text-primary font-title">
           Error 404: Empresa No Encontrada
@@ -90,7 +90,7 @@ export const DetalleClientePage = () => {
       case "PRESENTADO":
         return "bg-success/10 text-success border-success/20";
       case "REVISIÓN":
-        return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+        return "bg-warning/10 text-warning border-warning/20";
       case "VENCIDO":
         return "bg-danger/10 text-danger border-danger/20 animate-pulse";
       default:
@@ -113,7 +113,7 @@ export const DetalleClientePage = () => {
         {puedeAdministrar && (
           <button
             onClick={() => setShowForm(true)}
-            className="border border-gray-200 bg-surface hover:bg-gray-50 text-text-main text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
+            className="border border-text-muted/20 bg-surface hover:bg-text-muted/5 text-text-main text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2 transition-all shadow-2xs cursor-pointer"
           >
             <Edit2 className="w-3.5 h-3.5 text-text-muted" /> Editar Información
           </button>
@@ -130,7 +130,7 @@ export const DetalleClientePage = () => {
         </div>
       )}
 
-      <div className="card-container flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div className="card-container flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 border border-primary/5">
             <Building2 className="w-7 h-7" />
@@ -155,9 +155,9 @@ export const DetalleClientePage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
-          <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
+          <div className="card-container bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm space-y-6">
             <div>
-              <h3 className="text-lg font-title font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
+              <h3 className="text-lg font-title font-semibold text-primary mb-4 border-b border-text-muted/10 pb-2">
                 Información Legal y Tributaria
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -165,7 +165,7 @@ export const DetalleClientePage = () => {
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
                     <Hash className="w-3.5 h-3.5" /> NIT
                   </span>
-                  <p className="text-base font-semibold text-text-main font-mono bg-gray-50 px-3 py-2 rounded-md border border-gray-100">
+                  <p className="text-base font-semibold text-text-main font-mono bg-background px-3 py-2 rounded-md border border-text-muted/10">
                     {cliente.nit}-{cliente.dv}
                   </p>
                 </div>
@@ -173,7 +173,7 @@ export const DetalleClientePage = () => {
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
                     <Briefcase className="w-3.5 h-3.5" /> Responsable Asignado
                   </span>
-                  <p className="text-base font-medium text-primary bg-gray-50 px-3 py-2 rounded-md border border-gray-100 truncate">
+                  <p className="text-base font-medium text-primary bg-background px-3 py-2 rounded-md border border-text-muted/10 truncate">
                     {cliente.usuarios?.nombre_completo ||
                       "Sin asignar profesional"}
                   </p>
@@ -182,7 +182,7 @@ export const DetalleClientePage = () => {
             </div>
 
             <div>
-              <h3 className="text-lg font-title font-semibold text-primary mb-4 border-b border-gray-100 pb-2">
+              <h3 className="text-lg font-title font-semibold text-primary mb-4 border-b border-text-muted/10 pb-2">
                 Canales Oficiales de Contacto
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -190,7 +190,7 @@ export const DetalleClientePage = () => {
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" /> Correo Notificaciones
                   </span>
-                  <p className="text-sm font-medium text-text-main bg-gray-50 px-3 py-2 rounded-md border border-gray-100 truncate">
+                  <p className="text-sm font-medium text-text-main bg-background px-3 py-2 rounded-md border border-text-muted/10 truncate">
                     {cliente.email || (
                       <span className="text-text-muted italic text-xs">
                         No parametrizado
@@ -202,7 +202,7 @@ export const DetalleClientePage = () => {
                   <span className="text-xs text-text-muted font-medium flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5" /> Celular
                   </span>
-                  <p className="text-sm font-semibold text-text-main bg-gray-50 px-3 py-2 rounded-md border border-gray-100 font-mono">
+                  <p className="text-sm font-semibold text-text-main bg-background px-3 py-2 rounded-md border border-text-muted/10 font-mono">
                     {cliente.celular || (
                       <span className="text-text-muted italic text-xs">
                         No parametrizado
@@ -213,7 +213,7 @@ export const DetalleClientePage = () => {
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4">
+            <div className="border-t border-text-muted/10 pt-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-title font-semibold text-primary">
                   Impuestos y Obligaciones a Cargo
@@ -233,7 +233,7 @@ export const DetalleClientePage = () => {
                   Sincronizando obligaciones fiscales...
                 </p>
               ) : impuestosCargo.length === 0 ? (
-                <div className="p-4 rounded-lg bg-gray-50 border border-gray-100 text-center">
+                <div className="p-4 rounded-lg bg-background border border-text-muted/10 text-center">
                   <p className="text-xs text-text-muted italic">
                     Esta empresa no tiene obligaciones configuradas.
                   </p>
@@ -243,7 +243,7 @@ export const DetalleClientePage = () => {
                   {impuestosCargo.map((obl: any) => (
                     <div
                       key={obl.id}
-                      className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg border border-gray-100 shadow-2xs"
+                      className="flex items-center gap-2.5 p-3 bg-background rounded-lg border border-text-muted/10 shadow-2xs"
                     >
                       <FileText className="w-4 h-4 text-text-muted flex-shrink-0" />
                       <div className="flex flex-col truncate">
@@ -262,8 +262,8 @@ export const DetalleClientePage = () => {
           </div>
         </div>
 
-        <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+        <div className="card-container bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 border-b border-text-muted/10 pb-3">
             <Clock className="w-5 h-5 text-primary" />
             <h3 className="text-base font-title font-semibold text-primary">
               Vencimientos del Mes
@@ -285,7 +285,7 @@ export const DetalleClientePage = () => {
               vencimientos.map((vencimiento) => (
                 <div
                   key={vencimiento.id}
-                  className="p-3.5 bg-gray-50 rounded-lg border border-gray-100 space-y-2.5 hover:shadow-sm transition-all"
+                  className="p-3.5 bg-background rounded-lg border border-text-muted/10 space-y-2.5 hover:shadow-sm transition-all"
                 >
                   <div className="flex justify-between items-start gap-2">
                     <h4 className="text-xs font-bold text-primary font-title line-clamp-2 flex-1">
@@ -297,7 +297,7 @@ export const DetalleClientePage = () => {
                       {vencimiento.estado_tarea}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-text-muted font-mono pt-1 border-t border-gray-200/60">
+                  <div className="flex items-center justify-between text-[11px] text-text-muted font-mono pt-1 border-t border-text-muted/20">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-text-muted" />
                       {new Date(vencimiento.fecha_limite).toLocaleDateString(
