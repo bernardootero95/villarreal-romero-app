@@ -47,7 +47,6 @@ export const ClienteForm = ({
   const [mostrarPasoObligaciones, setMostrarPasoObligaciones] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Inyección de mutaciones controladas por TanStack Query
   const createClienteMutation = useCreateCliente();
   const updateClienteMutation = useUpdateCliente();
 

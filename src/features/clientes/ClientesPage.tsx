@@ -29,7 +29,6 @@ export const ClientesPage = () => {
   const { perfil } = useAuth();
   const navigate = useNavigate();
 
-  // Gestión de estado global asíncrono con TanStack Query
   const { data: clientes = [], isLoading, error } = useClientes();
   const deleteClienteMutation = useDeleteCliente();
 
@@ -44,7 +43,7 @@ export const ClientesPage = () => {
   const [selectedResponsable, setSelectedResponsable] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
-  const ITEMS_PER_PAGE = 5;
+  const ITEMS_PER_PAGE = 6;
 
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
@@ -128,7 +127,7 @@ export const ClientesPage = () => {
           <div className="flex gap-2">
             <button
               onClick={() => setShowBulk(true)}
-              className="bg-surface border border-gray-200 text-text-main px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-sm font-semibold shadow-xs cursor-pointer"
+              className="bg-surface border border-text-muted/20 text-text-main px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-text-muted/5 transition-all text-sm font-semibold shadow-xs cursor-pointer"
             >
               <Upload className="w-4 h-4 text-accent" /> Carga Masiva
             </button>
@@ -153,8 +152,8 @@ export const ClientesPage = () => {
         </div>
       )}
 
-      <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs flex flex-col">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+      <div className="card-container !p-0 overflow-hidden bg-surface border border-text-muted/20 rounded-xl shadow-xs flex flex-col">
+        <div className="p-4 border-b border-text-muted/10 bg-background/50 flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
           <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
@@ -164,7 +163,7 @@ export const ClientesPage = () => {
                 setCurrentPage(1);
               }}
               placeholder="Buscar por Razón Social o NIT..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors"
             />
           </div>
 
@@ -176,7 +175,7 @@ export const ClientesPage = () => {
                 setSelectedResponsable(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none appearance-none text-text-main font-medium cursor-pointer"
+              className="w-full pl-10 pr-4 py-2 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none appearance-none text-text-main font-medium cursor-pointer transition-colors"
             >
               <option value="">Todos los Responsables</option>
               {listaResponsables.map((resp) => (
@@ -191,7 +190,7 @@ export const ClientesPage = () => {
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider">
+              <tr className="bg-background text-text-muted text-xs uppercase tracking-wider">
                 <th className="px-6 py-4 font-semibold">Empresa / Cliente</th>
                 <th className="px-6 py-4 font-semibold">NIT</th>
                 <th className="px-6 py-4 font-semibold">Responsable</th>
@@ -203,7 +202,7 @@ export const ClientesPage = () => {
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
+            <tbody className="divide-y divide-text-muted/10 text-sm">
               {isLoading ? (
                 <tr>
                   <td
@@ -228,7 +227,7 @@ export const ClientesPage = () => {
                 paginatedClientes.map((cliente) => (
                   <tr
                     key={cliente.id}
-                    className="hover:bg-gray-50/50 transition-colors"
+                    className="hover:bg-primary/5 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div
@@ -252,7 +251,7 @@ export const ClientesPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="data-code bg-gray-100 px-2 py-1 rounded text-sm">
+                      <span className="data-code bg-text-muted/10 px-2 py-1 rounded text-sm">
                         {cliente.nit}-{cliente.dv}
                       </span>
                     </td>
@@ -276,12 +275,12 @@ export const ClientesPage = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => setClienteObligaciones(cliente)}
-                            className="text-text-muted hover:text-accent p-2 transition-colors bg-gray-50 hover:bg-accent/10 rounded-md border border-gray-100 cursor-pointer"
+                            className="text-text-muted hover:text-accent p-2 transition-colors bg-text-muted/5 hover:bg-accent/10 rounded-md border border-text-muted/20 cursor-pointer"
                             title="Gestionar Obligaciones Tributarias"
                           >
                             <Landmark className="w-4 h-4" />
                           </button>
-                          <div className="w-px h-6 bg-gray-200 mx-1"></div>
+                          <div className="w-px h-6 bg-text-muted/20 mx-1"></div>
                           <button
                             onClick={() => handleEdit(cliente)}
                             className="text-text-muted hover:text-accent p-2 transition-colors cursor-pointer"
@@ -307,9 +306,8 @@ export const ClientesPage = () => {
           </table>
         </div>
 
-        {/* CORREGIDO: Removido 'HallaronRegistros => 0' por la expresión matemática válida de arreglos */}
         {!isLoading && clientesFiltrados.length > 0 && (
-          <div className="p-4 border-t border-gray-100 bg-surface flex items-center justify-between text-sm">
+          <div className="p-4 border-t border-text-muted/20 bg-surface flex items-center justify-between text-sm">
             <span className="text-text-muted">
               Mostrando{" "}
               <span className="font-semibold text-text-main">
@@ -333,7 +331,7 @@ export const ClientesPage = () => {
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="p-1.5 rounded border border-text-muted/20 text-text-muted hover:bg-text-muted/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Página anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -346,7 +344,7 @@ export const ClientesPage = () => {
                   setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                 }
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="p-1.5 rounded border border-text-muted/20 text-text-muted hover:bg-text-muted/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Página siguiente"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -374,7 +372,7 @@ export const ClientesPage = () => {
         <Suspense
           fallback={
             <div className="fixed inset-0 bg-primary/20 backdrop-blur-xs flex items-center justify-center z-50">
-              <div className="bg-surface p-6 rounded-lg shadow-xl font-mono text-xs uppercase animate-pulse">
+              <div className="bg-surface p-6 rounded-lg shadow-xl font-mono text-xs uppercase text-primary animate-pulse border border-text-muted/10">
                 Invocando analizador XLSX...
               </div>
             </div>
