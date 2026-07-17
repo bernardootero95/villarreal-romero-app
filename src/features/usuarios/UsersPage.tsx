@@ -18,7 +18,6 @@ import { AlertNotification } from "../../components/ui/AlertNotification";
 export const UsersPage = () => {
   const { perfil } = useAuth();
 
-  // Gestión asíncrona de datos desde TanStack Query
   const { data: usuarios = [], isLoading, error } = useUsuarios();
   const deleteUsuarioMutation = useDeleteUsuario();
 
@@ -133,15 +132,15 @@ export const UsersPage = () => {
         </div>
       )}
 
-      <div className="card-container !p-0 overflow-hidden flex flex-col bg-surface border border-gray-200 rounded-xl shadow-xs">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+      <div className="card-container !p-0 overflow-hidden flex flex-col bg-surface border border-text-muted/20 rounded-xl shadow-xs">
+        <div className="p-4 border-b border-text-muted/10 bg-background/50">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nombre o cargo..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors"
             />
           </div>
         </div>
@@ -149,14 +148,14 @@ export const UsersPage = () => {
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider">
+              <tr className="bg-background text-text-muted text-xs uppercase tracking-wider">
                 <th className="px-6 py-4 font-semibold">Usuario</th>
                 <th className="px-6 py-4 font-semibold">Cargo</th>
                 <th className="px-6 py-4 font-semibold">Estado</th>
                 <th className="px-6 py-4 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
+            <tbody className="divide-y divide-text-muted/10 text-sm">
               {isLoading ? (
                 <tr>
                   <td
@@ -181,7 +180,7 @@ export const UsersPage = () => {
                 paginatedUsuarios.map((user) => (
                   <tr
                     key={user.id}
-                    className="hover:bg-gray-50/50 transition-colors"
+                    className="hover:bg-primary/5 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -209,7 +208,7 @@ export const UsersPage = () => {
                           user.estado === "ACTIVO"
                             ? "text-success"
                             : user.estado === "SUSPENDIDO"
-                              ? "text-amber-500"
+                              ? "text-warning"
                               : "text-danger"
                         }`}
                       >
@@ -218,7 +217,7 @@ export const UsersPage = () => {
                             user.estado === "ACTIVO"
                               ? "bg-success"
                               : user.estado === "SUSPENDIDO"
-                                ? "bg-amber-500"
+                                ? "bg-warning"
                                 : "bg-danger"
                           }`}
                         />
@@ -230,7 +229,7 @@ export const UsersPage = () => {
                         {puedeAdministrar && user.id !== perfil?.id && (
                           <button
                             onClick={() => setUsuarioClaveTarget(user)}
-                            className="text-text-muted hover:text-accent p-2 transition-colors bg-gray-50 hover:bg-accent/10 rounded-md border border-gray-100 cursor-pointer"
+                            className="text-text-muted hover:text-accent p-2 transition-colors bg-text-muted/5 hover:bg-accent/10 rounded-md border border-text-muted/20 cursor-pointer"
                             title="Sobreescribir Contraseña Remotamente"
                           >
                             <KeyRound className="w-4 h-4" />
@@ -263,7 +262,7 @@ export const UsersPage = () => {
         </div>
 
         {!isLoading && usuariosFiltrados.length > 0 && (
-          <div className="p-4 border-t border-gray-100 bg-surface flex items-center justify-between text-sm">
+          <div className="p-4 border-t border-text-muted/20 bg-surface flex items-center justify-between text-sm">
             <span className="text-text-muted">
               Mostrando{" "}
               <span className="font-semibold text-text-main">
@@ -287,7 +286,7 @@ export const UsersPage = () => {
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="p-1.5 rounded border border-text-muted/20 text-text-muted hover:bg-text-muted/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Página anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -300,7 +299,7 @@ export const UsersPage = () => {
                   setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                 }
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded border border-gray-200 text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="p-1.5 rounded border border-text-muted/20 text-text-muted hover:bg-text-muted/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Página siguiente"
               >
                 <ChevronRight className="w-4 h-4" />
