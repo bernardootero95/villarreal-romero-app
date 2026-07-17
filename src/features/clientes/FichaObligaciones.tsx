@@ -26,7 +26,6 @@ export const FichaObligaciones = ({
   const [loadingCat, setLoadingCat] = useState(true);
   const [errorFicha, setErrorFicha] = useState<string | null>(null);
 
-  // Consumo declarativo del estado global de asignaciones mediante TanStack Query
   const { data: obligaciones = [], isLoading: loadingObligaciones } =
     useClienteImpuestos(cliente.id);
 
@@ -103,7 +102,7 @@ export const FichaObligaciones = ({
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col max-h-[85vh]">
+      <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-text-muted/20 flex flex-col max-h-[85vh]">
         <div className="bg-primary p-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2 text-surface">
             <Landmark className="w-5 h-5 text-accent" />
@@ -124,7 +123,7 @@ export const FichaObligaciones = ({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-surface">
           {errorFicha && (
             <div className="animate-in fade-in duration-200">
               <AlertNotification
@@ -136,7 +135,7 @@ export const FichaObligaciones = ({
             </div>
           )}
 
-          <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl space-y-3">
+          <div className="bg-background border border-text-muted/20 p-4 rounded-xl space-y-3">
             <h3 className="text-xs uppercase font-bold tracking-wider text-text-main flex items-center gap-1.5">
               <Plus className="w-4 h-4 text-accent" /> Registrar Nueva
               Obligación
@@ -146,7 +145,7 @@ export const FichaObligaciones = ({
                 value={selectedImpuesto}
                 onChange={(e) => setSelectedImpuesto(e.target.value)}
                 disabled={submitting || loading}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-surface text-sm outline-none focus:ring-1 focus:ring-accent"
+                className="flex-1 px-3 py-2 border border-text-muted/30 rounded-md bg-surface text-sm outline-none focus:ring-1 focus:ring-accent transition-colors"
               >
                 <option value="">
                   Selecciona una obligación del catálogo...
@@ -181,7 +180,7 @@ export const FichaObligaciones = ({
                 Consultando ficha técnica...
               </p>
             ) : obligaciones.length === 0 ? (
-              <div className="border border-dashed border-gray-200 rounded-xl p-8 text-center text-text-muted space-y-1">
+              <div className="border border-dashed border-text-muted/30 rounded-xl p-8 text-center text-text-muted space-y-1">
                 <ShieldAlert className="w-8 h-8 text-text-muted/40 mx-auto" />
                 <p className="text-sm font-medium">
                   Esta empresa no tiene obligaciones asignadas.
@@ -191,9 +190,9 @@ export const FichaObligaciones = ({
                 </p>
               </div>
             ) : (
-              <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+              <div className="border border-text-muted/20 rounded-xl overflow-hidden bg-surface">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 text-text-muted text-[10px] uppercase tracking-wider border-b border-gray-200">
+                  <thead className="bg-background text-text-muted text-[10px] uppercase tracking-wider border-b border-text-muted/20">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Impuesto</th>
                       <th className="px-4 py-3 font-semibold text-center">
@@ -204,14 +203,17 @@ export const FichaObligaciones = ({
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm">
+                  <tbody className="divide-y divide-text-muted/10 text-sm">
                     {obligaciones.map((obl: any) => (
-                      <tr key={obl.id} className="hover:bg-gray-50/40">
+                      <tr
+                        key={obl.id}
+                        className="hover:bg-text-muted/5 transition-colors"
+                      >
                         <td className="px-4 py-3 font-semibold text-primary">
                           {obl.impuestos?.nombre}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="text-xs font-mono font-medium bg-gray-100 px-2 py-0.5 rounded text-text-main">
+                          <span className="text-xs font-mono font-medium bg-text-muted/10 px-2 py-0.5 rounded text-text-main">
                             {obl.impuestos?.periodicidad}
                           </span>
                         </td>
