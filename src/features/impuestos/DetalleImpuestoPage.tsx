@@ -112,7 +112,7 @@ export const DetalleImpuestoPage = () => {
 
   if (!impuesto) {
     return (
-      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-gray-200 rounded-xl shadow-sm my-12 space-y-4 animate-in fade-in duration-200">
+      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-text-muted/20 rounded-xl shadow-sm my-12 space-y-4 animate-in fade-in duration-200">
         <AlertCircle className="w-12 h-12 text-danger mx-auto stroke-[1.5]" />
         <h3 className="text-lg font-bold text-primary font-title">
           Impuesto No Encontrado
@@ -152,7 +152,7 @@ export const DetalleImpuestoPage = () => {
           <div className="flex gap-2">
             <button
               onClick={() => setShowBulkForm(true)}
-              className="bg-surface border border-gray-200 text-text-main px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-all text-xs font-semibold shadow-2xs cursor-pointer"
+              className="bg-surface border border-text-muted/20 text-text-main px-3 py-1.5 rounded-lg flex items-center gap-2 hover:bg-text-muted/5 transition-all text-xs font-semibold shadow-2xs cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5 text-accent" />
               Carga Masiva Excel
@@ -182,7 +182,7 @@ export const DetalleImpuestoPage = () => {
         </div>
       )}
 
-      <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between gap-4">
+      <div className="card-container bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm flex flex-col md:flex-row justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
             <Calendar className="w-6 h-6" />
@@ -200,7 +200,7 @@ export const DetalleImpuestoPage = () => {
             </p>
           </div>
         </div>
-        <div className="text-right text-xs md:border-l md:border-gray-100 md:pl-6 flex flex-col justify-center">
+        <div className="text-right text-xs md:border-l md:border-text-muted/10 md:pl-6 flex flex-col justify-center">
           <span className="text-text-muted">Especialista a Cargo:</span>
           <span className="font-semibold text-primary text-sm mt-0.5">
             {impuesto.usuarios?.nombre_completo || "Sin especialista asignado"}
@@ -208,7 +208,7 @@ export const DetalleImpuestoPage = () => {
         </div>
       </div>
 
-      <div className="card-container bg-surface p-4 rounded-xl border border-gray-200 shadow-xs flex flex-wrap gap-4 items-center justify-between">
+      <div className="card-container bg-surface p-4 rounded-xl border border-text-muted/20 shadow-xs flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center gap-2 text-text-muted text-sm font-medium">
           <Filter className="w-4 h-4" />
           <span>Filtros de Agenda Oficial</span>
@@ -225,7 +225,7 @@ export const DetalleImpuestoPage = () => {
                 setAnioFiltro(Number(e.target.value));
                 setPaginaActual(1);
               }}
-              className="border border-gray-200 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main cursor-pointer"
+              className="border border-text-muted/30 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main cursor-pointer"
             >
               {[2024, 2025, 2026, 2027].map((a) => (
                 <option key={a} value={a}>
@@ -242,7 +242,7 @@ export const DetalleImpuestoPage = () => {
             <select
               value={periodoFiltro}
               onChange={(e) => handlePeriodoChange(e.target.value)}
-              className="border border-gray-200 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main cursor-pointer"
+              className="border border-text-muted/30 rounded-md px-3 py-1.5 text-xs bg-surface outline-none focus:ring-1 focus:ring-accent font-medium text-text-main cursor-pointer"
             >
               <option value="TODOS">Todos los periodos</option>
               {periodosDisponibles.map((p) => (
@@ -255,9 +255,9 @@ export const DetalleImpuestoPage = () => {
         </div>
       </div>
 
-      <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs">
+      <div className="card-container !p-0 overflow-hidden bg-surface border border-text-muted/20 rounded-xl shadow-xs">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider border-b border-gray-100">
+          <thead className="bg-background text-text-muted text-xs uppercase tracking-wider border-b border-text-muted/10">
             <tr>
               <th className="px-6 py-4 font-semibold">Periodo</th>
               <th className="px-6 py-4 font-semibold text-center">
@@ -269,7 +269,7 @@ export const DetalleImpuestoPage = () => {
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 text-sm">
+          <tbody className="divide-y divide-text-muted/10 text-sm">
             {loading ? (
               <tr>
                 <td
@@ -290,17 +290,14 @@ export const DetalleImpuestoPage = () => {
               </tr>
             ) : (
               fechasPaginadas.map((f) => (
-                <tr
-                  key={f.id}
-                  className="hover:bg-gray-50/40 transition-colors"
-                >
+                <tr key={f.id} className="hover:bg-primary/5 transition-colors">
                   <td className="px-6 py-4">
                     <span className="font-bold text-primary font-mono bg-primary/5 px-2 py-1 rounded text-xs">
                       {f.periodo}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className="data-code font-semibold px-2 py-0.5 rounded text-xs bg-surface border border-gray-100">
+                    <span className="data-code font-semibold px-2 py-0.5 rounded text-xs bg-surface border border-text-muted/20">
                       {f.digito !== null
                         ? `Termina en: ${f.digito}`
                         : "Todos (Fecha Fija)"}
@@ -349,7 +346,7 @@ export const DetalleImpuestoPage = () => {
         </table>
 
         {!loading && totalRegistros > 0 && (
-          <div className="bg-gray-50 px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+          <div className="bg-background px-6 py-4 border-t border-text-muted/20 flex items-center justify-between">
             <div className="text-xs text-text-muted font-medium">
               Mostrando{" "}
               <span className="font-semibold text-text-main">
@@ -373,7 +370,7 @@ export const DetalleImpuestoPage = () => {
                     setPaginaActual((prev) => Math.max(prev - 1, 1))
                   }
                   disabled={paginaActual === 1}
-                  className="p-1.5 rounded-md border border-gray-200 bg-white text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="p-1.5 rounded-md border border-text-muted/20 bg-surface text-text-muted hover:bg-text-muted/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -387,7 +384,7 @@ export const DetalleImpuestoPage = () => {
                     setPaginaActual((prev) => Math.min(prev + 1, totalPaginas))
                   }
                   disabled={paginaActual === totalPaginas}
-                  className="p-1.5 rounded-md border border-gray-200 bg-white text-text-muted hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="p-1.5 rounded-md border border-text-muted/20 bg-surface text-text-muted hover:bg-text-muted/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
