@@ -129,7 +129,7 @@ export const CalendarioCargaMasiva = ({
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
+      <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-text-muted/20 flex flex-col max-h-[90vh]">
         <div className="bg-primary p-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2 text-surface">
             <FileSpreadsheet className="w-5 h-5" />
@@ -145,7 +145,7 @@ export const CalendarioCargaMasiva = ({
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-surface">
           {errorProcesamiento && (
             <div className="animate-in fade-in duration-200">
               <AlertNotification
@@ -175,15 +175,15 @@ export const CalendarioCargaMasiva = ({
               type="number"
               value={anio}
               onChange={(e) => setAnio(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
+              className="w-full px-3 py-2 border border-text-muted/30 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
             />
           </div>
 
-          <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg">
-            <h3 className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">
+          <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
+            <h3 className="text-xs font-bold text-primary mb-2 uppercase tracking-wide">
               Estructura obligatoria del Excel
             </h3>
-            <ul className="text-xs text-blue-700 list-disc list-inside space-y-1">
+            <ul className="text-xs text-text-main list-disc list-inside space-y-1">
               <li>
                 <b>Columna A:</b> Periodo (Ej. 01, B1, ANUAL)
               </li>
@@ -202,15 +202,15 @@ export const CalendarioCargaMasiva = ({
               Selecciona tu archivo Excel (.xlsx, .xls)
             </label>
             <label
-              className={`mt-2 flex justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-accent hover:bg-gray-50 focus:outline-none ${
-                archivo ? "border-accent bg-blue-50/30" : ""
+              className={`mt-2 flex justify-center w-full h-32 px-4 transition bg-surface border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-accent hover:bg-text-muted/5 focus:outline-none ${
+                archivo ? "border-accent bg-primary/5" : "border-text-muted/30"
               }`}
             >
               <span className="flex flex-col items-center justify-center space-y-2">
                 <FileUp
-                  className={`w-8 h-8 ${archivo ? "text-accent" : "text-gray-400"}`}
+                  className={`w-8 h-8 ${archivo ? "text-accent" : "text-text-muted/50"}`}
                 />
-                <span className="font-medium text-xs text-gray-600">
+                <span className="font-medium text-xs text-text-muted">
                   {archivo
                     ? archivo.name
                     : "Haz clic para explorar o arrastra el archivo aquí"}
@@ -226,11 +226,11 @@ export const CalendarioCargaMasiva = ({
           </div>
         </div>
 
-        <div className="p-4 border-t border-gray-100 flex justify-end gap-3 shrink-0 bg-gray-50">
+        <div className="p-4 border-t border-text-muted/10 flex justify-end gap-3 shrink-0 bg-background">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md transition-colors text-sm font-medium cursor-pointer"
+            className="px-4 py-2 text-text-muted hover:bg-text-muted/10 rounded-md transition-colors text-sm font-medium cursor-pointer"
           >
             Cancelar
           </button>
