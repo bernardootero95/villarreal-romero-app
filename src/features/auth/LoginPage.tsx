@@ -3,12 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { supabase } from "../../lib/supabase";
-import { Lock, User as UserIcon, Eye, EyeOff } from "lucide-react";
+import { Lock, User as UserIcon, Eye, EyeOff, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Loader } from "../../components/Loader";
 import { AlertNotification } from "../../components/ui/AlertNotification";
-import logo from "../../assets/LOGO-2.png";
 
 const loginSchema = z.object({
   username: z.string().min(4, "El usuario es requerido"),
@@ -24,6 +23,14 @@ export const LoginPage = () => {
 
   const navigate = useNavigate();
   const { session } = useAuth();
+
+  const logoUrl = import.meta.env.VITE_LOGO_URL || "";
+  const empresaNombre =
+    import.meta.env.VITE_EMPRESA_NOMBRE || "Villarreal-Romero";
+  const empresaSlogan =
+    import.meta.env.VITE_EMPRESA_SLOGAN || "Sistema de Gestión y Vencimientos";
+  const empresaDominio =
+    import.meta.env.VITE_EMPRESA_DOMINIO || "villarreal-romero.local";
 
   useEffect(() => {
     if (session) {
@@ -43,7 +50,7 @@ export const LoginPage = () => {
     setIsLoading(true);
     setAuthError(null);
 
-    const internalEmail = `${data.username.toLowerCase().trim()}@villarreal-romero.local`;
+    const internalEmail = `${data.username.toLowerCase().trim()}@${empresaDominio}`;
 
     const { error } = await supabase.auth.signInWithPassword({
       email: internalEmail,
@@ -69,16 +76,22 @@ export const LoginPage = () => {
 
       <div className="card-container w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
-          <img
-            src={logo}
-            alt="Logo Villarreal-Romero"
-            className="h-20 w-auto mb-4 object-contain"
-          />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={`Logo de ${empresaNombre}`}
+              className="h-20 w-auto mb-4 object-contain"
+            />
+          ) : (
+            <div className="h-20 w-20 bg-primary/5 rounded-full flex items-center justify-center mb-4">
+              <Building2 className="h-10 w-10 text-primary" />
+            </div>
+          )}
           <h1 className="text-2xl font-title font-semibold text-primary">
-            Villarreal-Romero
+            {empresaNombre}
           </h1>
           <p className="text-text-muted mt-1 font-body text-sm">
-            Sistema de Gestión y Vencimientos
+            {empresaSlogan}
           </p>
         </div>
 
@@ -107,7 +120,7 @@ export const LoginPage = () => {
                 {...register("username")}
                 disabled={isLoading}
                 className={`block w-full pl-10 pr-3 py-2 border ${
-                  errors.username ? "border-danger" : "border-gray-300"
+                  errors.username ? "border-danger" : "border-text-muted/30"
                 } rounded-md focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm transition-colors bg-surface`}
                 placeholder="jromero"
               />
@@ -132,7 +145,7 @@ export const LoginPage = () => {
                 {...register("password")}
                 disabled={isLoading}
                 className={`block w-full pl-10 pr-10 py-2 border ${
-                  errors.password ? "border-danger" : "border-gray-300"
+                  errors.password ? "border-danger" : "border-text-muted/30"
                 } rounded-md focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm transition-colors bg-surface`}
                 placeholder="••••••••"
               />
