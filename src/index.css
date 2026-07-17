@@ -30,6 +30,6 @@
   }
 
   .card-container {
-    @apply bg-surface rounded-lg shadow-sm border border-gray-200 p-6;
+    @apply bg-surface rounded-lg shadow-sm border border-text-muted/20 p-6;
   }
 }
