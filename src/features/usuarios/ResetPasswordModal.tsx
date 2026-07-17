@@ -57,7 +57,7 @@ export const ResetPasswordModal = ({
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-gray-200">
+      <div className="bg-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-text-muted/20">
         <div className="bg-primary p-4 flex justify-between items-center">
           <div className="flex items-center gap-2 text-surface">
             <KeyRound className="w-5 h-5 text-accent" />
@@ -74,7 +74,7 @@ export const ResetPasswordModal = ({
         </div>
 
         {cambioExitoso ? (
-          <div className="p-6 text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="p-6 text-center space-y-4 animate-in fade-in zoom-in-95 duration-200 bg-surface">
             <CheckCircle2 className="w-12 h-12 text-success mx-auto stroke-[1.5]" />
             <div className="space-y-1">
               <h3 className="font-title font-bold text-primary text-base">
@@ -85,10 +85,10 @@ export const ResetPasswordModal = ({
                 <span className="font-semibold text-text-main">
                   "{usuario.nombre_completo}"
                 </span>{" "}
-                se han actualizado con éxito en la bódvda de Supabase.
+                se han actualizado con éxito en la bóveda de Supabase.
               </p>
             </div>
-            <div className="p-3 bg-gray-50 border border-gray-100 rounded-lg text-xs font-medium text-text-main">
+            <div className="p-3 bg-background border border-text-muted/10 rounded-lg text-xs font-medium text-text-main">
               Por favor indícales su nueva clave de acceso de forma verbal o un
               canal seguro:{" "}
               <span className="font-mono font-bold text-primary block mt-1 text-sm">
@@ -103,10 +103,10 @@ export const ResetPasswordModal = ({
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-lg flex gap-2.5">
-              <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800 leading-tight">
+          <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-surface">
+            <div className="bg-warning/10 border border-warning/20 p-3.5 rounded-lg flex gap-2.5">
+              <ShieldAlert className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+              <p className="text-xs text-warning leading-tight">
                 Estás forzando el cambio de credenciales de{" "}
                 <span className="font-bold">"{usuario.nombre_completo}"</span>.
                 Como la plataforma opera con correos simulados, deberás
@@ -136,7 +136,7 @@ export const ResetPasswordModal = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Escribe la clave de reemplazo..."
-                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-gray-50 focus:bg-surface text-sm focus:ring-1 focus:ring-accent outline-none font-mono"
+                  className="w-full pl-3 pr-10 py-2 border border-text-muted/30 rounded-md bg-background focus:bg-surface text-sm focus:ring-1 focus:ring-accent outline-none font-mono transition-colors"
                 />
                 <button
                   type="button"
@@ -152,11 +152,11 @@ export const ResetPasswordModal = ({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
+            <div className="flex justify-end gap-3 pt-4 border-t border-text-muted/10 mt-6">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md text-xs font-semibold transition-colors cursor-pointer"
+                className="px-4 py-2 text-text-muted hover:bg-text-muted/10 rounded-md text-xs font-semibold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
