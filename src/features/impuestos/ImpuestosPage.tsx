@@ -11,7 +11,6 @@ export const ImpuestosPage = () => {
   const { perfil } = useAuth();
   const navigate = useNavigate();
 
-  // Gestión de estado global asíncrono administrado por TanStack Query
   const { data: impuestos = [], isLoading, error } = useImpuestos();
   const desactivarMutation = useDesactivarImpuesto();
 
@@ -95,15 +94,15 @@ export const ImpuestosPage = () => {
         </div>
       )}
 
-      <div className="card-container !p-0 overflow-hidden bg-surface border border-gray-200 rounded-xl shadow-xs">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+      <div className="card-container !p-0 overflow-hidden bg-surface border border-text-muted/20 rounded-xl shadow-xs">
+        <div className="p-4 border-b border-text-muted/10 bg-background/50">
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nombre o periodicidad..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors"
             />
           </div>
         </div>
@@ -111,7 +110,7 @@ export const ImpuestosPage = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 text-text-muted text-xs uppercase tracking-wider">
+              <tr className="bg-background text-text-muted text-xs uppercase tracking-wider">
                 <th className="px-6 py-4 font-semibold">Obligación</th>
                 <th className="px-6 py-4 font-semibold">Regla de Cálculo</th>
                 <th className="px-6 py-4 font-semibold">
@@ -121,7 +120,7 @@ export const ImpuestosPage = () => {
                 <th className="px-6 py-4 font-semibold text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
+            <tbody className="divide-y divide-text-muted/10 text-sm">
               {isLoading ? (
                 <tr>
                   <td
@@ -144,7 +143,7 @@ export const ImpuestosPage = () => {
                 impuestosFiltrados.map((impuesto) => (
                   <tr
                     key={impuesto.id}
-                    className="hover:bg-gray-50/50 transition-colors"
+                    className="hover:bg-primary/5 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div
@@ -154,7 +153,7 @@ export const ImpuestosPage = () => {
                         <span className="font-semibold text-primary group-hover:text-accent transition-colors">
                           {impuesto.nombre}
                         </span>
-                        <span className="text-xs text-text-muted font-mono bg-gray-100 w-fit px-1.5 py-0.5 rounded mt-1">
+                        <span className="text-xs text-text-muted font-mono bg-text-muted/10 w-fit px-1.5 py-0.5 rounded mt-1">
                           {impuesto.periodicidad}
                         </span>
                       </div>
