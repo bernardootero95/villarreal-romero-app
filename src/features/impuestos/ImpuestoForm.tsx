@@ -80,7 +80,7 @@ export const ImpuestoForm = ({
       } else {
         await impuestosService.create(data);
       }
-      // Sincronización proactiva de la caché de TanStack Query
+
       queryClient.invalidateQueries({ queryKey: IMPUESTOS_QUERY_KEY });
       onSuccess();
     } catch (error: any) {
@@ -93,7 +93,7 @@ export const ImpuestoForm = ({
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-gray-200">
+      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-text-muted/20">
         <div className="bg-primary p-4 flex justify-between items-center">
           <div className="flex items-center gap-2 text-surface">
             <Landmark className="w-5 h-5" />
@@ -109,7 +109,10 @@ export const ImpuestoForm = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="p-6 space-y-5 bg-surface"
+        >
           {submitError && (
             <div className="animate-in fade-in duration-200">
               <AlertNotification
@@ -127,8 +130,8 @@ export const ImpuestoForm = ({
             </label>
             <input
               {...register("nombre")}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
-                errors.nombre ? "border-danger" : "border-gray-300"
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors ${
+                errors.nombre ? "border-danger" : "border-text-muted/30"
               }`}
               placeholder="Ej. IVA Bimestral, ICA Medellín..."
             />
@@ -146,8 +149,8 @@ export const ImpuestoForm = ({
               </label>
               <select
                 {...register("periodicidad")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
-                  errors.periodicidad ? "border-danger" : "border-gray-300"
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors appearance-none ${
+                  errors.periodicidad ? "border-danger" : "border-text-muted/30"
                 }`}
               >
                 <option value="">Seleccione...</option>
@@ -170,8 +173,10 @@ export const ImpuestoForm = ({
               </label>
               <select
                 {...register("regla_vencimiento")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
-                  errors.regla_vencimiento ? "border-danger" : "border-gray-300"
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors appearance-none ${
+                  errors.regla_vencimiento
+                    ? "border-danger"
+                    : "border-text-muted/30"
                 }`}
               >
                 <option value="">Seleccione...</option>
@@ -199,8 +204,10 @@ export const ImpuestoForm = ({
             <select
               {...register("especialista_id")}
               disabled={loadingUsers}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
-                errors.especialista_id ? "border-danger" : "border-gray-300"
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors appearance-none ${
+                errors.especialista_id
+                  ? "border-danger"
+                  : "border-text-muted/30"
               }`}
             >
               <option value="">Ninguno (Responsabilidad del Contador)</option>
@@ -216,11 +223,11 @@ export const ImpuestoForm = ({
             </p>
           </div>
 
-          <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
+          <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-text-muted/10">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium cursor-pointer"
+              className="px-4 py-2 text-text-muted hover:bg-text-muted/10 rounded-md transition-colors text-sm font-medium cursor-pointer"
             >
               Cancelar
             </button>
