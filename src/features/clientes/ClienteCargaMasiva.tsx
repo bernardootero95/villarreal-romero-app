@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 import { useCreateBulkClientes, useAsignarImpuestosBulk } from "./useClientes";
-import { useUsuarios } from "../usuarios/useUsuarios"; // <-- Catálogo reactivo integrado
-import { useImpuestos } from "../impuestos/useImpuestos"; // <-- Catálogo reactivo integrado
+import { useUsuarios } from "../usuarios/useUsuarios";
+import { useImpuestos } from "../impuestos/useImpuestos";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import * as XLSX from "xlsx";
 
@@ -47,14 +47,12 @@ export const ClienteCargaMasiva = ({
   );
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
-  // Consumo de mutaciones y queries globales coordinadas
   const createBulkClientesMutation = useCreateBulkClientes();
   const asignarImpuestosBulkMutation = useAsignarImpuestosBulk();
 
   const { data: usuarios = [], isLoading: loadingUsers } = useUsuarios();
   const { data: impuestos = [], isLoading: loadingTaxes } = useImpuestos();
 
-  // REFACTOR SOLID (SRP): Derivamos los diccionarios de validación directamente de la caché global compartida
   useEffect(() => {
     if (usuarios.length > 0) {
       const userMap = usuarios.reduce(
@@ -289,7 +287,7 @@ export const ClienteCargaMasiva = ({
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col max-h-[90vh]">
+      <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-text-muted/20 flex flex-col max-h-[90vh]">
         <div className="bg-primary p-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2 text-surface">
             <FileSpreadsheet className="w-5 h-5" />
@@ -339,7 +337,7 @@ export const ClienteCargaMasiva = ({
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3.5 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3.5 bg-background border border-text-muted/20 rounded-lg">
               <div className="space-y-0.5">
                 <span className="text-xs font-bold text-primary block uppercase tracking-wide">
                   ¿No tienes el formato de carga?
@@ -352,16 +350,16 @@ export const ClienteCargaMasiva = ({
               <button
                 type="button"
                 onClick={handleDescargarModelo}
-                className="bg-white border border-gray-300 hover:border-primary text-text-main hover:text-primary px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-bold transition-all shadow-2xs shrink-0 cursor-pointer"
+                className="bg-surface border border-text-muted/30 hover:border-primary text-text-main hover:text-primary px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5 text-accent" />
                 Descargar Plantilla Excel
               </button>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-800 space-y-1">
+            <div className="bg-warning/10 border border-warning/20 p-4 rounded-lg flex gap-3">
+              <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+              <div className="text-xs text-warning space-y-1">
                 <span className="font-bold uppercase block">
                   Formato de las Columnas de Obligación:
                 </span>
@@ -382,13 +380,17 @@ export const ClienteCargaMasiva = ({
                 Selecciona la plantilla de Excel (.xlsx, .xls)
               </label>
               <label
-                className={`flex justify-center w-full h-36 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-accent hover:bg-gray-50 focus:outline-none ${archivo ? "border-accent bg-blue-50/20" : ""}`}
+                className={`flex justify-center w-full h-36 px-4 transition bg-surface border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-accent hover:bg-text-muted/5 focus:outline-none ${
+                  archivo
+                    ? "border-accent bg-primary/5"
+                    : "border-text-muted/30"
+                }`}
               >
                 <span className="flex flex-col items-center justify-center space-y-2">
                   <FileUp
-                    className={`w-9 h-9 ${archivo ? "text-accent" : "text-gray-400"}`}
+                    className={`w-9 h-9 ${archivo ? "text-accent" : "text-text-muted/50"}`}
                   />
-                  <span className="font-semibold text-xs text-gray-600">
+                  <span className="font-semibold text-xs text-text-muted">
                     {archivo
                       ? archivo.name
                       : "Arrastra tu libro contable aquí o haz clic para explorar"}
@@ -406,11 +408,11 @@ export const ClienteCargaMasiva = ({
         )}
 
         {!isSubmitting && !isMetadataLoading && (
-          <div className="p-4 border-t border-gray-100 flex justify-end gap-3 shrink-0 bg-gray-50">
+          <div className="p-4 border-t border-text-muted/10 flex justify-end gap-3 shrink-0 bg-background">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-200 rounded-md text-sm font-medium transition-colors cursor-pointer"
+              className="px-4 py-2 text-text-muted hover:bg-text-muted/10 rounded-md text-sm font-medium transition-colors cursor-pointer"
             >
               Cancelar
             </button>
