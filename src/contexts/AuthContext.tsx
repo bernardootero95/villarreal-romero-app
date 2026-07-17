@@ -1,9 +1,16 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import type { ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { useQueryClient } from "@tanstack/react-query"; // <-- Importamos el controlador de caché
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Usuario } from "../features/usuarios/types";
+import { useInactividad } from "../hooks/useInactividad"; // <-- Importamos el controlador de inactividad
 
 interface AuthContextType {
   session: Session | null;
@@ -75,10 +82,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-  const signOut = async () => {
+  // Se estabiliza la referencia de la función para evitar re-renderizados del hook de inactividad
+  const signOut = useCallback(async () => {
     queryClient.clear();
     await supabase.auth.signOut();
-  };
+  }, [queryClient]);
+
+  // Cierre de sesión automático si no se detecta interacción del usuario en 15 minutos
+  useInactividad(() => {
+    if (session) {
+      console.warn("Cerrando sesión por inactividad operativa.");
+      signOut();
+    }
+  }, 15);
 
   return (
     <AuthContext.Provider value={{ session, user, perfil, signOut, isLoading }}>
