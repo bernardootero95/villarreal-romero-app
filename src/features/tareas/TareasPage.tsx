@@ -36,7 +36,6 @@ export const TareasPage = () => {
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
-  // Cálculo del día actual local para evaluar tareas vencidas en tiempo real
   const localDate = new Date();
   const localTodayStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
@@ -60,7 +59,6 @@ export const TareasPage = () => {
   };
 
   const completarTarea = (id: string, estadoActual: string) => {
-    // REGLA DE NEGOCIO: Una vez completada, queda inmutable
     if (estadoActual === "COMPLETADA") return;
     estadoMutation.mutate({ id, estado: "COMPLETADA" });
   };
@@ -99,7 +97,7 @@ export const TareasPage = () => {
         />
       )}
 
-      <div className="flex gap-2 border-b border-gray-200 pb-4">
+      <div className="flex gap-2 border-b border-text-muted/20 pb-4">
         {["TODAS", "PENDIENTE", "COMPLETADA"].map((est) => (
           <button
             key={est}
@@ -107,7 +105,7 @@ export const TareasPage = () => {
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               filtroEstado === est
                 ? "bg-accent text-primary shadow-sm"
-                : "bg-gray-100 text-text-muted hover:bg-gray-200"
+                : "bg-text-muted/10 text-text-muted hover:bg-text-muted/20"
             }`}
           >
             {est}
@@ -117,8 +115,8 @@ export const TareasPage = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {tareasFiltradas.length === 0 ? (
-          <div className="col-span-full p-12 text-center border border-dashed border-gray-300 rounded-xl bg-gray-50/50">
-            <ListTodo className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <div className="col-span-full p-12 text-center border border-dashed border-text-muted/30 rounded-xl bg-background/50">
+            <ListTodo className="w-12 h-12 text-text-muted/30 mx-auto mb-3" />
             <p className="text-text-main font-semibold">
               No hay tareas para mostrar.
             </p>
@@ -129,22 +127,20 @@ export const TareasPage = () => {
             const esVencida =
               !esCompletada && tarea.fecha_limite < localTodayStr;
 
-            // Semáforo dinámico de la Etiqueta (Badge)
-            let badgeStyle = "bg-amber-100 text-amber-700 border-amber-200";
+            let badgeStyle = "bg-warning/10 text-warning border-warning/20";
             let badgeText = "PENDIENTE";
 
-            // Semáforo dinámico de la Tarjeta (Bordes)
-            let cardStyle = "border-amber-400 bg-surface";
+            let cardStyle = "border-warning/50 bg-surface";
 
             if (esCompletada) {
               badgeStyle = "bg-success/10 text-success border-success/20";
               badgeText = "COMPLETADA";
-              cardStyle = "border-success/60 bg-surface"; // Borde verde
+              cardStyle = "border-success/60 bg-surface";
             } else if (esVencida) {
               badgeStyle =
-                "bg-danger text-white border-danger animate-pulse shadow-sm";
+                "bg-danger text-surface border-danger animate-pulse shadow-sm";
               badgeText = "VENCIDA";
-              cardStyle = "border-danger bg-danger/5"; // Borde rojo y fondo ligeramente tintado
+              cardStyle = "border-danger bg-danger/5";
             }
 
             const isCompleting =
@@ -174,7 +170,7 @@ export const TareasPage = () => {
                       }
                     >
                       <CheckCircle2
-                        className={`w-6 h-6 transition-colors ${esCompletada ? "text-success" : esVencida ? "text-danger hover:text-success" : "text-gray-300 hover:text-success/50"}`}
+                        className={`w-6 h-6 transition-colors ${esCompletada ? "text-success" : esVencida ? "text-danger hover:text-success" : "text-text-muted/30 hover:text-success/50"}`}
                       />
                     </button>
                   </div>
@@ -192,7 +188,7 @@ export const TareasPage = () => {
                   </span>
                 </div>
 
-                <div className="border-t border-gray-100 pt-3 mt-4 flex items-center justify-between">
+                <div className="border-t border-text-muted/10 pt-3 mt-4 flex items-center justify-between">
                   <div className="space-y-1">
                     <span
                       className={`flex items-center gap-1.5 text-[11px] font-mono ${esVencida ? "text-danger font-bold" : "text-text-muted"}`}
@@ -214,14 +210,14 @@ export const TareasPage = () => {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleEdit(tarea)}
-                        className="p-1.5 text-text-muted hover:text-accent bg-gray-50 rounded cursor-pointer"
+                        className="p-1.5 text-text-muted hover:text-accent bg-text-muted/5 rounded cursor-pointer"
                         title="Editar tarea"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(tarea.id)}
-                        className="p-1.5 text-text-muted hover:text-danger bg-gray-50 rounded cursor-pointer"
+                        className="p-1.5 text-text-muted hover:text-danger bg-text-muted/5 rounded cursor-pointer"
                         title="Eliminar tarea"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
