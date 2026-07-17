@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDashboardMetricas, useDashboardDistribucion } from "./useDashboard";
 import { useVencimientosMes } from "../calendario/useVencimientos";
-import { useTareas } from "../tareas/useTareas"; // <-- INTEGRADO EL HOOK DE OBLIGACIONES INTERNAS
+import { useTareas } from "../tareas/useTareas";
 import { Loader } from "../../components/Loader";
 import {
   Building2,
@@ -20,7 +20,6 @@ import {
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import { useNavigate } from "react-router-dom";
 
-// UTILIDAD SOLID (SRP): Función pura aislada para calcular días de diferencia sin alterar renderizados
 const calcularDiasRestantes = (fechaLimiteStr: string): number => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -42,7 +41,6 @@ export const DashboardPage = () => {
   const hoy = new Date();
   const esIngeniero = perfil?.cargo === "Ingeniero";
 
-  // 1. Consumo Concurrente y Limpio de Estados Globales Indexados
   const {
     data: metricas,
     isLoading: loadingMetricas,
@@ -60,7 +58,7 @@ export const DashboardPage = () => {
   const { data: tareas = [], isLoading: loadingTareas } = useTareas(
     session?.user?.id,
     perfil?.cargo,
-  ); // <-- Inyección del nuevo catálogo asíncrono
+  );
 
   const { data: resumenImpuestos = [], isLoading: loadingDistribucion } =
     useDashboardDistribucion(esIngeniero && !!perfil);
@@ -105,7 +103,6 @@ export const DashboardPage = () => {
     calcularSemanaActual();
   }, []);
 
-  // 2. Filtrado Reactivo en memoria (Derivación de datos O(1) basada en Caché)
   const vtosDiaSeleccionado = vencimientosSemana.filter(
     (v) => v.fecha_limite === diaSeleccionado,
   );
@@ -137,7 +134,7 @@ export const DashboardPage = () => {
 
   if (errorAMostrar || !metricas) {
     return (
-      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-gray-200 rounded-xl shadow-sm my-12 space-y-4">
+      <div className="max-w-md mx-auto text-center p-8 bg-surface border border-text-muted/20 rounded-xl shadow-sm my-12 space-y-4">
         <AlertCircle className="w-12 h-12 text-danger mx-auto stroke-[1.5]" />
         <h2 className="text-lg font-bold text-primary font-title">
           Sincronización Incompleta
@@ -187,7 +184,7 @@ export const DashboardPage = () => {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
+        <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               {esIngeniero ? "Total Empresas" : "Mis Empresas"}
@@ -206,7 +203,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
+        <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               {esIngeniero ? "Vencimientos Firma" : "Vencimientos Mes"}
@@ -225,12 +222,12 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
+        <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               {esIngeniero ? "Pendientes Globales" : "Por Ejecutar"}
             </span>
-            <p className="text-3xl font-bold text-amber-600 font-title">
+            <p className="text-3xl font-bold text-warning font-title">
               {metricas.tareasPendientes}
             </p>
             <p className="text-[11px] text-text-muted">
@@ -239,12 +236,12 @@ export const DashboardPage = () => {
                 : "Pendientes y en revisión"}
             </p>
           </div>
-          <div className="w-12 h-12 bg-amber-500/10 text-amber-600 rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-warning/10 text-warning rounded-xl flex items-center justify-center">
             <Clock className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
+        <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Cumplimiento
@@ -267,8 +264,8 @@ export const DashboardPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
           {esIngeniero ? (
-            <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
-              <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
+            <div className="card-container bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 text-primary border-b border-text-muted/10 pb-3">
                 <ListFilter className="w-5 h-5 text-accent" />
                 <h3 className="text-sm font-title font-bold uppercase tracking-wide">
                   Distribución Analítica de Obligaciones del Catálogo
@@ -278,7 +275,7 @@ export const DashboardPage = () => {
                 {resumenImpuestos.map((imp) => (
                   <div
                     key={imp.id}
-                    className="p-3 bg-gray-50 border border-gray-100 rounded-xl flex justify-between items-center"
+                    className="p-3 bg-background border border-text-muted/10 rounded-xl flex justify-between items-center"
                   >
                     <div className="truncate space-y-0.5 max-w-[70%]">
                       <p className="text-xs font-bold text-primary truncate">
@@ -296,14 +293,14 @@ export const DashboardPage = () => {
               </div>
             </div>
           ) : (
-            <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
-              <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
+            <div className="card-container bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 text-primary border-b border-text-muted/10 pb-3">
                 <AlertTriangle className="w-5 h-5 text-accent" />
                 <h3 className="text-sm font-title font-bold uppercase tracking-wide">
                   Alertas Críticas de Vencimiento Semafórico
                 </h3>
               </div>
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-text-muted/10">
                 {metricas.alertasCriticas?.length === 0 ? (
                   <div className="text-center py-8 text-text-muted space-y-1">
                     <CheckCircle2 className="w-8 h-8 text-success/60 mx-auto" />
@@ -321,12 +318,12 @@ export const DashboardPage = () => {
                     );
 
                     let semaforoBadge =
-                      "bg-gray-100 text-text-muted border-gray-200";
+                      "bg-text-muted/10 text-text-muted border-text-muted/20";
                     let semaforoTexto = `${diasRestantes} días`;
 
                     if (diasRestantes < 0) {
                       semaforoBadge =
-                        "bg-danger text-white border-danger font-extrabold animate-pulse shadow-sm";
+                        "bg-danger text-surface border-danger font-extrabold animate-pulse shadow-sm";
                       semaforoTexto = `VENCIDO (${Math.abs(diasRestantes)}d)`;
                     } else if (diasRestantes === 0) {
                       semaforoBadge =
@@ -348,7 +345,7 @@ export const DashboardPage = () => {
                         onClick={() =>
                           navigate(`/clientes/${alerta.clientes.id}`)
                         }
-                        className="py-3 flex justify-between items-center hover:bg-gray-50/60 px-2 rounded-lg cursor-pointer transition-colors group"
+                        className="py-3 flex justify-between items-center hover:bg-background/60 px-2 rounded-lg cursor-pointer transition-colors group"
                       >
                         <div className="space-y-0.5 max-w-[65%]">
                           <p
@@ -377,9 +374,9 @@ export const DashboardPage = () => {
             </div>
           )}
 
-          <div className="card-container bg-surface p-6 rounded-xl border border-gray-200 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2 text-primary border-b border-gray-100 pb-3">
-              <Flame className="w-5 h-5 text-amber-500" />
+          <div className="card-container bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 text-primary border-b border-text-muted/10 pb-3">
+              <Flame className="w-5 h-5 text-warning" />
               <h3 className="text-sm font-title font-bold uppercase tracking-wide">
                 Top 5 Clientes con Mayor Carga Pendiente
               </h3>
@@ -394,12 +391,12 @@ export const DashboardPage = () => {
                 {metricas.topClientesCarga?.map((item: any, idx: number) => (
                   <div
                     key={idx}
-                    className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center"
+                    className="p-3 bg-background border border-text-muted/10 rounded-lg flex justify-between items-center"
                   >
                     <span className="text-xs font-semibold text-text-main truncate max-w-[75%]">
                       {item.nombre}
                     </span>
-                    <span className="text-xs font-mono font-bold bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded border border-amber-500/20">
+                    <span className="text-xs font-mono font-bold bg-warning/10 text-warning px-2 py-0.5 rounded border border-warning/20">
                       {item.pendientes} tgs
                     </span>
                   </div>
@@ -409,9 +406,8 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* PANEL DERECHO: Agenda Unificada Semanal y Diaria */}
-        <div className="card-container bg-surface p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4 flex flex-col h-full">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
+        <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm space-y-4 flex flex-col h-full">
+          <div className="flex items-center gap-2 border-b border-text-muted/10 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-title font-bold text-primary uppercase tracking-wide">
               {esIngeniero
@@ -420,7 +416,7 @@ export const DashboardPage = () => {
             </h3>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-100 shrink-0">
+          <div className="grid grid-cols-7 gap-1 bg-background p-1.5 rounded-lg border border-text-muted/10 shrink-0">
             {diasSemana.map((dia) => {
               const vtosDelDia = vencimientosSemana.filter(
                 (v) => v.fecha_limite === dia.fechaStr,
@@ -449,7 +445,7 @@ export const DashboardPage = () => {
                       ? "bg-primary text-surface shadow-md scale-105"
                       : dia.esHoy
                         ? "bg-primary/10 text-primary border border-primary/20"
-                        : "hover:bg-gray-200/70 text-text-main"
+                        : "hover:bg-text-muted/10 text-text-main"
                   }`}
                 >
                   <span
@@ -461,24 +457,23 @@ export const DashboardPage = () => {
                     {dia.numeroDia}
                   </span>
 
-                  {/* Punto Semafórico Unificado */}
                   <div className="mt-1.5 flex gap-0.5 justify-center min-h-[6px]">
                     {vtosDelDia.length > 0 || tareasDelDia.length > 0 ? (
                       <span
                         className={`w-1.5 h-1.5 rounded-full ${
                           tienePendientes
                             ? esDiaPasado
-                              ? "bg-danger animate-pulse" // Vencido acumulado histórico
+                              ? "bg-danger animate-pulse"
                               : pendientesVto > 0
                                 ? esSeleccionado
                                   ? "bg-accent"
-                                  : "bg-amber-500" // Obligación legal DIAN próxima
-                                : "bg-blue-500" // Tarea interna pendiente
-                            : "bg-success" // Todo completado el día correspondiente
+                                  : "bg-warning"
+                                : "bg-accent"
+                            : "bg-success"
                         }`}
                       />
                     ) : (
-                      <span className="w-1 h-1 rounded-full bg-gray-300/60" />
+                      <span className="w-1 h-1 rounded-full bg-text-muted/30" />
                     )}
                   </div>
                 </button>
@@ -489,7 +484,7 @@ export const DashboardPage = () => {
           <div className="flex-1 flex flex-col space-y-3 pt-1">
             <div className="flex justify-between items-center text-[10px] text-text-muted font-mono uppercase tracking-wider px-0.5 shrink-0">
               <span>Actividades del día:</span>
-              <span className="font-bold text-primary bg-gray-100 px-1.5 py-0.5 rounded">
+              <span className="font-bold text-primary bg-text-muted/10 px-1.5 py-0.5 rounded">
                 {infoDiaSeleccionado
                   ? `${infoDiaSeleccionado.nombre} ${infoDiaSeleccionado.numeroDia}`
                   : ""}
@@ -498,7 +493,7 @@ export const DashboardPage = () => {
 
             <div className="overflow-y-auto space-y-2 pr-1 flex-1">
               {totalActividadesDia === 0 ? (
-                <div className="text-center py-12 text-text-muted space-y-2 border border-dashed border-gray-100 rounded-xl bg-gray-50/30">
+                <div className="text-center py-12 text-text-muted space-y-2 border border-dashed border-text-muted/10 rounded-xl bg-background/30">
                   <AlertCircle className="w-5 h-5 text-text-muted/40 mx-auto" />
                   <p className="text-[11px] font-medium">
                     No se registran actividades para este día.
@@ -506,7 +501,6 @@ export const DashboardPage = () => {
                 </div>
               ) : (
                 <>
-                  {/* Renderizado de Vencimientos DIAN del Día */}
                   {vtosDiaSeleccionado.map((t) => {
                     const esVencidoHistorico =
                       t.estado_tarea !== "PRESENTADO" &&
@@ -515,7 +509,7 @@ export const DashboardPage = () => {
                       <div
                         key={t.id}
                         onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
-                        className="p-3 bg-gray-50 border border-gray-100 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white hover:border-gray-200 transition-all cursor-pointer group"
+                        className="p-3 bg-background border border-text-muted/10 rounded-lg flex justify-between items-center text-[11px] hover:shadow-sm hover:bg-surface hover:border-text-muted/20 transition-all cursor-pointer group"
                       >
                         <div className="truncate space-y-0.5 max-w-[70%]">
                           <p
@@ -532,8 +526,8 @@ export const DashboardPage = () => {
                             t.estado_tarea === "PRESENTADO"
                               ? "bg-success/10 text-success border-success/20"
                               : esVencidoHistorico
-                                ? "bg-danger text-white border-danger animate-pulse font-extrabold"
-                                : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                ? "bg-danger text-surface border-danger animate-pulse font-extrabold"
+                                : "bg-warning/10 text-warning border-warning/20"
                           }`}
                         >
                           {esVencidoHistorico ? "VENCIDO" : t.estado_tarea}
@@ -542,14 +536,13 @@ export const DashboardPage = () => {
                     );
                   })}
 
-                  {/* Renderizado de Tareas Internas del Día */}
                   {tareasDiaSeleccionado.map((t) => {
                     const esCompletada = t.estado === "COMPLETADA";
                     const esVencida =
                       !esCompletada && t.fecha_limite < localTodayStr;
 
                     let badgeStyle =
-                      "bg-amber-100 text-amber-700 border-amber-200";
+                      "bg-warning/10 text-warning border-warning/20";
                     let badgeText = "PENDIENTE";
 
                     if (esCompletada) {
@@ -558,7 +551,7 @@ export const DashboardPage = () => {
                       badgeText = "COMPLETADA";
                     } else if (esVencida) {
                       badgeStyle =
-                        "bg-danger text-white border-danger animate-pulse font-extrabold";
+                        "bg-danger text-surface border-danger animate-pulse font-extrabold";
                       badgeText = "VENCIDA";
                     }
 
@@ -566,7 +559,7 @@ export const DashboardPage = () => {
                       <div
                         key={t.id}
                         onClick={() => navigate("/tareas")}
-                        className={`p-3 border-2 rounded-lg flex justify-between items-center text-[11px] hover:shadow-2xs hover:bg-white transition-all cursor-pointer group ${esVencida ? "border-danger bg-danger/5" : esCompletada ? "border-success/40 bg-gray-50/50" : "border-amber-300 bg-gray-50"}`}
+                        className={`p-3 border-2 rounded-lg flex justify-between items-center text-[11px] hover:shadow-sm hover:bg-surface transition-all cursor-pointer group ${esVencida ? "border-danger bg-danger/5" : esCompletada ? "border-success/40 bg-background/50" : "border-warning/30 bg-background"}`}
                       >
                         <div className="truncate space-y-0.5 max-w-[70%]">
                           <p
