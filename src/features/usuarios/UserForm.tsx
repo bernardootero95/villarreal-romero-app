@@ -92,7 +92,7 @@ export const UserForm = ({
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-gray-200">
+      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-text-muted/20">
         <div className="bg-primary p-4 flex justify-between items-center">
           <h2 className="text-surface font-title font-semibold text-sm">
             {isEditing
@@ -101,13 +101,16 @@ export const UserForm = ({
           </h2>
           <button
             onClick={onClose}
-            className="text-surface/70 hover:text-surface cursor-pointer"
+            className="text-surface/70 hover:text-surface cursor-pointer transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="p-6 space-y-4 bg-surface"
+        >
           {errorPersistencia && (
             <div className="animate-in fade-in duration-200">
               <AlertNotification
@@ -127,9 +130,9 @@ export const UserForm = ({
               <input
                 {...register("username")}
                 disabled={isEditing}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface ${
-                  errors.username ? "border-danger" : "border-gray-300"
-                } ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface transition-colors ${
+                  errors.username ? "border-danger" : "border-text-muted/30"
+                } ${isEditing ? "bg-text-muted/10 cursor-not-allowed border-text-muted/20" : ""}`}
                 placeholder="juan.perez"
               />
               {errors.username && (
@@ -145,7 +148,7 @@ export const UserForm = ({
               </label>
               <select
                 {...register("cargo")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface text-sm cursor-pointer"
+                className="w-full px-3 py-2 border border-text-muted/30 rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface text-sm cursor-pointer transition-colors appearance-none"
               >
                 {CARGOS_PERMITIDOS.map((cargo) => (
                   <option key={cargo} value={cargo}>
@@ -167,8 +170,10 @@ export const UserForm = ({
             </label>
             <input
               {...register("nombre_completo")}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface ${
-                errors.nombre_completo ? "border-danger" : "border-gray-300"
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface transition-colors ${
+                errors.nombre_completo
+                  ? "border-danger"
+                  : "border-text-muted/30"
               }`}
             />
             {errors.nombre_completo && (
@@ -187,8 +192,10 @@ export const UserForm = ({
             </label>
             <input
               {...register("correo_notificacion")}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface ${
-                errors.correo_notificacion ? "border-danger" : "border-gray-300"
+              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface transition-colors ${
+                errors.correo_notificacion
+                  ? "border-danger"
+                  : "border-text-muted/30"
               }`}
               placeholder="alertas@correo.com"
             />
@@ -206,7 +213,7 @@ export const UserForm = ({
               </label>
               <select
                 {...register("estado")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface text-sm cursor-pointer"
+                className="w-full px-3 py-2 border border-text-muted/30 rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface text-sm cursor-pointer transition-colors appearance-none"
               >
                 {ESTADOS_USUARIO.map((est) => (
                   <option key={est} value={est}>
@@ -217,11 +224,11 @@ export const UserForm = ({
             </div>
           )}
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-text-muted/10">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium cursor-pointer"
+              className="px-4 py-2 text-text-muted hover:bg-text-muted/10 rounded-md transition-colors text-sm font-medium cursor-pointer"
             >
               Cancelar
             </button>
