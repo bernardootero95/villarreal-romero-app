@@ -156,7 +156,7 @@ export const PerfilPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-        <div className="bg-surface rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col justify-between">
+        <div className="bg-surface rounded-xl shadow-sm border border-text-muted/20 overflow-hidden flex flex-col justify-between">
           <div className="bg-primary/5 p-8 flex flex-col items-center justify-center text-center flex-1">
             <div className="w-24 h-24 bg-primary text-surface rounded-full flex items-center justify-center mb-4 shadow-md ring-4 ring-surface">
               <UserCircle className="w-16 h-16" />
@@ -169,8 +169,8 @@ export const PerfilPage = () => {
             </span>
           </div>
 
-          <div className="p-6 space-y-4 bg-white border-t border-gray-100">
-            <div className="flex items-center gap-3 text-text-main justify-center border-b border-gray-50 pb-4">
+          <div className="p-6 space-y-4 bg-surface border-t border-text-muted/10">
+            <div className="flex items-center gap-3 text-text-main justify-center border-b border-text-muted/10 pb-4">
               <Briefcase className="w-4 h-4 text-text-muted shrink-0" />
               <div className="text-center">
                 <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
@@ -198,7 +198,7 @@ export const PerfilPage = () => {
         </div>
 
         <div className="space-y-6 flex flex-col justify-between">
-          <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6 flex-1 flex flex-col justify-between space-y-4">
+          <div className="bg-surface rounded-xl shadow-sm border border-text-muted/20 p-6 flex-1 flex flex-col justify-between space-y-4">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Mail className="w-5 h-5 text-accent" />
@@ -232,7 +232,7 @@ export const PerfilPage = () => {
                     value={correoNotif}
                     onChange={(e) => setCorreoNotif(e.target.value)}
                     placeholder="ejemplo@correo.com"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-surface text-sm focus:ring-1 focus:ring-accent outline-none"
+                    className="w-full px-4 py-2 border border-text-muted/30 rounded-lg bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors"
                   />
                   <p className="text-[10px] text-text-muted mt-1 leading-tight">
                     * Aquí recibirás las alertas de vencimiento. Tu correo de
@@ -255,7 +255,7 @@ export const PerfilPage = () => {
             </div>
           </div>
 
-          <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6 flex-1 flex flex-col justify-between space-y-4">
+          <div className="bg-surface rounded-xl shadow-sm border border-text-muted/20 p-6 flex-1 flex flex-col justify-between space-y-4">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Key className="w-5 h-5 text-accent" />
@@ -288,7 +288,7 @@ export const PerfilPage = () => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Escribe tu nueva clave secreta..."
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-all"
+                    className="w-full px-4 py-2 border border-text-muted/30 rounded-lg bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-all"
                   />
                   <p className="text-[10px] text-text-muted mt-1">
                     Usa al menos 6 caracteres. Te recomendamos combinar letras y
@@ -310,8 +310,8 @@ export const PerfilPage = () => {
         </div>
       </div>
 
-      <div className="bg-surface rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-2 mb-4 border-b border-gray-50 pb-3">
+      <div className="bg-surface rounded-xl shadow-sm border border-text-muted/20 p-6">
+        <div className="flex items-center gap-2 mb-4 border-b border-text-muted/10 pb-3">
           <FolderOpen className="w-5 h-5 text-accent" />
           <div>
             <h3 className="text-lg font-bold text-primary">
@@ -328,7 +328,7 @@ export const PerfilPage = () => {
             Sincronizando archivo corporativo...
           </p>
         ) : misClientes.length === 0 ? (
-          <div className="p-8 text-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200 space-y-1.5">
+          <div className="p-8 text-center bg-background/50 rounded-xl border border-dashed border-text-muted/30 space-y-1.5">
             <Building2 className="w-8 h-8 text-text-muted/40 mx-auto" />
             <p className="text-sm font-medium text-text-main">
               No registras clientes a tu cargo
@@ -345,7 +345,7 @@ export const PerfilPage = () => {
                 <div
                   key={cliente.id}
                   onClick={() => navigate(`/clientes/${cliente.id}`)}
-                  className="p-4 bg-gray-50 hover:bg-white border border-gray-100 hover:border-gray-200 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-2xs group h-[74px]"
+                  className="p-4 bg-background hover:bg-surface border border-text-muted/10 hover:border-text-muted/30 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-2xs group h-[74px]"
                 >
                   <div className="flex items-center gap-3 truncate">
                     <div className="w-9 h-9 rounded-lg bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/5 group-hover:bg-primary group-hover:text-surface transition-colors">
@@ -355,7 +355,7 @@ export const PerfilPage = () => {
                       <h4 className="text-sm font-bold text-primary truncate group-hover:text-accent transition-colors">
                         {cliente.razon_social}
                       </h4>
-                      <p className="text-xs text-text-muted font-mono bg-gray-100 group-hover:bg-gray-50 px-2 py-0.5 rounded w-fit">
+                      <p className="text-xs text-text-muted font-mono bg-text-muted/10 group-hover:bg-text-muted/20 px-2 py-0.5 rounded w-fit transition-colors">
                         NIT: {cliente.nit}-{cliente.dv}
                       </p>
                     </div>
