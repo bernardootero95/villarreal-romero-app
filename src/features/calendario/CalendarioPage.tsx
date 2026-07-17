@@ -9,7 +9,7 @@ import type { Vencimiento } from "./vencimientosService";
 import type { Tarea } from "../tareas/types";
 import { Loader } from "../../components/Loader";
 import { AlertNotification } from "../../components/ui/AlertNotification";
-import { TareaForm } from "../tareas/TareaForm"; // <-- IMPORTAMOS EL FORMULARIO REUTILIZABLE
+import { TareaForm } from "../tareas/TareaForm";
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,7 +19,7 @@ import {
   CheckSquare,
   CheckCircle2,
   ClipboardList,
-  Plus, // <-- Icono para el botón
+  Plus,
 } from "lucide-react";
 
 export const CalendarioPage = () => {
@@ -30,20 +30,17 @@ export const CalendarioPage = () => {
   const [radicados, setRadicados] = useState<Record<string, string>>({});
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
-  // Estado para controlar la visibilidad del modal de creación de tareas
   const [showTareaForm, setShowTareaForm] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // 1. Consulta de Vencimientos Tributarios
   const {
     data: vencimientos = [],
     isLoading: loadingVencimientos,
     error: errorVencimientos,
   } = useVencimientosMes(year, month, session?.user?.id, perfil?.cargo);
 
-  // 2. Consulta de Tareas Internas
   const {
     data: tareas = [],
     isLoading: loadingTareas,
@@ -66,7 +63,6 @@ export const CalendarioPage = () => {
   const localDate = new Date();
   const dateStrToday = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
-  // Agrupación en memoria de Vencimientos
   const vencimientosPorDia = vencimientos.reduce(
     (acc, v) => {
       if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
@@ -76,7 +72,6 @@ export const CalendarioPage = () => {
     {} as Record<string, Vencimiento[]>,
   );
 
-  // Agrupación en memoria de Tareas
   const tareasPorDia = tareas.reduce(
     (acc, t) => {
       if (!acc[t.fecha_limite]) acc[t.fecha_limite] = [];
@@ -153,7 +148,7 @@ export const CalendarioPage = () => {
 
     return (
       <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col max-h-[85vh]">
+        <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-text-muted/20 flex flex-col max-h-[85vh]">
           <div className="bg-primary p-4 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-2 text-surface">
               <CalendarIcon className="w-5 h-5" />
@@ -169,7 +164,7 @@ export const CalendarioPage = () => {
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50 space-y-6">
+          <div className="p-6 overflow-y-auto flex-1 bg-background/50 space-y-6">
             {errorLocal && (
               <div className="animate-in fade-in duration-200">
                 <AlertNotification
@@ -190,7 +185,7 @@ export const CalendarioPage = () => {
                 {/* SECCIÓN 1: Vencimientos Tributarios */}
                 {vtosDelDia.length > 0 && (
                   <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-primary border-b border-gray-200 pb-2">
+                    <h3 className="text-sm font-bold text-primary border-b border-text-muted/20 pb-2">
                       Vencimientos Oficiales
                     </h3>
                     {vtosDelDia.map((tarea) => {
@@ -204,7 +199,7 @@ export const CalendarioPage = () => {
                       return (
                         <div
                           key={tarea.id}
-                          className="bg-surface border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100"
+                          className="bg-surface border border-text-muted/20 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100"
                         >
                           <div className="flex-1 space-y-1">
                             <h4 className="font-bold text-primary text-base leading-tight">
@@ -215,10 +210,10 @@ export const CalendarioPage = () => {
                             </p>
 
                             <div className="flex flex-wrap items-center gap-2 pt-1">
-                              <span className="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded font-semibold">
+                              <span className="bg-primary/10 text-primary border border-primary/20 text-xs px-2 py-0.5 rounded font-semibold">
                                 {tarea.impuestos.nombre}
                               </span>
-                              <span className="text-xs text-text-muted font-medium bg-gray-100 px-2 py-0.5 rounded">
+                              <span className="text-xs text-text-muted font-medium bg-text-muted/10 px-2 py-0.5 rounded">
                                 Periodo: {tarea.periodo_fiscal}
                               </span>
                             </div>
@@ -230,7 +225,7 @@ export const CalendarioPage = () => {
                             )}
                           </div>
 
-                          <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
+                          <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-text-muted/10">
                             {tarea.estado_tarea === "PRESENTADO" ? (
                               <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full border border-success/10">
                                 <CheckCircle className="w-4 h-4" /> Presentado
@@ -247,14 +242,14 @@ export const CalendarioPage = () => {
                                     })
                                   }
                                   placeholder="N° Radicado de la DIAN..."
-                                  className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-surface outline-none focus:ring-1 focus:ring-accent"
+                                  className="w-full text-xs px-2 py-1.5 border border-text-muted/20 rounded bg-surface outline-none focus:ring-1 focus:ring-accent"
                                 />
                                 <button
                                   onClick={() =>
                                     handleMarcarPresentado(tarea.id)
                                   }
                                   disabled={guardandoId}
-                                  className="w-full bg-success hover:bg-success/90 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                                  className="w-full bg-success hover:bg-success/90 text-surface text-xs px-3 py-1.5 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                                 >
                                   <CheckSquare className="w-3.5 h-3.5" />
                                   {guardandoId
@@ -270,10 +265,9 @@ export const CalendarioPage = () => {
                   </div>
                 )}
 
-                {/* SECCIÓN 2: Tareas Internas */}
                 {tareasDelDia.length > 0 && (
                   <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-primary border-b border-gray-200 pb-2 flex items-center gap-1.5">
+                    <h3 className="text-sm font-bold text-primary border-b border-text-muted/20 pb-2 flex items-center gap-1.5">
                       <ClipboardList className="w-4 h-4 text-accent" /> Tareas
                       Internas
                     </h3>
@@ -290,7 +284,7 @@ export const CalendarioPage = () => {
                       return (
                         <div
                           key={tarea.id}
-                          className={`bg-surface border rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100 ${esVencida ? "border-danger/30 bg-danger/5" : "border-gray-200"}`}
+                          className={`bg-surface border rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-100 ${esVencida ? "border-danger/30 bg-danger/5" : "border-text-muted/20"}`}
                         >
                           <div className="flex-1 space-y-1">
                             <h4
@@ -306,7 +300,7 @@ export const CalendarioPage = () => {
 
                             <div className="flex gap-2 items-center mt-2">
                               {esVencida && (
-                                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-danger text-white border-danger animate-pulse tracking-wider">
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-danger text-surface border-danger animate-pulse tracking-wider">
                                   VENCIDA
                                 </span>
                               )}
@@ -319,7 +313,7 @@ export const CalendarioPage = () => {
                             </div>
                           </div>
 
-                          <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
+                          <div className="flex flex-col items-end justify-center shrink-0 min-w-[200px] border-t md:border-t-0 pt-3 md:pt-0 border-text-muted/10">
                             {esCompletada ? (
                               <span className="flex items-center gap-1.5 text-sm font-bold text-success bg-success/10 px-3 py-1 rounded-full border border-success/10">
                                 <CheckCircle2 className="w-4 h-4" /> Completada
@@ -333,7 +327,7 @@ export const CalendarioPage = () => {
                                   })
                                 }
                                 disabled={guardandoId}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+                                className="w-full bg-primary hover:bg-primary/90 text-surface text-xs px-3 py-2 rounded font-semibold flex items-center justify-center gap-1 transition-all shadow-xs disabled:opacity-50 cursor-pointer"
                               >
                                 <CheckSquare className="w-3.5 h-3.5" />
                                 {guardandoId
@@ -381,7 +375,6 @@ export const CalendarioPage = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          {/* BOTÓN NUEVA TAREA AÑADIDO Y ENLAZADO */}
           <button
             onClick={() => setShowTareaForm(true)}
             className="bg-primary text-surface px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm text-sm font-semibold cursor-pointer w-full sm:w-auto"
@@ -389,22 +382,22 @@ export const CalendarioPage = () => {
             <Plus className="w-4 h-4" /> Nueva Tarea
           </button>
 
-          <div className="flex items-center bg-surface border border-gray-200 rounded-lg p-1 shadow-sm w-full sm:w-auto justify-between">
+          <div className="flex items-center bg-surface border border-text-muted/20 rounded-lg p-1 shadow-sm w-full sm:w-auto justify-between">
             <button
               onClick={prevMonth}
-              className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors cursor-pointer"
+              className="p-2 hover:bg-text-muted/10 rounded text-text-main transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={goToToday}
-              className="px-4 py-1 text-sm font-semibold text-primary hover:bg-gray-100 rounded transition-colors cursor-pointer"
+              className="px-4 py-1 text-sm font-semibold text-primary hover:bg-text-muted/10 rounded transition-colors cursor-pointer"
             >
               Hoy
             </button>
             <button
               onClick={nextMonth}
-              className="p-2 hover:bg-gray-100 rounded text-text-main transition-colors cursor-pointer"
+              className="p-2 hover:bg-text-muted/10 rounded text-text-main transition-colors cursor-pointer"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -423,14 +416,14 @@ export const CalendarioPage = () => {
         </div>
       )}
 
-      <div className="card-container !p-0 overflow-hidden bg-surface shadow-lg border border-gray-200 rounded-xl">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/80 text-center">
+      <div className="card-container !p-0 overflow-hidden bg-surface shadow-lg border border-text-muted/20 rounded-xl">
+        <div className="p-4 border-b border-text-muted/10 bg-background/80 text-center">
           <h2 className="text-xl font-title font-bold text-primary capitalize">
             {meses[month]} {year}
           </h2>
         </div>
 
-        <div className="grid grid-cols-7 border-b border-gray-200">
+        <div className="grid grid-cols-7 border-b border-text-muted/20">
           {diasSemana.map((d) => (
             <div
               key={d}
@@ -441,15 +434,14 @@ export const CalendarioPage = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 auto-rows-[100px] md:auto-rows-[120px] bg-gray-200 gap-px border-b border-gray-200">
+        <div className="grid grid-cols-7 auto-rows-[100px] md:auto-rows-[120px] bg-text-muted/20 gap-px border-b border-text-muted/20">
           {blanks.map((b) => (
-            <div key={`blank-${b}`} className="bg-gray-50/50" />
+            <div key={`blank-${b}`} className="bg-background/50" />
           ))}
 
           {days.map((day) => {
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-            // Datos del día
             const vtosDelDia = vencimientosPorDia[dateStr] || [];
             const tareasDelDia = tareasPorDia[dateStr] || [];
             const isToday = dateStrToday === dateStr;
@@ -465,7 +457,7 @@ export const CalendarioPage = () => {
               <div
                 key={day}
                 onClick={() => setSelectedDate(dateStr)}
-                className="bg-surface p-2 flex flex-col hover:bg-blue-50/50 cursor-pointer transition-colors relative group"
+                className="bg-surface p-2 flex flex-col hover:bg-primary/5 cursor-pointer transition-colors relative group"
               >
                 <div className="flex justify-between items-start">
                   <span
@@ -476,26 +468,24 @@ export const CalendarioPage = () => {
                 </div>
 
                 <div className="mt-2 flex-1 overflow-hidden flex flex-col justify-end gap-1.5 pb-1">
-                  {/* Etiqueta Vencimientos Oficiales */}
                   {vtosDelDia.length > 0 && (
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
                         pendientesVto === 0
                           ? "bg-success/10 text-success"
-                          : "bg-amber-100 text-amber-700"
+                          : "bg-warning/10 text-warning"
                       }`}
                     >
                       {vtosDelDia.length} Vto{vtosDelDia.length > 1 ? "s" : ""}
                     </span>
                   )}
 
-                  {/* Etiqueta Tareas Internas */}
                   {tareasDelDia.length > 0 && (
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
                         pendientesTarea === 0
-                          ? "bg-blue-50 text-blue-600"
-                          : "bg-blue-100 text-blue-700"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-primary/20 text-primary"
                       }`}
                     >
                       {tareasDelDia.length} Tarea
@@ -511,7 +501,6 @@ export const CalendarioPage = () => {
 
       {renderDayModal()}
 
-      {/* RENDERIZADO DEL FORMULARIO DE TAREA REUTILIZADO */}
       {showTareaForm && (
         <TareaForm
           onClose={() => setShowTareaForm(false)}
