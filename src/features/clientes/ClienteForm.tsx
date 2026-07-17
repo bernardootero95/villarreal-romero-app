@@ -12,6 +12,7 @@ import { usuariosService } from "../usuarios/usuariosService";
 import type { Usuario } from "../usuarios/types";
 import { FichaObligaciones } from "./FichaObligaciones";
 import { AlertNotification } from "../../components/ui/AlertNotification";
+import { Loader } from "../../components/Loader";
 
 interface ClienteFormProps {
   onClose: () => void;
@@ -149,8 +150,8 @@ export const ClienteForm = ({
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-gray-200">
-        <div className="bg-primary p-4 flex justify-between items-center">
+      <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-text-muted/20">
+        <div className="bg-primary p-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2 text-surface">
             <Building2 className="w-5 h-5" />
             <h2 className="font-title font-semibold">
@@ -165,169 +166,182 @@ export const ClienteForm = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
-          {submitError && (
-            <div className="animate-in fade-in duration-200">
-              <AlertNotification
-                type="error"
-                title="Error de Registro"
-                message={submitError}
-                onClose={() => setSubmitError(null)}
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-9 md:col-span-10">
-              <label className="block text-sm font-medium text-text-main mb-1">
-                NIT
-              </label>
-              <input
-                {...register("nit")}
-                disabled={isEditing}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface ${
-                  errors.nit ? "border-danger" : "border-gray-300"
-                } ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                placeholder="Ej. 900123456"
-              />
-              {errors.nit && (
-                <p className="text-danger text-xs mt-1">{errors.nit.message}</p>
-              )}
-            </div>
-
-            <div className="col-span-3 md:col-span-2">
-              <label className="block text-sm font-medium text-text-main mb-1">
-                DV
-              </label>
-              <input
-                {...register("dv", { valueAsNumber: true })}
-                type="number"
-                readOnly
-                className={`w-full px-3 py-2 border rounded-md outline-none data-code text-center bg-gray-100 cursor-not-allowed ${
-                  errors.dv ? "border-danger" : "border-gray-300"
-                }`}
-                placeholder="-"
-              />
-              <p className="text-[10px] text-text-muted mt-1 text-center">
-                Calculado
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">
-              Razón Social / Nombre
-            </label>
-            <input
-              {...register("razon_social")}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
-                errors.razon_social ? "border-danger" : "border-gray-300"
-              }`}
-              placeholder="Nombre de la empresa o persona natural"
+        {loadingContadores ? (
+          <div className="p-12 bg-surface">
+            <Loader
+              texto="Cargando catálogo de responsables..."
+              fullScreen={false}
             />
-            {errors.razon_social && (
-              <p className="text-danger text-xs mt-1">
-                {errors.razon_social.message}
-              </p>
-            )}
           </div>
+        ) : (
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="p-6 space-y-5 bg-surface"
+          >
+            {submitError && (
+              <div className="animate-in fade-in duration-200">
+                <AlertNotification
+                  type="error"
+                  title="Error de Registro"
+                  message={submitError}
+                  onClose={() => setSubmitError(null)}
+                />
+              </div>
+            )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1">
-                Email de Contacto{" "}
-                <span className="text-text-muted font-normal text-xs">
-                  (Opcional)
-                </span>
-              </label>
-              <input
-                {...register("email")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
-                  errors.email ? "border-danger" : "border-gray-300"
-                }`}
-                placeholder="facturacion@empresa.com"
-              />
-              {errors.email && (
-                <p className="text-danger text-xs mt-1">
-                  {errors.email.message}
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-9 md:col-span-10">
+                <label className="block text-sm font-medium text-text-main mb-1">
+                  NIT
+                </label>
+                <input
+                  {...register("nit")}
+                  disabled={isEditing}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface transition-colors ${
+                    errors.nit ? "border-danger" : "border-text-muted/30"
+                  } ${isEditing ? "bg-text-muted/10 cursor-not-allowed border-text-muted/20" : ""}`}
+                  placeholder="Ej. 900123456"
+                />
+                {errors.nit && (
+                  <p className="text-danger text-xs mt-1">
+                    {errors.nit.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="col-span-3 md:col-span-2">
+                <label className="block text-sm font-medium text-text-main mb-1">
+                  DV
+                </label>
+                <input
+                  {...register("dv", { valueAsNumber: true })}
+                  type="number"
+                  readOnly
+                  className={`w-full px-3 py-2 border rounded-md outline-none data-code text-center bg-text-muted/10 cursor-not-allowed ${
+                    errors.dv ? "border-danger" : "border-text-muted/20"
+                  }`}
+                  placeholder="-"
+                />
+                <p className="text-[10px] text-text-muted mt-1 text-center font-medium">
+                  Calculado
                 </p>
-              )}
+              </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
-                Número de Celular{" "}
-                <span className="text-text-muted font-normal text-xs">
-                  (Opcional)
-                </span>
+                Razón Social / Nombre
               </label>
               <input
-                {...register("celular")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface ${
-                  errors.celular ? "border-danger" : "border-gray-300"
+                {...register("razon_social")}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors ${
+                  errors.razon_social ? "border-danger" : "border-text-muted/30"
                 }`}
-                placeholder="Ej. 3151234567"
+                placeholder="Nombre de la empresa o persona natural"
               />
-              {errors.celular && (
+              {errors.razon_social && (
                 <p className="text-danger text-xs mt-1">
-                  {errors.celular.message}
+                  {errors.razon_social.message}
                 </p>
               )}
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">
-              Responsable Asignado
-            </label>
-            <select
-              {...register("contador_id")}
-              disabled={loadingContadores}
-              className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface ${
-                errors.contador_id ? "border-danger" : "border-gray-300"
-              }`}
-            >
-              <option value="">Seleccione un responsable...</option>
-              {contadores.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.nombre_completo} ({user.cargo})
-                </option>
-              ))}
-            </select>
-            {errors.contador_id && (
-              <p className="text-danger text-xs mt-1">
-                {errors.contador_id.message}
-              </p>
-            )}
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-1">
+                  Email de Contacto{" "}
+                  <span className="text-text-muted font-normal text-xs">
+                    (Opcional)
+                  </span>
+                </label>
+                <input
+                  {...register("email")}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors ${
+                    errors.email ? "border-danger" : "border-text-muted/30"
+                  }`}
+                  placeholder="facturacion@empresa.com"
+                />
+                {errors.email && (
+                  <p className="text-danger text-xs mt-1">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
 
-          <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm cursor-pointer"
-            >
-              {isSubmitting ? (
-                "Guardando..."
-              ) : isEditing ? (
-                <>
-                  <Save className="w-4 h-4" /> Actualizar Cliente
-                </>
-              ) : (
-                <>
-                  Continuar a Impuestos <ArrowRight className="w-4 h-4" />
-                </>
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-1">
+                  Número de Celular{" "}
+                  <span className="text-text-muted font-normal text-xs">
+                    (Opcional)
+                  </span>
+                </label>
+                <input
+                  {...register("celular")}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none data-code bg-surface transition-colors ${
+                    errors.celular ? "border-danger" : "border-text-muted/30"
+                  }`}
+                  placeholder="Ej. 3151234567"
+                />
+                {errors.celular && (
+                  <p className="text-danger text-xs mt-1">
+                    {errors.celular.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">
+                Responsable Asignado
+              </label>
+              <select
+                {...register("contador_id")}
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors appearance-none ${
+                  errors.contador_id ? "border-danger" : "border-text-muted/30"
+                }`}
+              >
+                <option value="">Seleccione un responsable...</option>
+                {contadores.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.nombre_completo} ({user.cargo})
+                  </option>
+                ))}
+              </select>
+              {errors.contador_id && (
+                <p className="text-danger text-xs mt-1">
+                  {errors.contador_id.message}
+                </p>
               )}
-            </button>
-          </div>
-        </form>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-text-muted/10">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-text-muted hover:bg-text-muted/10 rounded-md transition-colors text-sm font-medium cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-accent hover:bg-accent/90 text-primary font-semibold px-6 py-2 rounded-md flex items-center gap-2 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed text-sm cursor-pointer"
+              >
+                {isSubmitting ? (
+                  "Guardando..."
+                ) : isEditing ? (
+                  <>
+                    <Save className="w-4 h-4" /> Actualizar Cliente
+                  </>
+                ) : (
+                  <>
+                    Continuar a Impuestos <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
