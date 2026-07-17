@@ -39,28 +39,24 @@ export const AlertNotification = ({
     { container: string; icon: React.ReactNode; iconColor: string }
   > = {
     success: {
-      container:
-        "bg-success/10 border-success/30 text-text-main text-success-dark",
+      container: "bg-success/10 border-success/30 text-text-main",
       icon: <CheckCircle2 className="w-5 h-5" />,
       iconColor: "text-success",
     },
     warning: {
-      container:
-        "bg-amber-500/10 border-amber-500/30 text-text-main text-amber-700",
+      container: "bg-warning/10 border-warning/30 text-text-main",
       icon: <AlertTriangle className="w-5 h-5" />,
-      iconColor: "text-amber-600",
+      iconColor: "text-warning",
     },
     error: {
-      container:
-        "bg-danger/10 border-danger/30 text-text-main text-danger-dark",
+      container: "bg-danger/10 border-danger/30 text-text-main",
       icon: <AlertCircle className="w-5 h-5" />,
       iconColor: "text-danger",
     },
     info: {
-      container:
-        "bg-[var(--accent-bg)] border-[var(--accent-border)] text-text-main",
+      container: "bg-primary/10 border-primary/30 text-text-main",
       icon: <Info className="w-5 h-5" />,
-      iconColor: "text-[var(--accent)]",
+      iconColor: "text-primary",
     },
   };
 
@@ -69,7 +65,7 @@ export const AlertNotification = ({
   return (
     <div
       role="alert"
-      className={`w-full p-4 border rounded-xl flex items-start gap-3.5 transition-all animate-in fade-in slide-in-from-top-2 duration-200 shadow-2xs ${currentStyle.container}`}
+      className={`w-full p-4 border rounded-xl flex items-start gap-3.5 transition-all animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm ${currentStyle.container}`}
     >
       <div className={`shrink-0 mt-0.5 ${currentStyle.iconColor}`}>
         {currentStyle.icon}
@@ -86,7 +82,7 @@ export const AlertNotification = ({
         <button
           type="button"
           onClick={onClose}
-          className="shrink-0 text-text-muted hover:text-primary p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)]"
+          className="shrink-0 text-text-muted hover:text-primary p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
           aria-label="Cerrar alerta"
         >
           <X className="w-4 h-4" />
