@@ -4,11 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --color-primary: #0d2e5e;
-  --color-accent: #c9a84c;
-}
-
 @layer base {
   body {
     @apply bg-background text-text-main font-body antialiased;
