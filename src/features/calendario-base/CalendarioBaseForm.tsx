@@ -105,7 +105,7 @@ export const CalendarioBaseForm = ({
 
   return (
     <div className="fixed inset-0 bg-primary/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-gray-200">
+      <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-text-muted/20">
         <div className="bg-primary p-4 flex justify-between items-center">
           <div className="flex items-center gap-2 text-surface">
             <CalendarDays className="w-5 h-5" />
@@ -151,7 +151,7 @@ export const CalendarioBaseForm = ({
                 <input
                   type="number"
                   {...register("anio", { valueAsNumber: true })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
+                  className="w-full px-3 py-2 border border-text-muted/30 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
                 />
                 {errors.anio && (
                   <p className="text-danger text-xs mt-1">
@@ -166,7 +166,7 @@ export const CalendarioBaseForm = ({
                 </label>
                 <input
                   {...register("periodo")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
+                  className="w-full px-3 py-2 border border-text-muted/30 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
                   placeholder="Ej. 01, B1, ANUAL"
                 />
                 {errors.periodo && (
@@ -195,8 +195,8 @@ export const CalendarioBaseForm = ({
                   placeholder={requiereDigito ? "0-9" : "Fecha fija"}
                   className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm ${
                     !requiereDigito
-                      ? "bg-gray-100 cursor-not-allowed"
-                      : "bg-surface border-gray-300"
+                      ? "bg-text-muted/10 cursor-not-allowed border-text-muted/20"
+                      : "bg-surface border-text-muted/30"
                   }`}
                 />
                 {errors.digito && (
@@ -213,7 +213,7 @@ export const CalendarioBaseForm = ({
                 <input
                   type="date"
                   {...register("fecha_vencimiento_oficial")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
+                  className="w-full px-3 py-2 border border-text-muted/30 rounded-md focus:ring-1 focus:ring-accent outline-none text-sm bg-surface"
                 />
                 {errors.fecha_vencimiento_oficial && (
                   <p className="text-danger text-xs mt-1">
@@ -223,19 +223,19 @@ export const CalendarioBaseForm = ({
               </div>
             </div>
 
-            <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
-              <p className="text-[11px] text-amber-800 leading-relaxed">
+            <div className="bg-warning/10 p-3 rounded-lg border border-warning/20 mt-2">
+              <p className="text-[11px] text-warning leading-relaxed">
                 <strong>Nota:</strong> Al guardar, el sistema actualizará
                 dinámicamente el cronograma de todas las empresas vinculadas a
                 este impuesto.
               </p>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-text-muted/10">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-text-muted hover:bg-gray-100 rounded-md transition-colors text-sm font-medium cursor-pointer"
+                className="px-4 py-2 text-text-muted hover:bg-text-muted/10 rounded-md transition-colors text-sm font-medium cursor-pointer"
               >
                 Cancelar
               </button>
