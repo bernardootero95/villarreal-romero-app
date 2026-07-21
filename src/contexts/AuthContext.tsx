@@ -82,13 +82,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-  // Se estabiliza la referencia de la función para evitar re-renderizados del hook de inactividad
   const signOut = useCallback(async () => {
     queryClient.clear();
     await supabase.auth.signOut();
   }, [queryClient]);
 
-  // Cierre de sesión automático si no se detecta interacción del usuario en 15 minutos
   useInactividad(() => {
     if (session) {
       console.warn("Cerrando sesión por inactividad operativa.");
