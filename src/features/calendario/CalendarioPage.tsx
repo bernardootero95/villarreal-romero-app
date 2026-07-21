@@ -182,7 +182,6 @@ export const CalendarioPage = () => {
               </p>
             ) : (
               <>
-                {/* SECCIÓN 1: Vencimientos Tributarios */}
                 {vtosDelDia.length > 0 && (
                   <div className="space-y-4">
                     <h3 className="text-sm font-bold text-primary border-b border-text-muted/20 pb-2">
@@ -453,6 +452,24 @@ export const CalendarioPage = () => {
               (t) => t.estado === "PENDIENTE",
             ).length;
 
+            const presentadosVto = vtosDelDia.filter(
+              (t) => t.estado_tarea === "PRESENTADO",
+            ).length;
+            const vencidosVto = vtosDelDia.filter(
+              (t) =>
+                t.estado_tarea !== "PRESENTADO" &&
+                t.fecha_limite < dateStrToday,
+            ).length;
+            const pendientesRealesVto = pendientesVto - vencidosVto;
+
+            const completadasTarea = tareasDelDia.filter(
+              (t) => t.estado === "COMPLETADA",
+            ).length;
+            const vencidasTarea = tareasDelDia.filter(
+              (t) => t.estado === "PENDIENTE" && t.fecha_limite < dateStrToday,
+            ).length;
+            const pendientesRealesTarea = pendientesTarea - vencidasTarea;
+
             return (
               <div
                 key={day}
@@ -467,30 +484,52 @@ export const CalendarioPage = () => {
                   </span>
                 </div>
 
-                <div className="mt-2 flex-1 overflow-hidden flex flex-col justify-end gap-1.5 pb-1">
+                <div className="mt-2 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin flex flex-col gap-1.5 pb-1 pr-1">
                   {vtosDelDia.length > 0 && (
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
-                        pendientesVto === 0
-                          ? "bg-success/10 text-success"
-                          : "bg-warning/10 text-warning"
-                      }`}
-                    >
-                      {vtosDelDia.length} Vto{vtosDelDia.length > 1 ? "s" : ""}
-                    </span>
+                    <div className="flex flex-col gap-1 w-full">
+                      {vencidosVto > 0 && (
+                        <span className="text-[9px] font-bold px-1 py-0.5 rounded w-full truncate uppercase tracking-wider bg-danger/10 text-danger border border-danger/20">
+                          {vencidosVto} Vencido{vencidosVto > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {pendientesRealesVto > 0 && (
+                        <span className="text-[9px] font-bold px-1 py-0.5 rounded w-full truncate uppercase tracking-wider bg-warning/10 text-warning border border-warning/20">
+                          {pendientesRealesVto} Pendiente
+                          {pendientesRealesVto > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {presentadosVto > 0 && (
+                        <span className="text-[9px] font-bold px-1 py-0.5 rounded w-full truncate uppercase tracking-wider bg-success/10 text-success border border-success/20">
+                          {presentadosVto} Presentado
+                          {presentadosVto > 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {vtosDelDia.length > 0 && tareasDelDia.length > 0 && (
+                    <div className="w-full border-t border-text-muted/10 my-0.5"></div>
                   )}
 
                   {tareasDelDia.length > 0 && (
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit uppercase tracking-wider ${
-                        pendientesTarea === 0
-                          ? "bg-primary/10 text-primary"
-                          : "bg-primary/20 text-primary"
-                      }`}
-                    >
-                      {tareasDelDia.length} Tarea
-                      {tareasDelDia.length > 1 ? "s" : ""}
-                    </span>
+                    <div className="flex flex-col gap-1 w-full">
+                      {vencidasTarea > 0 && (
+                        <span className="text-[9px] font-bold px-1 py-0.5 rounded w-full truncate uppercase tracking-wider bg-danger text-surface border border-danger/20">
+                          {vencidasTarea} T. Venc{vencidasTarea > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {pendientesRealesTarea > 0 && (
+                        <span className="text-[9px] font-bold px-1 py-0.5 rounded w-full truncate uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                          {pendientesRealesTarea} T. Ptte
+                          {pendientesRealesTarea > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {completadasTarea > 0 && (
+                        <span className="text-[9px] font-bold px-1 py-0.5 rounded w-full truncate uppercase tracking-wider bg-success/10 text-success border border-success/20">
+                          {completadasTarea} T. OK
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
