@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 
 export const useInactividad = (onInactivo: () => void, minutos: number = 15) => {
-  const temporizador = useRef<NodeJS.Timeout | null>(null);
+  
+  const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const reiniciarTemporizador = () => {
@@ -9,6 +10,7 @@ export const useInactividad = (onInactivo: () => void, minutos: number = 15) => 
       temporizador.current = setTimeout(onInactivo, minutos * 60 * 1000);
     };
 
+    
     const eventos = [
       "mousemove",
       "mousedown",
