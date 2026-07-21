@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// UTILIDAD SOLID (SRP): Función pura para sumar días hábiles (Salta sábados y domingos)
+
 const sumarDiasHabiles = (fechaBase: Date, diasHabilesAAgregar: number): Date => {
   const fecha = new Date(fechaBase.getTime());
   let diasAgregados = 0;
@@ -22,7 +22,7 @@ const sumarDiasHabiles = (fechaBase: Date, diasHabilesAAgregar: number): Date =>
   return fecha;
 };
 
-// UTILIDAD SOLID (SRP): Función pura aislada para generar la plantilla HTML dinámica
+
 const generarPlantillaEmail = (
   usuario: any,
   vtosVencidos: any[],
