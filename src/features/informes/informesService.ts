@@ -94,12 +94,15 @@ export const informesService = {
     });
 
     
-    return Object.values(mapaEmpleados).map((emp) => ({
-      ...emp,
-      porcentaje_efectividad:
-        emp.total_vencimientos > 0
-          ? Math.round((emp.presentados_a_tiempo / emp.total_vencimientos) * 100)
-          : 0,
-    }));
+    return Object.values(mapaEmpleados).map((emp) => {
+      const totalPresentados = emp.presentados_a_tiempo + emp.presentados_tarde;
+      return {
+        ...emp,
+        porcentaje_efectividad:
+          emp.total_vencimientos > 0
+            ? Math.round((totalPresentados / emp.total_vencimientos) * 100)
+            : 0,
+      };
+    });
   },
 };
