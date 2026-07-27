@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-
 const sumarDiasHabiles = (fechaBase: Date, diasHabilesAAgregar: number): Date => {
   const fecha = new Date(fechaBase.getTime());
   let diasAgregados = 0;
@@ -21,7 +20,6 @@ const sumarDiasHabiles = (fechaBase: Date, diasHabilesAAgregar: number): Date =>
   }
   return fecha;
 };
-
 
 const generarPlantillaEmail = (
   usuario: any,
@@ -99,18 +97,15 @@ serve(async (req) => {
       throw new Error("No se ha configurado la variable de entorno RESEND_API_KEY.");
     }
 
-    // Variables Dinámicas de Identidad Corporativa (Marca Blanca)
     const EMPRESA_NOMBRE = Deno.env.get('APP_NAME') || 'Firma Contable';
     const COLOR_PRIMARIO = Deno.env.get('APP_COLOR_PRIMARY') || '#0f172a';
 
     const hoy = new Date()
     const hoyStr = hoy.toISOString().split('T')[0]
     
-    // Rango de búsqueda: Desde el día 1 del mes actual
     const fechaInicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
     const inicioMesStr = fechaInicioMes.toISOString().split('T')[0]
 
-    // Rango de búsqueda: Hasta 3 días HÁBILES en el futuro
     const fechaCritica = sumarDiasHabiles(hoy, 3);
     const limiteFuturoStr = fechaCritica.toISOString().split('T')[0]
 
@@ -122,10 +117,20 @@ serve(async (req) => {
 
     if (!usuarios) throw new Error("Fallo recuperando usuarios")
 
+    // CONSULTA BLINDADA: Filtro estricto con uniones !inner para clientes e impuestos activos y no eliminados
     const { data: vencimientos } = await supabaseAdmin
       .from('vencimientos')
-      .select(`fecha_limite, periodo_fiscal, clientes!inner(razon_social, contador_id), impuestos(nombre, especialista_id)`)
+      .select(`
+        fecha_limite, 
+        periodo_fiscal, 
+        clientes!inner(razon_social, contador_id, estado, eliminado), 
+        impuestos!inner(nombre, especialista_id, estado, eliminado)
+      `)
       .neq('estado_tarea', 'PRESENTADO')
+      .eq('clientes.estado', 'ACTIVO')
+      .is('clientes.eliminado', null)
+      .eq('impuestos.estado', 'ACTIVO')
+      .is('impuestos.eliminado', null)
       .gte('fecha_limite', inicioMesStr)
       .lte('fecha_limite', limiteFuturoStr)
 

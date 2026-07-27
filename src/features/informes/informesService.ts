@@ -37,10 +37,14 @@ export const informesService = {
           fecha_limite,
           estado_tarea,
           actualizado,
-          clientes (contador_id),
-          impuestos (especialista_id)
+          clientes!inner (contador_id, estado, eliminado),
+          impuestos!inner (especialista_id, estado, eliminado)
         `,
         )
+        .eq("clientes.estado", "ACTIVO")
+        .is("clientes.eliminado", null)
+        .eq("impuestos.estado", "ACTIVO")
+        .is("impuestos.eliminado", null)
         .gte("fecha_limite", filtros.fechaInicio)
         .lte("fecha_limite", filtros.fechaFin),
     ]);
@@ -127,7 +131,19 @@ export const informesService = {
       queryImpuestos,
       supabase
         .from("vencimientos")
-        .select("id, fecha_limite, estado_tarea, actualizado, impuesto_id")
+        .select(`
+          id, 
+          fecha_limite, 
+          estado_tarea, 
+          actualizado, 
+          impuesto_id,
+          clientes!inner (estado, eliminado),
+          impuestos!inner (estado, eliminado)
+        `)
+        .eq("clientes.estado", "ACTIVO")
+        .is("clientes.eliminado", null)
+        .eq("impuestos.estado", "ACTIVO")
+        .is("impuestos.eliminado", null)
         .gte("fecha_limite", filtros.fechaInicio)
         .lte("fecha_limite", filtros.fechaFin),
     ]);
@@ -211,10 +227,14 @@ export const informesService = {
           actualizado,
           periodo_fiscal,
           observaciones,
-          clientes!inner (contador_id, razon_social, nit, dv),
-          impuestos!inner (especialista_id, nombre)
+          clientes!inner (contador_id, razon_social, nit, dv, estado, eliminado),
+          impuestos!inner (especialista_id, nombre, estado, eliminado)
         `,
         )
+        .eq("clientes.estado", "ACTIVO")
+        .is("clientes.eliminado", null)
+        .eq("impuestos.estado", "ACTIVO")
+        .is("impuestos.eliminado", null)
         .gte("fecha_limite", fechaInicio)
         .lte("fecha_limite", fechaFin),
     ]);
@@ -321,10 +341,15 @@ export const informesService = {
           actualizado,
           periodo_fiscal,
           observaciones,
-          clientes!inner (contador_id, razon_social, nit, dv)
+          clientes!inner (contador_id, razon_social, nit, dv, estado, eliminado),
+          impuestos!inner (estado, eliminado)
         `,
         )
         .eq("impuesto_id", impuestoId)
+        .eq("clientes.estado", "ACTIVO")
+        .is("clientes.eliminado", null)
+        .eq("impuestos.estado", "ACTIVO")
+        .is("impuestos.eliminado", null)
         .gte("fecha_limite", fechaInicio)
         .lte("fecha_limite", fechaFin),
       supabase.from("usuarios").select("id, nombre_completo"),
