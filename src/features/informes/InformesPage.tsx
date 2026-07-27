@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FiltrosInforme } from "./FiltrosInforme";
 import { useInformesVencimientos } from "./useInformes";
+import { exportService } from "./exportService";
 import type { FiltrosInformeData } from "./types";
 import {
   FileSpreadsheet,
@@ -9,6 +10,7 @@ import {
   AlertTriangle,
   Clock,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 
@@ -29,6 +31,14 @@ export const InformesPage = () => {
 
   const { data: datosEmpleados = [], isLoading } =
     useInformesVencimientos(filtros);
+
+  const handleExportarExcel = () => {
+    exportService.exportarVencimientosExcel(
+      datosEmpleados,
+      filtros.fechaInicio,
+      filtros.fechaFin,
+    );
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -55,14 +65,26 @@ export const InformesPage = () => {
         />
       ) : (
         <div className="bg-surface border border-text-muted/20 rounded-xl shadow-xs overflow-hidden">
-          <div className="p-4 bg-background border-b border-text-muted/10 flex justify-between items-center">
-            <h3 className="font-title font-bold text-primary text-sm flex items-center gap-1.5">
+          <div className="p-4 bg-background border-b border-text-muted/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-accent" />
-              Desglose de Vencimientos por Especialista
-            </h3>
-            <span className="text-xs font-mono text-text-muted">
-              Miembros Evaluados: {datosEmpleados.length}
-            </span>
+              <h3 className="font-title font-bold text-primary text-sm">
+                Desglose de Vencimientos por Especialista
+              </h3>
+              <span className="text-xs font-mono text-text-muted ml-2">
+                ({datosEmpleados.length} Evaluados)
+              </span>
+            </div>
+
+            <button
+              onClick={handleExportarExcel}
+              disabled={datosEmpleados.length === 0}
+              className="bg-accent hover:bg-accent/90 text-primary font-semibold px-4 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+              title="Descargar reporte en formato Excel"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Descargar Excel
+            </button>
           </div>
 
           <div className="overflow-x-auto">
