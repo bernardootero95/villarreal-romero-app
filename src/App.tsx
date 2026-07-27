@@ -16,7 +16,8 @@ import { CalendarioPage } from "./features/calendario/CalendarioPage";
 import { PerfilPage } from "./features/perfil/PerfilPage";
 import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { DetalleImpuestoPage } from "./features/impuestos/DetalleImpuestoPage";
-import { TareasPage } from "./features/tareas/TareasPage"; // <-- IMPORTACIÓN NUEVA
+import { TareasPage } from "./features/tareas/TareasPage";
+import { InformesPage } from "./features/informes/InformesPage"; // <-- IMPORTACIÓN DE INFORMES
 
 function App() {
   return (
@@ -44,9 +45,19 @@ function App() {
                     />
                     <Route path="perfil" element={<PerfilPage />} />
                     <Route path="/calendario" element={<CalendarioPage />} />
-
-                    {/* RUTA DE TAREAS */}
                     <Route path="/tareas" element={<TareasPage />} />
+
+                    {/* RUTA DE INFORMES (PROTEGIDA POR ROL) */}
+                    <Route
+                      path="/informes"
+                      element={
+                        <ProtectedRoute
+                          cargosPermitidos={["Gerente", "Ingeniero"]}
+                        >
+                          <InformesPage />
+                        </ProtectedRoute>
+                      }
+                    />
 
                     <Route
                       path="/usuarios"

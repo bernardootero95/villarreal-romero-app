@@ -9,6 +9,7 @@ import {
   Landmark,
   UserCircle,
   ClipboardList,
+  FileSpreadsheet, // <-- IMPORTACIÓN DEL ÍCONO DE INFORMES
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Footer } from "./Footer";
@@ -52,15 +53,21 @@ export const Layout = ({ children }: LayoutProps) => {
       path: "/tareas",
     },
     {
+      icon: <Calendar className="w-5 h-5" />,
+      label: "Calendario",
+      path: "/calendario",
+    },
+    {
+      icon: <FileSpreadsheet className="w-5 h-5" />,
+      label: "Informes",
+      path: "/informes",
+      roles: ["Gerente", "Ingeniero"], // <-- FILTRO DE SEGURIDAD POR ROL
+    },
+    {
       icon: <Users className="w-5 h-5" />,
       label: "Usuarios",
       path: "/usuarios",
       roles: ["Gerente", "Ingeniero"],
-    },
-    {
-      icon: <Calendar className="w-5 h-5" />,
-      label: "Calendario",
-      path: "/calendario",
     },
   ];
 
