@@ -39,5 +39,8 @@ export interface MetricaCargaEquipo {
   tareas_pendientes: number;
   tareas_completadas: number;
   tareas_vencidas: number;
-  vencimientos_asignados: number;
+  vencimientos_pendientes: number;
+  vencimientos_presentados: number;
+  vencimientos_vencidos: number;
+  total_carga_activa: number; 
 }

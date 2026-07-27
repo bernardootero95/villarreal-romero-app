@@ -71,23 +71,41 @@ export const informesService = {
   async getCargaEquipo(
     filtros: FiltrosInformeData,
   ): Promise<MetricaCargaEquipo[]> {
-    const [{ data: usuarios, error: errUsu }, { data: tareas, error: errTar }] =
-      await Promise.all([
-        supabase
-          .from("usuarios")
-          .select("id, nombre_completo, cargo")
-          .eq("estado", "ACTIVO")
-          .is("eliminado", null),
-        supabase
-          .from("tareas")
-          .select("id, usuario_id, estado, fecha_limite")
-          .is("eliminado", null)
-          .gte("fecha_limite", filtros.fechaInicio)
-          .lte("fecha_limite", filtros.fechaFin),
-      ]);
+    
+    const [
+      { data: usuarios, error: errUsu },
+      { data: tareas, error: errTar },
+      { data: vencimientos, error: errVto },
+    ] = await Promise.all([
+      supabase
+        .from("usuarios")
+        .select("id, nombre_completo, cargo")
+        .eq("estado", "ACTIVO")
+        .is("eliminado", null),
+      supabase
+        .from("tareas")
+        .select("id, usuario_id, estado, fecha_limite")
+        .is("eliminado", null)
+        .gte("fecha_limite", filtros.fechaInicio)
+        .lte("fecha_limite", filtros.fechaFin),
+      supabase
+        .from("vencimientos")
+        .select(
+          `
+          id,
+          fecha_limite,
+          estado_tarea,
+          clientes (contador_id),
+          impuestos (especialista_id)
+        `,
+        )
+        .gte("fecha_limite", filtros.fechaInicio)
+        .lte("fecha_limite", filtros.fechaFin),
+    ]);
 
     if (errUsu) throw errUsu;
     if (errTar) throw errTar;
+    if (errVto) throw errVto;
 
     const hoyStr = new Date().toISOString().split("T")[0];
     const mapaEquipo: Record<string, MetricaCargaEquipo> = {};
@@ -100,7 +118,10 @@ export const informesService = {
         tareas_pendientes: 0,
         tareas_completadas: 0,
         tareas_vencidas: 0,
-        vencimientos_asignados: 0,
+        vencimientos_pendientes: 0,
+        vencimientos_presentados: 0,
+        vencimientos_vencidos: 0,
+        total_carga_activa: 0,
       };
     });
 
@@ -117,6 +138,35 @@ export const informesService = {
       }
     });
 
-    return Object.values(mapaEquipo);
+    
+    (vencimientos || []).forEach((v: any) => {
+      const responsables = new Set<string>();
+      if (v.clientes?.contador_id) responsables.add(v.clientes.contador_id);
+      if (v.impuestos?.especialista_id)
+        responsables.add(v.impuestos.especialista_id);
+
+      responsables.forEach((userId) => {
+        const miembro = mapaEquipo[userId];
+        if (!miembro) return;
+
+        if (v.estado_tarea === "PRESENTADO") {
+          miembro.vencimientos_presentados += 1;
+        } else if (v.fecha_limite < hoyStr) {
+          miembro.vencimientos_vencidos += 1;
+        } else {
+          miembro.vencimientos_pendientes += 1;
+        }
+      });
+    });
+
+  
+    return Object.values(mapaEquipo).map((m) => ({
+      ...m,
+      total_carga_activa:
+        m.tareas_pendientes +
+        m.tareas_vencidas +
+        m.vencimientos_pendientes +
+        m.vencimientos_vencidos,
+    }));
   },
 };

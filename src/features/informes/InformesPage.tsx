@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
+  Briefcase,
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 
@@ -186,7 +187,7 @@ export const InformesPage = () => {
           <div className="p-4 bg-background border-b border-text-muted/10 flex justify-between items-center">
             <h3 className="font-title font-bold text-primary text-sm flex items-center gap-1.5">
               <Users className="w-4 h-4 text-accent" />
-              Rendimiento Operativo por Especialista
+              Rendimiento y Carga Activa por Especialista
             </h3>
             <span className="text-xs font-mono text-text-muted">
               Miembros Activos: {datosEquipo.length}
@@ -197,21 +198,17 @@ export const InformesPage = () => {
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="bg-background/50 text-text-muted text-xs uppercase tracking-wider border-b border-text-muted/10">
-                  <th className="px-6 py-3.5 font-semibold">
-                    Miembro del Equipo
-                  </th>
+                  <th className="px-6 py-3.5 font-semibold">Especialista</th>
                   <th className="px-6 py-3.5 font-semibold text-center">
-                    Cargo
+                    Carga Activa
                   </th>
-                  <th className="px-6 py-3.5 font-semibold text-center text-success flex items-center justify-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> T. Listas
+                  <th className="px-6 py-3.5 font-semibold text-center border-l border-text-muted/10">
+                    <Briefcase className="w-3.5 h-3.5 inline mr-1 text-primary" />{" "}
+                    Vencimientos DIAN
                   </th>
-                  <th className="px-6 py-3.5 font-semibold text-center text-warning">
-                    <Clock className="w-3.5 h-3.5 inline mr-1" /> T. Pendientes
-                  </th>
-                  <th className="px-6 py-3.5 font-semibold text-center text-danger">
-                    <AlertTriangle className="w-3.5 h-3.5 inline mr-1" /> T.
-                    Vencidas
+                  <th className="px-6 py-3.5 font-semibold text-center border-l border-text-muted/10">
+                    <Clock className="w-3.5 h-3.5 inline mr-1 text-accent" />{" "}
+                    Tareas Internas
                   </th>
                 </tr>
               </thead>
@@ -219,10 +216,10 @@ export const InformesPage = () => {
                 {datosEquipo.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="px-6 py-12 text-center text-text-muted italic text-xs"
                     >
-                      No hay registros de tareas para los miembros activos.
+                      No hay miembros activos para evaluar.
                     </td>
                   </tr>
                 ) : (
@@ -231,22 +228,78 @@ export const InformesPage = () => {
                       key={miembro.usuario_id}
                       className="hover:bg-primary/5 transition-colors"
                     >
-                      <td className="px-6 py-4 font-semibold text-primary">
-                        {miembro.nombre_completo}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="px-2 py-0.5 bg-primary/5 text-primary text-xs font-medium rounded-full border border-primary/10">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-primary">
+                          {miembro.nombre_completo}
+                        </div>
+                        <span className="px-2 py-0.5 mt-1 inline-block bg-primary/5 text-primary text-[11px] font-medium rounded-full border border-primary/10">
                           {miembro.cargo}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-success bg-success/5">
-                        {miembro.tareas_completadas}
+
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`px-3 py-1 rounded-full font-mono font-bold text-xs border ${
+                            miembro.total_carga_activa > 10
+                              ? "bg-danger/10 text-danger border-danger/20 animate-pulse"
+                              : miembro.total_carga_activa > 5
+                                ? "bg-warning/10 text-warning border-warning/20"
+                                : "bg-success/10 text-success border-success/20"
+                          }`}
+                        >
+                          {miembro.total_carga_activa}{" "}
+                          {miembro.total_carga_activa === 1 ? "Ítem" : "Ítems"}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-warning bg-warning/5">
-                        {miembro.tareas_pendientes}
+
+                      <td className="px-6 py-4 text-center border-l border-text-muted/10">
+                        <div className="flex items-center justify-center gap-3 text-xs font-mono">
+                          <span
+                            title="Vencidos"
+                            className="text-danger font-bold flex items-center gap-0.5"
+                          >
+                            <AlertTriangle className="w-3 h-3" />{" "}
+                            {miembro.vencimientos_vencidos}
+                          </span>
+                          <span
+                            title="Pendientes en plazo"
+                            className="text-warning font-semibold"
+                          >
+                            Ptte: {miembro.vencimientos_pendientes}
+                          </span>
+                          <span
+                            title="Presentados"
+                            className="text-success font-semibold flex items-center gap-0.5"
+                          >
+                            <CheckCircle2 className="w-3 h-3" />{" "}
+                            {miembro.vencimientos_presentados}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-danger bg-danger/5">
-                        {miembro.tareas_vencidas}
+
+                      <td className="px-6 py-4 text-center border-l border-text-muted/10">
+                        <div className="flex items-center justify-center gap-3 text-xs font-mono">
+                          <span
+                            title="Tareas Vencidas"
+                            className="text-danger font-bold flex items-center gap-0.5"
+                          >
+                            <AlertTriangle className="w-3 h-3" />{" "}
+                            {miembro.tareas_vencidas}
+                          </span>
+                          <span
+                            title="Tareas Pendientes"
+                            className="text-warning font-semibold"
+                          >
+                            Ptte: {miembro.tareas_pendientes}
+                          </span>
+                          <span
+                            title="Tareas Completadas"
+                            className="text-success font-semibold flex items-center gap-0.5"
+                          >
+                            <CheckCircle2 className="w-3 h-3" />{" "}
+                            {miembro.tareas_completadas}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ))
