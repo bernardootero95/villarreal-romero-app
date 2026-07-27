@@ -43,3 +43,40 @@ export interface MetricaVencimientosImpuesto {
   vencidos: number;
   porcentaje_efectividad: number;
 }
+
+export type ClasificacionVencimiento =
+  | "A_TIEMPO"
+  | "TARDE"
+  | "PENDIENTE"
+  | "VENCIDO";
+
+export interface DetalleVencimientoEmpleado {
+  id: string;
+  razon_social: string;
+  nit: string;
+  dv: number;
+  impuesto_nombre: string;
+  periodo_fiscal: string;
+  fecha_limite: string;
+  estado_tarea: string;
+  fecha_radicacion: string | null;
+  observaciones: string | null;
+  clasificacion: ClasificacionVencimiento;
+}
+
+export interface ResumenDetalleEmpleado {
+  usuario: {
+    id: string;
+    nombre_completo: string;
+    cargo: string;
+  };
+  metricas: {
+    total: number;
+    a_tiempo: number;
+    tarde: number;
+    pendientes: number;
+    vencidos: number;
+    efectividad: number;
+  };
+  items: DetalleVencimientoEmpleado[];
+}

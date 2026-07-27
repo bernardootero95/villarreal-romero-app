@@ -3,6 +3,9 @@ import type {
   FiltrosInformeData,
   MetricaVencimientosEmpleado,
   MetricaVencimientosImpuesto,
+  ResumenDetalleEmpleado,
+  DetalleVencimientoEmpleado,
+  ClasificacionVencimiento,
 } from "./types";
 
 export const informesService = {
@@ -180,5 +183,116 @@ export const informesService = {
             : 0,
       };
     });
+  },
+
+  async getDetalleEmpleado(
+    usuarioId: string,
+    fechaInicio: string,
+    fechaFin: string,
+  ): Promise<ResumenDetalleEmpleado> {
+    const [
+      { data: usuario, error: errUsu },
+      { data: vencimientos, error: errVto },
+    ] = await Promise.all([
+      supabase
+        .from("usuarios")
+        .select("id, nombre_completo, cargo")
+        .eq("id", usuarioId)
+        .single(),
+      supabase
+        .from("vencimientos")
+        .select(
+          `
+          id,
+          fecha_limite,
+          estado_tarea,
+          actualizado,
+          periodo_fiscal,
+          observaciones,
+          clientes!inner (contador_id, razon_social, nit, dv),
+          impuestos!inner (especialista_id, nombre)
+        `,
+        )
+        .gte("fecha_limite", fechaInicio)
+        .lte("fecha_limite", fechaFin),
+    ]);
+
+    if (errUsu) throw errUsu;
+    if (errVto) throw errVto;
+
+    const hoyStr = new Date().toISOString().split("T")[0];
+
+    
+    const asignados = (vencimientos || []).filter(
+      (v: any) =>
+        v.clientes?.contador_id === usuarioId ||
+        v.impuestos?.especialista_id === usuarioId,
+    );
+
+    let a_tiempo = 0;
+    let tarde = 0;
+    let pendientes = 0;
+    let vencidos = 0;
+
+    const items: DetalleVencimientoEmpleado[] = asignados.map((v: any) => {
+      const fechaRadicacion = v.actualizado ? v.actualizado.split("T")[0] : null;
+      let clasificacion: ClasificacionVencimiento;
+
+      if (v.estado_tarea === "PRESENTADO") {
+        const rad = fechaRadicacion || hoyStr;
+        if (rad <= v.fecha_limite) {
+          clasificacion = "A_TIEMPO";
+          a_tiempo++;
+        } else {
+          clasificacion = "TARDE";
+          tarde++;
+        }
+      } else if (v.fecha_limite < hoyStr) {
+        clasificacion = "VENCIDO";
+        vencidos++;
+      } else {
+        clasificacion = "PENDIENTE";
+        pendientes++;
+      }
+
+      return {
+        id: v.id,
+        razon_social: v.clientes.razon_social,
+        nit: v.clientes.nit,
+        dv: v.clientes.dv,
+        impuesto_nombre: v.impuestos.nombre,
+        periodo_fiscal: v.periodo_fiscal,
+        fecha_limite: v.fecha_limite,
+        estado_tarea: v.estado_tarea,
+        fecha_radicacion: fechaRadicacion,
+        observaciones: v.observaciones,
+        clasificacion,
+      };
+    });
+
+    const total = items.length;
+    const totalPresentados = a_tiempo + tarde;
+    const efectividad =
+      total > 0 ? Math.round((totalPresentados / total) * 100) : 0;
+
+    
+    items.sort((a, b) => a.fecha_limite.localeCompare(b.fecha_limite));
+
+    return {
+      usuario: {
+        id: usuario.id,
+        nombre_completo: usuario.nombre_completo,
+        cargo: usuario.cargo,
+      },
+      metricas: {
+        total,
+        a_tiempo,
+        tarde,
+        pendientes,
+        vencidos,
+        efectividad,
+      },
+      items,
+    };
   },
 };

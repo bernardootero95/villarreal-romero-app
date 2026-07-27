@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FiltrosInforme } from "./FiltrosInforme";
 import { useInformesVencimientos, useInformesImpuestos } from "./useInformes";
 import { exportService } from "./exportService";
@@ -12,10 +13,12 @@ import {
   AlertCircle,
   Download,
   Landmark,
+  ChevronRight,
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 
 export const InformesPage = () => {
+  const navigate = useNavigate();
   const hoy = new Date();
   const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
     .toISOString()
@@ -58,6 +61,12 @@ export const InformesPage = () => {
   };
 
   const datosActuales = vista === "EMPLEADO" ? datosEmpleados : datosImpuestos;
+
+  const verDetalleEmpleado = (usuarioId: string) => {
+    navigate(
+      `/informes/empleado/${usuarioId}?fechaInicio=${filtros.fechaInicio}&fechaFin=${filtros.fechaFin}`,
+    );
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -135,7 +144,7 @@ export const InformesPage = () => {
               )}
               <h3 className="font-title font-bold text-primary text-sm">
                 {vista === "EMPLEADO"
-                  ? "Desglose de Vencimientos por Especialista"
+                  ? "Desglose de Vencimientos por Especialista (Haz clic para auditar)"
                   : "Desglose de Rendimiento por Obligación Tributaria"}
               </h3>
               <span className="text-xs font-mono text-text-muted ml-2">
@@ -200,11 +209,14 @@ export const InformesPage = () => {
                   (datosActuales as typeof datosEmpleados).map((emp) => (
                     <tr
                       key={emp.usuario_id}
-                      className="hover:bg-primary/5 transition-colors"
+                      onClick={() => verDetalleEmpleado(emp.usuario_id)}
+                      className="hover:bg-primary/5 transition-colors cursor-pointer group"
+                      title="Haz clic para abrir el desglose detallado"
                     >
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-primary">
-                          {emp.nombre_completo}
+                        <div className="font-semibold text-primary flex items-center justify-between">
+                          <span>{emp.nombre_completo}</span>
+                          <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
                         </div>
                         <span className="px-2 py-0.5 mt-1 inline-block bg-primary/5 text-primary text-[11px] font-medium rounded-full border border-primary/10">
                           {emp.cargo}
