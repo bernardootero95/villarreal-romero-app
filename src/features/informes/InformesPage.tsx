@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FiltrosInforme } from "./FiltrosInforme";
-import { useInformesVencimientos } from "./useInformes";
+import { useInformesVencimientos, useInformesImpuestos } from "./useInformes";
 import { exportService } from "./exportService";
 import type { FiltrosInformeData } from "./types";
 import {
@@ -11,6 +11,7 @@ import {
   Clock,
   AlertCircle,
   Download,
+  Landmark,
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 
@@ -23,62 +24,129 @@ export const InformesPage = () => {
     .toISOString()
     .split("T")[0];
 
+  const [vista, setVista] = useState<"EMPLEADO" | "IMPUESTO">("EMPLEADO");
+
   const [filtros, setFiltros] = useState<FiltrosInformeData>({
     fechaInicio: primerDiaMes,
     fechaFin: ultimoDiaMes,
     usuarioId: "",
+    impuestoId: "",
   });
 
-  const { data: datosEmpleados = [], isLoading } =
+  const { data: datosEmpleados = [], isLoading: loadingEmpleados } =
     useInformesVencimientos(filtros);
 
+  const { data: datosImpuestos = [], isLoading: loadingImpuestos } =
+    useInformesImpuestos(filtros);
+
+  const isLoading = loadingEmpleados || loadingImpuestos;
+
   const handleExportarExcel = () => {
-    exportService.exportarVencimientosExcel(
-      datosEmpleados,
-      filtros.fechaInicio,
-      filtros.fechaFin,
-    );
+    if (vista === "EMPLEADO") {
+      exportService.exportarVencimientosExcel(
+        datosEmpleados,
+        filtros.fechaInicio,
+        filtros.fechaFin,
+      );
+    } else {
+      exportService.exportarImpuestosExcel(
+        datosImpuestos,
+        filtros.fechaInicio,
+        filtros.fechaFin,
+      );
+    }
   };
+
+  const datosActuales = vista === "EMPLEADO" ? datosEmpleados : datosImpuestos;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div>
-        <h1 className="text-2xl font-title font-bold text-primary flex items-center gap-2">
-          <FileSpreadsheet className="w-6 h-6 text-accent" />
-          Rendimiento Operativo por Empleado
-        </h1>
-        <p className="text-text-muted text-sm">
-          Evaluación de efectividad en la presentación oficial de vencimientos
-          tributarios asignados.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-title font-bold text-primary flex items-center gap-2">
+            <FileSpreadsheet className="w-6 h-6 text-accent" />
+            Centro de Informes Operativos
+          </h1>
+          <p className="text-text-muted text-sm">
+            Auditoría de cumplimiento tributario evaluada por especialista o por
+            obligación oficial.
+          </p>
+        </div>
+
+        <div className="flex bg-surface border border-text-muted/20 p-1 rounded-lg shadow-xs">
+          <button
+            onClick={() => {
+              setVista("EMPLEADO");
+              setFiltros((prev) => ({
+                ...prev,
+                impuestoId: "",
+                usuarioId: "",
+              }));
+            }}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+              vista === "EMPLEADO"
+                ? "bg-primary text-surface shadow-sm"
+                : "text-text-muted hover:text-primary"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            Por Empleado
+          </button>
+          <button
+            onClick={() => {
+              setVista("IMPUESTO");
+              setFiltros((prev) => ({
+                ...prev,
+                impuestoId: "",
+                usuarioId: "",
+              }));
+            }}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+              vista === "IMPUESTO"
+                ? "bg-primary text-surface shadow-sm"
+                : "text-text-muted hover:text-primary"
+            }`}
+          >
+            <Landmark className="w-3.5 h-3.5" />
+            Por Impuesto
+          </button>
+        </div>
       </div>
 
       <FiltrosInforme
         filtrosActuales={filtros}
+        tipoVista={vista}
         onAplicarFiltros={(nuevosFiltros) => setFiltros(nuevosFiltros)}
       />
 
       {isLoading ? (
         <Loader
-          texto="Consolidando métricas de cumplimiento por empleado..."
+          texto="Consolidando métricas de cumplimiento..."
           fullScreen={false}
         />
       ) : (
         <div className="bg-surface border border-text-muted/20 rounded-xl shadow-xs overflow-hidden">
           <div className="p-4 bg-background border-b border-text-muted/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-accent" />
+              {vista === "EMPLEADO" ? (
+                <Users className="w-4 h-4 text-accent" />
+              ) : (
+                <Landmark className="w-4 h-4 text-accent" />
+              )}
               <h3 className="font-title font-bold text-primary text-sm">
-                Desglose de Vencimientos por Especialista
+                {vista === "EMPLEADO"
+                  ? "Desglose de Vencimientos por Especialista"
+                  : "Desglose de Rendimiento por Obligación Tributaria"}
               </h3>
               <span className="text-xs font-mono text-text-muted ml-2">
-                ({datosEmpleados.length} Evaluados)
+                ({datosActuales.length}{" "}
+                {vista === "EMPLEADO" ? "Evaluados" : "Impuestos"})
               </span>
             </div>
 
             <button
               onClick={handleExportarExcel}
-              disabled={datosEmpleados.length === 0}
+              disabled={datosActuales.length === 0}
               className="bg-accent hover:bg-accent/90 text-primary font-semibold px-4 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
               title="Descargar reporte en formato Excel"
             >
@@ -91,7 +159,11 @@ export const InformesPage = () => {
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="bg-background/50 text-text-muted text-xs uppercase tracking-wider border-b border-text-muted/10">
-                  <th className="px-6 py-3.5 font-semibold">Empleado</th>
+                  <th className="px-6 py-3.5 font-semibold">
+                    {vista === "EMPLEADO"
+                      ? "Empleado"
+                      : "Obligación Tributaria"}
+                  </th>
                   <th className="px-6 py-3.5 font-semibold text-center">
                     Total Asignado
                   </th>
@@ -115,7 +187,7 @@ export const InformesPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-text-muted/10">
-                {datosEmpleados.length === 0 ? (
+                {datosActuales.length === 0 ? (
                   <tr>
                     <td
                       colSpan={7}
@@ -124,8 +196,8 @@ export const InformesPage = () => {
                       No se encontraron registros en el período seleccionado.
                     </td>
                   </tr>
-                ) : (
-                  datosEmpleados.map((emp) => (
+                ) : vista === "EMPLEADO" ? (
+                  (datosActuales as typeof datosEmpleados).map((emp) => (
                     <tr
                       key={emp.usuario_id}
                       className="hover:bg-primary/5 transition-colors"
@@ -197,6 +269,84 @@ export const InformesPage = () => {
                           </div>
                           <span className="font-mono font-bold text-xs text-primary w-10 text-right">
                             {emp.porcentaje_efectividad}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  (datosActuales as typeof datosImpuestos).map((imp) => (
+                    <tr
+                      key={imp.impuesto_id}
+                      className="hover:bg-primary/5 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-primary">
+                          {imp.nombre}
+                        </div>
+                        <span className="px-2 py-0.5 mt-1 inline-block bg-primary/5 text-primary text-[11px] font-medium rounded-full border border-primary/10">
+                          Periodicidad: {imp.periodicidad}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-center font-bold text-primary font-mono text-base">
+                        {imp.total_vencimientos}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-bold text-success bg-success/10 px-2.5 py-1 rounded-md font-mono text-xs border border-success/20">
+                          {imp.presentados_a_tiempo}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`font-bold px-2.5 py-1 rounded-md font-mono text-xs border ${
+                            imp.presentados_tarde > 0
+                              ? "bg-warning/10 text-warning border-warning/20 font-extrabold"
+                              : "bg-background text-text-muted border-text-muted/20"
+                          }`}
+                        >
+                          {imp.presentados_tarde}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-semibold text-primary bg-primary/5 px-2.5 py-1 rounded-md font-mono text-xs border border-primary/10">
+                          {imp.pendientes}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`font-bold px-2.5 py-1 rounded-md font-mono text-xs border ${
+                            imp.vencidos > 0
+                              ? "bg-danger text-surface border-danger animate-pulse shadow-xs"
+                              : "bg-background text-text-muted border-text-muted/20"
+                          }`}
+                        >
+                          {imp.vencidos}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-16 bg-text-muted/20 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 ${
+                                imp.porcentaje_efectividad >= 80
+                                  ? "bg-success"
+                                  : imp.porcentaje_efectividad >= 50
+                                    ? "bg-warning"
+                                    : "bg-danger"
+                              }`}
+                              style={{
+                                width: `${imp.porcentaje_efectividad}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="font-mono font-bold text-xs text-primary w-10 text-right">
+                            {imp.porcentaje_efectividad}%
                           </span>
                         </div>
                       </td>

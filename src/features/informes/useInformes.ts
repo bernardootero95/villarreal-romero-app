@@ -3,11 +3,20 @@ import { informesService } from "./informesService";
 import type { FiltrosInformeData } from "./types";
 
 export const INFORMES_EMPLEADOS_KEY = "informes_empleados_vencimientos";
+export const INFORMES_IMPUESTOS_KEY = "informes_impuestos_vencimientos";
 
 export const useInformesVencimientos = (filtros: FiltrosInformeData) => {
   return useQuery({
     queryKey: [INFORMES_EMPLEADOS_KEY, filtros],
     queryFn: () => informesService.getVencimientosPorEmpleado(filtros),
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useInformesImpuestos = (filtros: FiltrosInformeData) => {
+  return useQuery({
+    queryKey: [INFORMES_IMPUESTOS_KEY, filtros],
+    queryFn: () => informesService.getVencimientosPorImpuesto(filtros),
+    staleTime: 1000 * 60 * 5,
   });
 };

@@ -5,6 +5,7 @@ export const filtrosInformeSchema = z
     fechaInicio: z.string().min(1, "La fecha de inicio es requerida."),
     fechaFin: z.string().min(1, "La fecha de fin es requerida."),
     usuarioId: z.string().optional(),
+    impuestoId: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -23,6 +24,18 @@ export interface MetricaVencimientosEmpleado {
   usuario_id: string;
   nombre_completo: string;
   cargo: string;
+  total_vencimientos: number;
+  presentados_a_tiempo: number;
+  presentados_tarde: number;
+  pendientes: number;
+  vencidos: number;
+  porcentaje_efectividad: number;
+}
+
+export interface MetricaVencimientosImpuesto {
+  impuesto_id: string;
+  nombre: string;
+  periodicidad: string;
   total_vencimientos: number;
   presentados_a_tiempo: number;
   presentados_tarde: number;

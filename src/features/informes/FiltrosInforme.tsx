@@ -3,17 +3,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { filtrosInformeSchema, type FiltrosInformeData } from "./types";
 import { Filter, Search } from "lucide-react";
 import { useUsuarios } from "../usuarios/useUsuarios";
+import { useImpuestos } from "../impuestos/useImpuestos";
 
 interface FiltrosInformeProps {
   onAplicarFiltros: (filtros: FiltrosInformeData) => void;
   filtrosActuales: FiltrosInformeData;
+  tipoVista: "EMPLEADO" | "IMPUESTO";
 }
 
 export const FiltrosInforme = ({
   onAplicarFiltros,
   filtrosActuales,
+  tipoVista,
 }: FiltrosInformeProps) => {
   const { data: usuarios = [] } = useUsuarios();
+  const { data: impuestos = [] } = useImpuestos();
 
   const {
     register,
@@ -31,7 +35,7 @@ export const FiltrosInforme = ({
     >
       <div className="flex items-center gap-2 text-primary font-title font-semibold text-sm border-b border-text-muted/10 pb-2">
         <Filter className="w-4 h-4 text-accent" />
-        <span>Filtros del Informe de Vencimientos</span>
+        <span>Filtros de Búsqueda</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -71,22 +75,41 @@ export const FiltrosInforme = ({
           )}
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-text-muted uppercase mb-1">
-            Especialista / Contador (Opcional)
-          </label>
-          <select
-            {...register("usuarioId")}
-            className="w-full px-3 py-1.5 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors appearance-none cursor-pointer"
-          >
-            <option value="">Todos los empleados</option>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre_completo} ({u.cargo})
-              </option>
-            ))}
-          </select>
-        </div>
+        {tipoVista === "EMPLEADO" ? (
+          <div>
+            <label className="block text-xs font-bold text-text-muted uppercase mb-1">
+              Especialista / Empleado (Opcional)
+            </label>
+            <select
+              {...register("usuarioId")}
+              className="w-full px-3 py-1.5 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors appearance-none cursor-pointer"
+            >
+              <option value="">Todos los empleados</option>
+              {usuarios.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nombre_completo} ({u.cargo})
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-xs font-bold text-text-muted uppercase mb-1">
+              Obligación / Impuesto (Opcional)
+            </label>
+            <select
+              {...register("impuestoId")}
+              className="w-full px-3 py-1.5 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors appearance-none cursor-pointer"
+            >
+              <option value="">Todos los impuestos</option>
+              {impuestos.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.nombre} ({i.periodicidad})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end pt-2">
