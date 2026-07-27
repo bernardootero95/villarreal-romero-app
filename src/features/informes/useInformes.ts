@@ -5,6 +5,7 @@ import type { FiltrosInformeData } from "./types";
 export const INFORMES_EMPLEADOS_KEY = "informes_empleados_vencimientos";
 export const INFORMES_IMPUESTOS_KEY = "informes_impuestos_vencimientos";
 export const INFORMES_DETALLE_EMPLEADO_KEY = "informes_detalle_empleado";
+export const INFORMES_DETALLE_IMPUESTO_KEY = "informes_detalle_impuesto";
 
 export const useInformesVencimientos = (filtros: FiltrosInformeData) => {
   return useQuery({
@@ -36,6 +37,24 @@ export const useDetalleInformeEmpleado = (
         fechaFin,
       ),
     enabled: !!usuarioId && !!fechaInicio && !!fechaFin,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+export const useDetalleInformeImpuesto = (
+  impuestoId: string | undefined,
+  fechaInicio: string,
+  fechaFin: string,
+) => {
+  return useQuery({
+    queryKey: [INFORMES_DETALLE_IMPUESTO_KEY, impuestoId, fechaInicio, fechaFin],
+    queryFn: () =>
+      informesService.getDetalleImpuesto(
+        impuestoId || "",
+        fechaInicio,
+        fechaFin,
+      ),
+    enabled: !!impuestoId && !!fechaInicio && !!fechaFin,
     staleTime: 1000 * 60 * 5,
   });
 };

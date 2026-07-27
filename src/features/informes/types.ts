@@ -80,3 +80,34 @@ export interface ResumenDetalleEmpleado {
   };
   items: DetalleVencimientoEmpleado[];
 }
+
+export interface DetalleVencimientoImpuesto {
+  id: string;
+  razon_social: string;
+  nit: string;
+  dv: number;
+  contador_nombre: string;
+  periodo_fiscal: string;
+  fecha_limite: string;
+  estado_tarea: string;
+  fecha_radicacion: string | null;
+  observaciones: string | null;
+  clasificacion: ClasificacionVencimiento;
+}
+
+export interface ResumenDetalleImpuesto {
+  impuesto: {
+    id: string;
+    nombre: string;
+    periodicidad: string;
+  };
+  metricas: {
+    total: number;
+    a_tiempo: number;
+    tarde: number;
+    pendientes: number;
+    vencidos: number;
+    efectividad: number;
+  };
+  items: DetalleVencimientoImpuesto[];
+}

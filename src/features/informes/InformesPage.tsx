@@ -68,6 +68,12 @@ export const InformesPage = () => {
     );
   };
 
+  const verDetalleImpuesto = (impuestoId: string) => {
+    navigate(
+      `/informes/impuesto/${impuestoId}?fechaInicio=${filtros.fechaInicio}&fechaFin=${filtros.fechaFin}`,
+    );
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -145,7 +151,7 @@ export const InformesPage = () => {
               <h3 className="font-title font-bold text-primary text-sm">
                 {vista === "EMPLEADO"
                   ? "Desglose de Vencimientos por Especialista (Haz clic para auditar)"
-                  : "Desglose de Rendimiento por Obligación Tributaria"}
+                  : "Desglose de Rendimiento por Obligación (Haz clic para auditar)"}
               </h3>
               <span className="text-xs font-mono text-text-muted ml-2">
                 ({datosActuales.length}{" "}
@@ -290,11 +296,14 @@ export const InformesPage = () => {
                   (datosActuales as typeof datosImpuestos).map((imp) => (
                     <tr
                       key={imp.impuesto_id}
-                      className="hover:bg-primary/5 transition-colors"
+                      onClick={() => verDetalleImpuesto(imp.impuesto_id)}
+                      className="hover:bg-primary/5 transition-colors cursor-pointer group"
+                      title="Haz clic para abrir el desglose detallado por clientes"
                     >
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-primary">
-                          {imp.nombre}
+                        <div className="font-semibold text-primary flex items-center justify-between">
+                          <span>{imp.nombre}</span>
+                          <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-accent group-hover:translate-x-0.5 transition-all" />
                         </div>
                         <span className="px-2 py-0.5 mt-1 inline-block bg-primary/5 text-primary text-[11px] font-medium rounded-full border border-primary/10">
                           Periodicidad: {imp.periodicidad}

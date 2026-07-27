@@ -18,7 +18,8 @@ import { DashboardPage } from "./features/dashboard/DashboardPage";
 import { DetalleImpuestoPage } from "./features/impuestos/DetalleImpuestoPage";
 import { TareasPage } from "./features/tareas/TareasPage";
 import { InformesPage } from "./features/informes/InformesPage";
-import { DetalleInformeEmpleadoPage } from "./features/informes/DetalleInformeEmpleadoPage"; // <-- NUEVA IMPORTACIÓN
+import { DetalleInformeEmpleadoPage } from "./features/informes/DetalleInformeEmpleadoPage";
+import { DetalleInformeImpuestoPage } from "./features/informes/DetalleInformeImpuestoPage"; // <-- NUEVA IMPORTACIÓN
 
 function App() {
   return (
@@ -66,6 +67,16 @@ function App() {
                           cargosPermitidos={["Gerente", "Ingeniero"]}
                         >
                           <DetalleInformeEmpleadoPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/informes/impuesto/:id"
+                      element={
+                        <ProtectedRoute
+                          cargosPermitidos={["Gerente", "Ingeniero"]}
+                        >
+                          <DetalleInformeImpuestoPage />
                         </ProtectedRoute>
                       }
                     />
