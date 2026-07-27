@@ -39,7 +39,8 @@ export const DashboardPage = () => {
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   const hoy = new Date();
-  const esIngeniero = perfil?.cargo === "Ingeniero";
+  // Ampliado para que Gerencia y Soporte Técnico tengan visión global del negocio
+  const esRolGlobal = ["Gerente", "Ingeniero"].includes(perfil?.cargo || "");
 
   const {
     data: metricas,
@@ -47,7 +48,7 @@ export const DashboardPage = () => {
     error: errorMetricas,
   } = useDashboardMetricas(session?.user?.id, perfil?.cargo);
 
-  const { data: vencimientosSemana = [], isLoading: loadingVencimientos } =
+  const { data: vencimientosMes = [], isLoading: loadingVencimientos } =
     useVencimientosMes(
       hoy.getFullYear(),
       hoy.getMonth(),
@@ -61,7 +62,7 @@ export const DashboardPage = () => {
   );
 
   const { data: resumenImpuestos = [], isLoading: loadingDistribucion } =
-    useDashboardDistribucion(esIngeniero && !!perfil);
+    useDashboardDistribucion(esRolGlobal && !!perfil);
 
   const calcularSemanaActual = () => {
     const hoy = new Date();
@@ -103,7 +104,7 @@ export const DashboardPage = () => {
     calcularSemanaActual();
   }, []);
 
-  const vtosDiaSeleccionado = vencimientosSemana.filter(
+  const vtosDiaSeleccionado = vencimientosMes.filter(
     (v) => v.fecha_limite === diaSeleccionado,
   );
 
@@ -119,7 +120,7 @@ export const DashboardPage = () => {
     loadingMetricas ||
     loadingVencimientos ||
     loadingTareas ||
-    (esIngeniero && loadingDistribucion);
+    (esRolGlobal && loadingDistribucion);
 
   if (isLoading) {
     return (
@@ -187,13 +188,13 @@ export const DashboardPage = () => {
         <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esIngeniero ? "Total Empresas" : "Mis Empresas"}
+              {esRolGlobal ? "Total Empresas" : "Mis Empresas"}
             </span>
             <p className="text-3xl font-bold text-primary font-title">
               {metricas.totalClientes}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esIngeniero
+              {esRolGlobal
                 ? "Empresas dadas de alta en el sistema"
                 : "Clientes bajo tu cargo"}
             </p>
@@ -206,13 +207,13 @@ export const DashboardPage = () => {
         <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esIngeniero ? "Vencimientos Firma" : "Vencimientos Mes"}
+              {esRolGlobal ? "Vencimientos Firma" : "Vencimientos Mes"}
             </span>
             <p className="text-3xl font-bold text-primary font-title">
               {metricas.totalVencimientos}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esIngeniero
+              {esRolGlobal
                 ? "Calendarios totales sembrados este mes"
                 : "Obligaciones totales del periodo"}
             </p>
@@ -225,13 +226,13 @@ export const DashboardPage = () => {
         <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esIngeniero ? "Pendientes Globales" : "Por Ejecutar"}
+              {esRolGlobal ? "Pendientes Globales" : "Por Ejecutar"}
             </span>
             <p className="text-3xl font-bold text-warning font-title">
               {metricas.tareasPendientes}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esIngeniero
+              {esRolGlobal
                 ? "Tareas sin presentar de toda la firma"
                 : "Pendientes y en revisión"}
             </p>
@@ -250,9 +251,9 @@ export const DashboardPage = () => {
               {metricas.porcentajeEfectividad}%
             </p>
             <p className="text-[11px] text-text-muted">
-              {esIngeniero
+              {esRolGlobal
                 ? "Efectividad operativa global de la firma"
-                : "Efectividad de presentation"}
+                : "Efectividad de presentación"}
             </p>
           </div>
           <div className="w-12 h-12 bg-success/10 text-success rounded-xl flex items-center justify-center">
@@ -263,7 +264,7 @@ export const DashboardPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
-          {esIngeniero ? (
+          {esRolGlobal ? (
             <div className="card-container bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm space-y-4">
               <div className="flex items-center gap-2 text-primary border-b border-text-muted/10 pb-3">
                 <ListFilter className="w-5 h-5 text-accent" />
@@ -343,6 +344,7 @@ export const DashboardPage = () => {
                       <div
                         key={alerta.id}
                         onClick={() =>
+                          alerta.clientes?.id &&
                           navigate(`/clientes/${alerta.clientes.id}`)
                         }
                         className="py-3 flex justify-between items-center hover:bg-background/60 px-2 rounded-lg cursor-pointer transition-colors group"
@@ -410,7 +412,7 @@ export const DashboardPage = () => {
           <div className="flex items-center gap-2 border-b border-text-muted/10 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-title font-bold text-primary uppercase tracking-wide">
-              {esIngeniero
+              {esRolGlobal
                 ? "Cronograma Base de Control Global"
                 : "Agenda Semanal de Trabajo"}
             </h3>
@@ -418,7 +420,7 @@ export const DashboardPage = () => {
 
           <div className="grid grid-cols-7 gap-1 bg-background p-1.5 rounded-lg border border-text-muted/10 shrink-0">
             {diasSemana.map((dia) => {
-              const vtosDelDia = vencimientosSemana.filter(
+              const vtosDelDia = vencimientosMes.filter(
                 (v) => v.fecha_limite === dia.fechaStr,
               );
               const tareasDelDia = tareas.filter(
@@ -508,7 +510,10 @@ export const DashboardPage = () => {
                     return (
                       <div
                         key={t.id}
-                        onClick={() => navigate(`/clientes/${t.clientes?.id}`)}
+                        onClick={() =>
+                          t.clientes?.id &&
+                          navigate(`/clientes/${t.clientes.id}`)
+                        }
                         className="p-3 bg-background border border-text-muted/10 rounded-lg flex justify-between items-center text-[11px] hover:shadow-sm hover:bg-surface hover:border-text-muted/20 transition-all cursor-pointer group"
                       >
                         <div className="truncate space-y-0.5 max-w-[70%]">
@@ -559,7 +564,13 @@ export const DashboardPage = () => {
                       <div
                         key={t.id}
                         onClick={() => navigate("/tareas")}
-                        className={`p-3 border-2 rounded-lg flex justify-between items-center text-[11px] hover:shadow-sm hover:bg-surface transition-all cursor-pointer group ${esVencida ? "border-danger bg-danger/5" : esCompletada ? "border-success/40 bg-background/50" : "border-warning/30 bg-background"}`}
+                        className={`p-3 border rounded-lg flex justify-between items-center text-[11px] hover:shadow-sm hover:bg-surface transition-all cursor-pointer group ${
+                          esVencida
+                            ? "border-danger/30 bg-danger/5"
+                            : esCompletada
+                              ? "border-success/30 bg-background/50"
+                              : "border-text-muted/10 bg-background"
+                        }`}
                       >
                         <div className="truncate space-y-0.5 max-w-[70%]">
                           <p
@@ -568,7 +579,7 @@ export const DashboardPage = () => {
                             <ClipboardList className="w-3 h-3 text-text-muted shrink-0" />
                             {t.titulo}
                           </p>
-                          {esIngeniero && (
+                          {esRolGlobal && (
                             <p className="text-[9px] text-text-muted font-semibold truncate">
                               Asignado a: {t.usuarios?.nombre_completo}
                             </p>
