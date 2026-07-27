@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDashboardMetricas, useDashboardDistribucion } from "./useDashboard";
+import { type ModoVistaDashboard } from "./dashboardService";
 import { useVencimientosMes } from "../calendario/useVencimientos";
 import { useTareas } from "../tareas/useTareas";
 import { Loader } from "../../components/Loader";
@@ -16,6 +17,8 @@ import {
   ListFilter,
   AlertTriangle,
   ClipboardList,
+  User,
+  Globe,
 } from "lucide-react";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import { useNavigate } from "react-router-dom";
@@ -34,35 +37,37 @@ const calcularDiasRestantes = (fechaLimiteStr: string): number => {
 export const DashboardPage = () => {
   const { perfil, session } = useAuth();
   const navigate = useNavigate();
+
+  const [vista, setVista] = useState<ModoVistaDashboard>("PERSONAL");
   const [diasSemana, setDiasSemana] = useState<any[]>([]);
   const [diaSeleccionado, setDiaSeleccionado] = useState<string>("");
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   const hoy = new Date();
-  // Ampliado para que Gerencia y Soporte Técnico tengan visión global del negocio
-  const esRolGlobal = ["Gerente", "Ingeniero"].includes(perfil?.cargo || "");
+  const esRolDirectivo = ["Gerente", "Ingeniero"].includes(perfil?.cargo || "");
+  const esVistaGlobal = esRolDirectivo && vista === "GLOBAL";
 
   const {
     data: metricas,
     isLoading: loadingMetricas,
     error: errorMetricas,
-  } = useDashboardMetricas(session?.user?.id, perfil?.cargo);
+  } = useDashboardMetricas(session?.user?.id, perfil?.cargo, vista);
 
   const { data: vencimientosMes = [], isLoading: loadingVencimientos } =
     useVencimientosMes(
       hoy.getFullYear(),
       hoy.getMonth(),
       session?.user?.id,
-      perfil?.cargo,
+      esVistaGlobal ? "Ingeniero" : perfil?.cargo,
     );
 
   const { data: tareas = [], isLoading: loadingTareas } = useTareas(
     session?.user?.id,
-    perfil?.cargo,
+    esVistaGlobal ? "Ingeniero" : perfil?.cargo,
   );
 
   const { data: resumenImpuestos = [], isLoading: loadingDistribucion } =
-    useDashboardDistribucion(esRolGlobal && !!perfil);
+    useDashboardDistribucion(esVistaGlobal && !!perfil);
 
   const calcularSemanaActual = () => {
     const hoy = new Date();
@@ -120,7 +125,7 @@ export const DashboardPage = () => {
     loadingMetricas ||
     loadingVencimientos ||
     loadingTareas ||
-    (esRolGlobal && loadingDistribucion);
+    (esVistaGlobal && loadingDistribucion);
 
   if (isLoading) {
     return (
@@ -160,17 +165,46 @@ export const DashboardPage = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
-      <div>
-        <h1 className="text-2xl font-title font-bold text-primary">
-          Panel de Control Operativo
-        </h1>
-        <p className="text-text-muted text-sm mt-1">
-          Bienvenido de nuevo,{" "}
-          <span className="font-semibold text-text-main">
-            {perfil?.nombre_completo}
-          </span>{" "}
-          ({perfil?.cargo}).
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-text-muted/10 pb-5">
+        <div>
+          <h1 className="text-2xl font-title font-bold text-primary">
+            Panel de Control Operativo
+          </h1>
+          <p className="text-text-muted text-sm mt-1">
+            Bienvenido de nuevo,{" "}
+            <span className="font-semibold text-text-main">
+              {perfil?.nombre_completo}
+            </span>{" "}
+            ({perfil?.cargo}).
+          </p>
+        </div>
+
+        {esRolDirectivo && (
+          <div className="flex bg-surface border border-text-muted/20 p-1 rounded-xl shadow-xs">
+            <button
+              onClick={() => setVista("PERSONAL")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                vista === "PERSONAL"
+                  ? "bg-primary text-surface shadow-sm"
+                  : "text-text-muted hover:text-primary"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              Mi Operación
+            </button>
+            <button
+              onClick={() => setVista("GLOBAL")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                vista === "GLOBAL"
+                  ? "bg-primary text-surface shadow-sm"
+                  : "text-text-muted hover:text-primary"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              Visión Firma
+            </button>
+          </div>
+        )}
       </div>
 
       {errorLocal && (
@@ -188,15 +222,17 @@ export const DashboardPage = () => {
         <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esRolGlobal ? "Total Empresas" : "Mis Empresas"}
+              {esVistaGlobal
+                ? "Total Empresas Firma"
+                : "Mis Empresas Asignadas"}
             </span>
             <p className="text-3xl font-bold text-primary font-title">
               {metricas.totalClientes}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esRolGlobal
+              {esVistaGlobal
                 ? "Empresas dadas de alta en el sistema"
-                : "Clientes bajo tu cargo"}
+                : "Clientes bajo tu responsabilidad directa"}
             </p>
           </div>
           <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
@@ -207,15 +243,15 @@ export const DashboardPage = () => {
         <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esRolGlobal ? "Vencimientos Firma" : "Vencimientos Mes"}
+              {esVistaGlobal ? "Vencimientos Firma" : "Mis Vencimientos Mes"}
             </span>
             <p className="text-3xl font-bold text-primary font-title">
               {metricas.totalVencimientos}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esRolGlobal
+              {esVistaGlobal
                 ? "Calendarios totales sembrados este mes"
-                : "Obligaciones totales del periodo"}
+                : "Obligaciones totales de tu cartera"}
             </p>
           </div>
           <div className="w-12 h-12 bg-accent/20 text-primary rounded-xl flex items-center justify-center">
@@ -226,15 +262,15 @@ export const DashboardPage = () => {
         <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              {esRolGlobal ? "Pendientes Globales" : "Por Ejecutar"}
+              {esVistaGlobal ? "Pendientes Globales" : "Por Ejecutar"}
             </span>
             <p className="text-3xl font-bold text-warning font-title">
               {metricas.tareasPendientes}
             </p>
             <p className="text-[11px] text-text-muted">
-              {esRolGlobal
+              {esVistaGlobal
                 ? "Tareas sin presentar de toda la firma"
-                : "Pendientes y en revisión"}
+                : "Pendientes y en revisión bajo tu cargo"}
             </p>
           </div>
           <div className="w-12 h-12 bg-warning/10 text-warning rounded-xl flex items-center justify-center">
@@ -245,15 +281,15 @@ export const DashboardPage = () => {
         <div className="card-container bg-surface p-5 rounded-xl border border-text-muted/20 shadow-sm flex items-center justify-between">
           <div className="space-y-1.5">
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              Cumplimiento
+              {esVistaGlobal ? "Efectividad Global" : "Mi Efectividad"}
             </span>
             <p className="text-3xl font-bold text-success font-title">
               {metricas.porcentajeEfectividad}%
             </p>
             <p className="text-[11px] text-text-muted">
-              {esRolGlobal
-                ? "Efectividad operativa global de la firma"
-                : "Efectividad de presentación"}
+              {esVistaGlobal
+                ? "Efectividad operativa general de la firma"
+                : "Tasa de cumplimiento en tus presentaciones"}
             </p>
           </div>
           <div className="w-12 h-12 bg-success/10 text-success rounded-xl flex items-center justify-center">
@@ -264,7 +300,7 @@ export const DashboardPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
-          {esRolGlobal ? (
+          {esVistaGlobal ? (
             <div className="card-container bg-surface p-6 rounded-xl border border-text-muted/20 shadow-sm space-y-4">
               <div className="flex items-center gap-2 text-primary border-b border-text-muted/10 pb-3">
                 <ListFilter className="w-5 h-5 text-accent" />
@@ -412,7 +448,7 @@ export const DashboardPage = () => {
           <div className="flex items-center gap-2 border-b border-text-muted/10 pb-3">
             <CalendarDays className="w-5 h-5 text-primary" />
             <h3 className="text-sm font-title font-bold text-primary uppercase tracking-wide">
-              {esRolGlobal
+              {esVistaGlobal
                 ? "Cronograma Base de Control Global"
                 : "Agenda Semanal de Trabajo"}
             </h3>
@@ -579,7 +615,7 @@ export const DashboardPage = () => {
                             <ClipboardList className="w-3 h-3 text-text-muted shrink-0" />
                             {t.titulo}
                           </p>
-                          {esRolGlobal && (
+                          {esVistaGlobal && (
                             <p className="text-[9px] text-text-muted font-semibold truncate">
                               Asignado a: {t.usuarios?.nombre_completo}
                             </p>
