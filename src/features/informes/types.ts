@@ -4,9 +4,7 @@ export const filtrosInformeSchema = z
   .object({
     fechaInicio: z.string().min(1, "La fecha de inicio es requerida."),
     fechaFin: z.string().min(1, "La fecha de fin es requerida."),
-    clienteId: z.string().optional(),
     usuarioId: z.string().optional(),
-    estado: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -21,26 +19,14 @@ export const filtrosInformeSchema = z
 
 export type FiltrosInformeData = z.infer<typeof filtrosInformeSchema>;
 
-export interface MetricaCumplimientoCliente {
-  cliente_id: string;
-  razon_social: string;
-  nit: string;
-  total_vencimientos: number;
-  presentados: number;
-  pendientes: number;
-  vencidos: number;
-  porcentaje_cumplimiento: number;
-}
-
-export interface MetricaCargaEquipo {
+export interface MetricaVencimientosEmpleado {
   usuario_id: string;
   nombre_completo: string;
   cargo: string;
-  tareas_pendientes: number;
-  tareas_completadas: number;
-  tareas_vencidas: number;
-  vencimientos_pendientes: number;
-  vencimientos_presentados: number;
-  vencimientos_vencidos: number;
-  total_carga_activa: number; 
+  total_vencimientos: number;
+  presentados_a_tiempo: number;
+  presentados_tarde: number;
+  pendientes: number;
+  vencidos: number;
+  porcentaje_efectividad: number;
 }

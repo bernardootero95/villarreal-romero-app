@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { FiltrosInforme } from "./FiltrosInforme";
-import { useInformeCumplimiento, useInformeCargaEquipo } from "./useInformes";
+import { useInformesVencimientos } from "./useInformes";
 import type { FiltrosInformeData } from "./types";
 import {
   FileSpreadsheet,
-  TrendingUp,
   Users,
-  Building2,
   CheckCircle2,
   AlertTriangle,
   Clock,
-  Briefcase,
+  AlertCircle,
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 
@@ -26,57 +24,23 @@ export const InformesPage = () => {
   const [filtros, setFiltros] = useState<FiltrosInformeData>({
     fechaInicio: primerDiaMes,
     fechaFin: ultimoDiaMes,
-    clienteId: "",
+    usuarioId: "",
   });
 
-  const [tabActiva, setTabActiva] = useState<"CLIENTES" | "EQUIPO">("CLIENTES");
-
-  const { data: datosClientes = [], isLoading: loadingClientes } =
-    useInformeCumplimiento(filtros);
-
-  const { data: datosEquipo = [], isLoading: loadingEquipo } =
-    useInformeCargaEquipo(filtros);
-
-  const isLoading = loadingClientes || loadingEquipo;
+  const { data: datosEmpleados = [], isLoading } =
+    useInformesVencimientos(filtros);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-title font-bold text-primary flex items-center gap-2">
-            <FileSpreadsheet className="w-6 h-6 text-accent" />
-            Centro de Informes
-          </h1>
-          <p className="text-text-muted text-sm">
-            Auditoría de cumplimiento tributario y rendimiento operativo de la
-            firma.
-          </p>
-        </div>
-
-        <div className="flex bg-surface border border-text-muted/20 p-1 rounded-lg shadow-xs">
-          <button
-            onClick={() => setTabActiva("CLIENTES")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-              tabActiva === "CLIENTES"
-                ? "bg-primary text-surface shadow-sm"
-                : "text-text-muted hover:text-primary"
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            Cumplimiento Clientes
-          </button>
-          <button
-            onClick={() => setTabActiva("EQUIPO")}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-              tabActiva === "EQUIPO"
-                ? "bg-primary text-surface shadow-sm"
-                : "text-text-muted hover:text-primary"
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            Carga Operativa
-          </button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-title font-bold text-primary flex items-center gap-2">
+          <FileSpreadsheet className="w-6 h-6 text-accent" />
+          Rendimiento Operativo por Empleado
+        </h1>
+        <p className="text-text-muted text-sm">
+          Evaluación de efectividad en la presentación oficial de vencimientos
+          tributarios asignados.
+        </p>
       </div>
 
       <FiltrosInforme
@@ -86,111 +50,18 @@ export const InformesPage = () => {
 
       {isLoading ? (
         <Loader
-          texto="Procesando métricas y consolidando datos..."
+          texto="Consolidando métricas de cumplimiento por empleado..."
           fullScreen={false}
         />
-      ) : tabActiva === "CLIENTES" ? (
-        <div className="bg-surface border border-text-muted/20 rounded-xl shadow-xs overflow-hidden">
-          <div className="p-4 bg-background border-b border-text-muted/10 flex justify-between items-center">
-            <h3 className="font-title font-bold text-primary text-sm flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-accent" />
-              Estado de Obligaciones por Cliente
-            </h3>
-            <span className="text-xs font-mono text-text-muted">
-              Total Registros: {datosClientes.length}
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-background/50 text-text-muted text-xs uppercase tracking-wider border-b border-text-muted/10">
-                  <th className="px-6 py-3.5 font-semibold">Cliente</th>
-                  <th className="px-6 py-3.5 font-semibold text-center">
-                    Total Vtos
-                  </th>
-                  <th className="px-6 py-3.5 font-semibold text-center text-success">
-                    Presentados
-                  </th>
-                  <th className="px-6 py-3.5 font-semibold text-center text-warning">
-                    Pendientes
-                  </th>
-                  <th className="px-6 py-3.5 font-semibold text-center text-danger">
-                    Vencidos
-                  </th>
-                  <th className="px-6 py-3.5 font-semibold text-right">
-                    Cumplimiento
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-text-muted/10">
-                {datosClientes.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-12 text-center text-text-muted italic text-xs"
-                    >
-                      No se encontraron movimientos tributarios en este rango de
-                      fechas.
-                    </td>
-                  </tr>
-                ) : (
-                  datosClientes.map((item) => (
-                    <tr
-                      key={item.cliente_id}
-                      className="hover:bg-primary/5 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-primary">
-                          {item.razon_social}
-                        </div>
-                        <div className="text-xs text-text-muted font-mono">
-                          NIT: {item.nit}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center font-bold text-primary">
-                        {item.total_vencimientos}
-                      </td>
-                      <td className="px-6 py-4 text-center font-semibold text-success bg-success/5">
-                        {item.presentados}
-                      </td>
-                      <td className="px-6 py-4 text-center font-semibold text-warning bg-warning/5">
-                        {item.pendientes}
-                      </td>
-                      <td className="px-6 py-4 text-center font-semibold text-danger bg-danger/5">
-                        {item.vencidos}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="w-16 bg-text-muted/20 rounded-full h-2 overflow-hidden">
-                            <div
-                              className="bg-success h-full transition-all duration-300"
-                              style={{
-                                width: `${item.porcentaje_cumplimiento}%`,
-                              }}
-                            />
-                          </div>
-                          <span className="font-mono font-bold text-xs text-primary w-9 text-right">
-                            {item.porcentaje_cumplimiento}%
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
       ) : (
         <div className="bg-surface border border-text-muted/20 rounded-xl shadow-xs overflow-hidden">
           <div className="p-4 bg-background border-b border-text-muted/10 flex justify-between items-center">
             <h3 className="font-title font-bold text-primary text-sm flex items-center gap-1.5">
               <Users className="w-4 h-4 text-accent" />
-              Rendimiento y Carga Activa por Especialista
+              Desglose de Vencimientos por Especialista
             </h3>
             <span className="text-xs font-mono text-text-muted">
-              Miembros Activos: {datosEquipo.length}
+              Miembros Evaluados: {datosEmpleados.length}
             </span>
           </div>
 
@@ -198,106 +69,112 @@ export const InformesPage = () => {
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="bg-background/50 text-text-muted text-xs uppercase tracking-wider border-b border-text-muted/10">
-                  <th className="px-6 py-3.5 font-semibold">Especialista</th>
+                  <th className="px-6 py-3.5 font-semibold">Empleado</th>
                   <th className="px-6 py-3.5 font-semibold text-center">
-                    Carga Activa
+                    Total Asignado
                   </th>
-                  <th className="px-6 py-3.5 font-semibold text-center border-l border-text-muted/10">
-                    <Briefcase className="w-3.5 h-3.5 inline mr-1 text-primary" />{" "}
-                    Vencimientos DIAN
+                  <th className="px-6 py-3.5 font-semibold text-center text-success">
+                    <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" /> A
+                    Tiempo
                   </th>
-                  <th className="px-6 py-3.5 font-semibold text-center border-l border-text-muted/10">
-                    <Clock className="w-3.5 h-3.5 inline mr-1 text-accent" />{" "}
-                    Tareas Internas
+                  <th className="px-6 py-3.5 font-semibold text-center text-warning">
+                    <AlertCircle className="w-3.5 h-3.5 inline mr-1" /> Tarde
+                  </th>
+                  <th className="px-6 py-3.5 font-semibold text-center text-primary">
+                    <Clock className="w-3.5 h-3.5 inline mr-1" /> Pendientes
+                  </th>
+                  <th className="px-6 py-3.5 font-semibold text-center text-danger">
+                    <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />{" "}
+                    Vencidos
+                  </th>
+                  <th className="px-6 py-3.5 font-semibold text-right">
+                    Efectividad
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-text-muted/10">
-                {datosEquipo.length === 0 ? (
+                {datosEmpleados.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={7}
                       className="px-6 py-12 text-center text-text-muted italic text-xs"
                     >
-                      No hay miembros activos para evaluar.
+                      No se encontraron registros en el período seleccionado.
                     </td>
                   </tr>
                 ) : (
-                  datosEquipo.map((miembro) => (
+                  datosEmpleados.map((emp) => (
                     <tr
-                      key={miembro.usuario_id}
+                      key={emp.usuario_id}
                       className="hover:bg-primary/5 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div className="font-semibold text-primary">
-                          {miembro.nombre_completo}
+                          {emp.nombre_completo}
                         </div>
                         <span className="px-2 py-0.5 mt-1 inline-block bg-primary/5 text-primary text-[11px] font-medium rounded-full border border-primary/10">
-                          {miembro.cargo}
+                          {emp.cargo}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-center font-bold text-primary font-mono text-base">
+                        {emp.total_vencimientos}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-bold text-success bg-success/10 px-2.5 py-1 rounded-md font-mono text-xs border border-success/20">
+                          {emp.presentados_a_tiempo}
                         </span>
                       </td>
 
                       <td className="px-6 py-4 text-center">
                         <span
-                          className={`px-3 py-1 rounded-full font-mono font-bold text-xs border ${
-                            miembro.total_carga_activa > 10
-                              ? "bg-danger/10 text-danger border-danger/20 animate-pulse"
-                              : miembro.total_carga_activa > 5
-                                ? "bg-warning/10 text-warning border-warning/20"
-                                : "bg-success/10 text-success border-success/20"
+                          className={`font-bold px-2.5 py-1 rounded-md font-mono text-xs border ${
+                            emp.presentados_tarde > 0
+                              ? "bg-warning/10 text-warning border-warning/20 font-extrabold"
+                              : "bg-background text-text-muted border-text-muted/20"
                           }`}
                         >
-                          {miembro.total_carga_activa}{" "}
-                          {miembro.total_carga_activa === 1 ? "Ítem" : "Ítems"}
+                          {emp.presentados_tarde}
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-center border-l border-text-muted/10">
-                        <div className="flex items-center justify-center gap-3 text-xs font-mono">
-                          <span
-                            title="Vencidos"
-                            className="text-danger font-bold flex items-center gap-0.5"
-                          >
-                            <AlertTriangle className="w-3 h-3" />{" "}
-                            {miembro.vencimientos_vencidos}
-                          </span>
-                          <span
-                            title="Pendientes en plazo"
-                            className="text-warning font-semibold"
-                          >
-                            Ptte: {miembro.vencimientos_pendientes}
-                          </span>
-                          <span
-                            title="Presentados"
-                            className="text-success font-semibold flex items-center gap-0.5"
-                          >
-                            <CheckCircle2 className="w-3 h-3" />{" "}
-                            {miembro.vencimientos_presentados}
-                          </span>
-                        </div>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-semibold text-primary bg-primary/5 px-2.5 py-1 rounded-md font-mono text-xs border border-primary/10">
+                          {emp.pendientes}
+                        </span>
                       </td>
 
-                      <td className="px-6 py-4 text-center border-l border-text-muted/10">
-                        <div className="flex items-center justify-center gap-3 text-xs font-mono">
-                          <span
-                            title="Tareas Vencidas"
-                            className="text-danger font-bold flex items-center gap-0.5"
-                          >
-                            <AlertTriangle className="w-3 h-3" />{" "}
-                            {miembro.tareas_vencidas}
-                          </span>
-                          <span
-                            title="Tareas Pendientes"
-                            className="text-warning font-semibold"
-                          >
-                            Ptte: {miembro.tareas_pendientes}
-                          </span>
-                          <span
-                            title="Tareas Completadas"
-                            className="text-success font-semibold flex items-center gap-0.5"
-                          >
-                            <CheckCircle2 className="w-3 h-3" />{" "}
-                            {miembro.tareas_completadas}
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`font-bold px-2.5 py-1 rounded-md font-mono text-xs border ${
+                            emp.vencidos > 0
+                              ? "bg-danger text-surface border-danger animate-pulse shadow-xs"
+                              : "bg-background text-text-muted border-text-muted/20"
+                          }`}
+                        >
+                          {emp.vencidos}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-16 bg-text-muted/20 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 ${
+                                emp.porcentaje_efectividad >= 80
+                                  ? "bg-success"
+                                  : emp.porcentaje_efectividad >= 50
+                                    ? "bg-warning"
+                                    : "bg-danger"
+                              }`}
+                              style={{
+                                width: `${emp.porcentaje_efectividad}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="font-mono font-bold text-xs text-primary w-10 text-right">
+                            {emp.porcentaje_efectividad}%
                           </span>
                         </div>
                       </td>

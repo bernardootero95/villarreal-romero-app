@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { filtrosInformeSchema, type FiltrosInformeData } from "./types";
 import { Filter, Search } from "lucide-react";
-import { useClientes } from "../clientes/useClientes";
+import { useUsuarios } from "../usuarios/useUsuarios";
 
 interface FiltrosInformeProps {
   onAplicarFiltros: (filtros: FiltrosInformeData) => void;
@@ -13,7 +13,7 @@ export const FiltrosInforme = ({
   onAplicarFiltros,
   filtrosActuales,
 }: FiltrosInformeProps) => {
-  const { data: clientes = [] } = useClientes();
+  const { data: usuarios = [] } = useUsuarios();
 
   const {
     register,
@@ -31,7 +31,7 @@ export const FiltrosInforme = ({
     >
       <div className="flex items-center gap-2 text-primary font-title font-semibold text-sm border-b border-text-muted/10 pb-2">
         <Filter className="w-4 h-4 text-accent" />
-        <span>Parámetros de Evaluación</span>
+        <span>Filtros del Informe de Vencimientos</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -73,16 +73,16 @@ export const FiltrosInforme = ({
 
         <div>
           <label className="block text-xs font-bold text-text-muted uppercase mb-1">
-            Filtrar Cliente (Opcional)
+            Especialista / Contador (Opcional)
           </label>
           <select
-            {...register("clienteId")}
+            {...register("usuarioId")}
             className="w-full px-3 py-1.5 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors appearance-none cursor-pointer"
           >
-            <option value="">Todos los clientes</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.razon_social}
+            <option value="">Todos los empleados</option>
+            {usuarios.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nombre_completo} ({u.cargo})
               </option>
             ))}
           </select>
@@ -95,7 +95,7 @@ export const FiltrosInforme = ({
           className="bg-primary hover:bg-primary/90 text-surface text-xs font-semibold px-5 py-2 rounded-md flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
         >
           <Search className="w-3.5 h-3.5" />
-          Generar Informe
+          Actualizar Reporte
         </button>
       </div>
     </form>
