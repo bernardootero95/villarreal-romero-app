@@ -170,17 +170,25 @@ export const ClienteCargaMasiva = ({
             ? String(row[4]).toLowerCase().trim()
             : null;
 
-          if (!nit || !razonSocial || !responsableStr) {
+          if (!nit || !razonSocial) {
             throw new Error(
-              `Pestaña 'Clientes' - Fila ${i + 1}: El campo NIT, Razón Social y Profesional a Cargo son obligatorios.`,
+              `Pestaña 'Clientes' - Fila ${i + 1}: El campo NIT y Razón Social son obligatorios.`,
             );
           }
 
-          const contadorId = usuariosSistema[responsableStr];
-          if (!contadorId) {
-            throw new Error(
-              `Pestaña 'Clientes' - Fila ${i + 1}: El profesional '${row[4]}' no figura registrado o activo en la firma.`,
-            );
+          let contadorId = null;
+          if (
+            responsableStr &&
+            responsableStr !== "n/a" &&
+            responsableStr !== "sin asignar" &&
+            responsableStr !== ""
+          ) {
+            contadorId = usuariosSistema[responsableStr];
+            if (!contadorId) {
+              throw new Error(
+                `Pestaña 'Clientes' - Fila ${i + 1}: El profesional '${row[4]}' no figura registrado o activo en la firma.`,
+              );
+            }
           }
 
           const dv = calcularDV(nit);
@@ -252,7 +260,6 @@ export const ClienteCargaMasiva = ({
         if (obligacionesPayload.length > 0) {
           await asignarImpuestosBulkMutation.mutateAsync({
             obligaciones: obligacionesPayload,
-            // Delegamos el cruce de NIT al servicio Backend
           });
         }
 
@@ -357,7 +364,7 @@ export const ClienteCargaMasiva = ({
                 </span>
                 <p>
                   <b>Hoja 1 (Clientes):</b> NIT | Razón Social | Celular |
-                  Correo | Persona a Cargo
+                  Correo | Persona a Cargo (Opcional)
                 </p>
                 <p>
                   <b>Hoja 2 (Obligaciones):</b> NIT del Cliente | Nombre del

@@ -59,7 +59,7 @@ export const ClienteForm = ({
     formState: { errors },
   } = useForm<ClienteFormData>({
     resolver: zodResolver(clienteSchema),
-    defaultValues: { estado: "ACTIVO" },
+    defaultValues: { estado: "ACTIVO", contador_id: "" },
   });
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export const ClienteForm = ({
         razon_social: clienteAEditar.razon_social,
         email: clienteAEditar.email || "",
         celular: clienteAEditar.celular || "",
-        contador_id: clienteAEditar.contador_id,
+        contador_id: clienteAEditar.contador_id || "",
         estado: clienteAEditar.estado as "ACTIVO" | "INACTIVO",
       });
     }
@@ -110,6 +110,7 @@ export const ClienteForm = ({
       ...data,
       email: data.email?.trim() || null,
       celular: data.celular?.trim() || null,
+      contador_id: data.contador_id || null,
     };
 
     if (clienteAEditar) {
@@ -291,15 +292,18 @@ export const ClienteForm = ({
 
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">
-                Responsable Asignado
+                Responsable Asignado{" "}
+                <span className="text-text-muted font-normal text-xs">
+                  (Opcional)
+                </span>
               </label>
               <select
                 {...register("contador_id")}
-                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors appearance-none ${
+                className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none bg-surface transition-colors appearance-none cursor-pointer ${
                   errors.contador_id ? "border-danger" : "border-text-muted/30"
                 }`}
               >
-                <option value="">Seleccione un responsable...</option>
+                <option value="">Sin responsable asignado</option>
                 {contadores.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.nombre_completo} ({user.cargo})
