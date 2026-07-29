@@ -117,7 +117,6 @@ export const calendarioBaseService = {
 
     await usuariosService.registrarAuditoria('CREAR_MASIVO', 'CALENDARIO_BASE', 'bulk', null, { cantidad: payloads.length });
 
-    
     if (data && data.length > 0) {
       for (const registro of data) {
         await this.sincronizarVencimientosConCalendarioBase(registro as CalendarioBase);
@@ -127,10 +126,8 @@ export const calendarioBaseService = {
     return data;
   },
 
-  
   async sincronizarVencimientosConCalendarioBase(calendario: CalendarioBase) {
     try {
-      
       const { data: asignaciones, error: errAsig } = await supabase
         .from('cliente_impuestos')
         .select(`
@@ -143,11 +140,17 @@ export const calendarioBaseService = {
 
       if (errAsig || !asignaciones || asignaciones.length === 0) return;
 
-      
+      // CRUCE DINÁMICO DE DÍGITOS (1 O 2 CARACTERES COMO TEXTO EXACTO)
       const clientesAfectados = asignaciones.filter((asig: any) => {
-        if (calendario.digito === null) return true; 
-        const ultimoDigitoCliente = Number(String(asig.clientes.nit).slice(-1));
-        return ultimoDigitoCliente === calendario.digito;
+        if (calendario.digito === null || calendario.digito === '') return true; 
+        
+        const nitCliente = String(asig.clientes.nit);
+        const longitudDigito = String(calendario.digito).length;
+        
+        // Extraemos exactamente la cantidad de caracteres que el calendario exija del final del NIT
+        const extractoNit = nitCliente.slice(-longitudDigito);
+        
+        return extractoNit === String(calendario.digito);
       });
 
       if (clientesAfectados.length === 0) return;
@@ -155,7 +158,6 @@ export const calendarioBaseService = {
       const periodoFiscalStr = `${calendario.anio}-${calendario.periodo}`;
 
       for (const asig of clientesAfectados) {
-        
         const { data: vtoExistente } = await supabase
           .from('vencimientos')
           .select('id, estado_tarea')
@@ -164,7 +166,6 @@ export const calendarioBaseService = {
           .maybeSingle();
 
         if (vtoExistente) {
-          
           if (vtoExistente.estado_tarea !== 'PRESENTADO') {
             await supabase
               .from('vencimientos')
@@ -175,7 +176,6 @@ export const calendarioBaseService = {
               .eq('id', vtoExistente.id);
           }
         } else {
-          
           await supabase
             .from('vencimientos')
             .insert([{

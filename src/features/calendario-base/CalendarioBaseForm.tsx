@@ -186,13 +186,13 @@ export const CalendarioBaseForm = ({
                   )}
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   {...register("digito", {
                     setValueAs: (v) =>
-                      v === "" || v === null ? null : Number(v),
+                      v === "" || v === null ? null : String(v).trim(),
                   })}
                   disabled={!requiereDigito}
-                  placeholder={requiereDigito ? "0-9" : "Fecha fija"}
+                  placeholder={requiereDigito ? "Ej. 1 o 05" : "Fecha fija"}
                   className={`w-full px-3 py-2 border rounded-md focus:ring-1 focus:ring-accent outline-none text-sm ${
                     !requiereDigito
                       ? "bg-text-muted/10 cursor-not-allowed border-text-muted/20"

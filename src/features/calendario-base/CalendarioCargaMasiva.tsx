@@ -70,7 +70,14 @@ export const CalendarioCargaMasiva = ({
           if (!row || row.length === 0 || !row[0]) continue;
 
           const periodo = String(row[0] || "").trim();
-          const digitoStr = String(row[1] || "").trim();
+
+          // Tratamiento estricto como texto para preservar posibles ceros si el Excel los envía
+          const digitoRaw = row[1];
+          const digitoStr =
+            digitoRaw !== undefined && digitoRaw !== null
+              ? String(digitoRaw).trim()
+              : "";
+
           const fechaStr = procesarFechaExcel(row[2]);
 
           if (!periodo || !fechaStr) {
@@ -86,7 +93,7 @@ export const CalendarioCargaMasiva = ({
             digito:
               digitoStr === "" || digitoStr.toUpperCase() === "N/A"
                 ? null
-                : Number(digitoStr),
+                : digitoStr,
             fecha_vencimiento_oficial: fechaStr,
           });
         }
@@ -188,13 +195,17 @@ export const CalendarioCargaMasiva = ({
                 <b>Columna A:</b> Periodo (Ej. 01, B1, ANUAL)
               </li>
               <li>
-                <b>Columna B:</b> Dígito NIT (0-9. Dejar vacío o N/A si es Fecha
-                Fija)
+                <b>Columna B:</b> Dígito NIT (0-9 o 00-09 en texto. Dejar vacío
+                o N/A si es Fecha Fija)
               </li>
               <li>
                 <b>Columna C:</b> Fecha de Vencimiento (Formato AAAA-MM-DD)
               </li>
             </ul>
+            <p className="text-[10px] text-text-muted mt-3 italic">
+              *Asegúrate de que la Columna B esté en formato de texto en Excel
+              si necesitas preservar ceros a la izquierda.
+            </p>
           </div>
 
           <div>

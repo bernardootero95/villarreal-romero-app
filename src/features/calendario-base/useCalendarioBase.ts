@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { calendarioBaseService } from "./calendarioBaseService";
 import type { CalendarioBaseConImpuesto, CalendarioBaseFormData } from "./types";
 
-
 export const CALENDARIO_BASE_KEY = ["calendario-base"] as const;
 
 export const getCalendarioBaseQueryKey = (anio: number) => [...CALENDARIO_BASE_KEY, anio] as const;
@@ -11,7 +10,7 @@ export const useCalendarioBase = (anio: number) => {
   return useQuery<CalendarioBaseConImpuesto[], Error>({
     queryKey: getCalendarioBaseQueryKey(anio),
     queryFn: () => calendarioBaseService.getAll(anio),
-    staleTime: 1000 * 60 * 10, // Los vencimientos oficiales varían poco, los consideramos frescos por 10 min
+    staleTime: 1000 * 60 * 10,
   });
 };
 
