@@ -157,7 +157,6 @@ export const ClienteCargaMasiva = ({
         );
 
         const clientesPayload: any[] = [];
-        const nitToUltimoDigitoMapa: Record<string, number> = {};
 
         for (let i = 1; i < filasClientes.length; i++) {
           const row = filasClientes[i];
@@ -185,7 +184,6 @@ export const ClienteCargaMasiva = ({
           }
 
           const dv = calcularDV(nit);
-          const ultimoDigito = Number(nit.slice(-1));
 
           clientesPayload.push({
             nit,
@@ -197,8 +195,6 @@ export const ClienteCargaMasiva = ({
             contador_id: contadorId,
             estado: "ACTIVO",
           });
-
-          nitToUltimoDigitoMapa[nit] = ultimoDigito;
         }
 
         if (clientesPayload.length === 0) {
@@ -216,7 +212,6 @@ export const ClienteCargaMasiva = ({
         });
 
         const obligacionesPayload: any[] = [];
-        const idToUltimoDigitoMapeado: Record<string, number> = {};
 
         for (let j = 1; j < filasObligaciones.length; j++) {
           const rowOb = filasObligaciones[j];
@@ -252,15 +247,12 @@ export const ClienteCargaMasiva = ({
             impuesto_id: impuestoId,
             estado: "ACTIVO",
           });
-
-          idToUltimoDigitoMapeado[clienteId] =
-            nitToUltimoDigitoMapa[nitBusqueda];
         }
 
         if (obligacionesPayload.length > 0) {
           await asignarImpuestosBulkMutation.mutateAsync({
             obligaciones: obligacionesPayload,
-            ultimoDigitoMapa: idToUltimoDigitoMapeado,
+            // Delegamos el cruce de NIT al servicio Backend
           });
         }
 

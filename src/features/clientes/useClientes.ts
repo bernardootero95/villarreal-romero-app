@@ -100,7 +100,6 @@ export const useClienteImpuestos = (clienteId: string) => {
 interface AsignarImpuestoParams {
   clienteId: string;
   impuestoId: string;
-  ultimoDigitoNit: number;
 }
 
 /**
@@ -110,8 +109,8 @@ export const useAsignarImpuesto = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ clienteId, impuestoId, ultimoDigitoNit }: AsignarImpuestoParams) =>
-      clienteImpuestosService.asignarImpuesto(clienteId, impuestoId, ultimoDigitoNit),
+    mutationFn: ({ clienteId, impuestoId }: AsignarImpuestoParams) =>
+      clienteImpuestosService.asignarImpuesto(clienteId, impuestoId),
     onSuccess: (_data, variables) => {
       // Invalida la lista de obligaciones del cliente para forzar el re-render en la UI
       queryClient.invalidateQueries({ queryKey: getClienteImpuestosQueryKey(variables.clienteId) });
@@ -145,7 +144,6 @@ export const useDesasignarImpuesto = () => {
 
 interface AsignarImpuestosBulkParams {
   obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>;
-  ultimoDigitoMapa: Record<string, number>;
 }
 
 /**
@@ -155,8 +153,8 @@ export const useAsignarImpuestosBulk = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ obligaciones, ultimoDigitoMapa }: AsignarImpuestosBulkParams) =>
-      clienteImpuestosService.asignarImpuestosBulk(obligaciones, ultimoDigitoMapa),
+    mutationFn: ({ obligaciones }: AsignarImpuestosBulkParams) =>
+      clienteImpuestosService.asignarImpuestosBulk(obligaciones),
     onSuccess: () => {
       // Invalida toda la jerarquía de asignaciones y agendas temporales
       queryClient.invalidateQueries({ queryKey: CLIENTE_IMPUESTOS_KEY });

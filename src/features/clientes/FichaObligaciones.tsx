@@ -32,8 +32,6 @@ export const FichaObligaciones = ({
   const asignarMutation = useAsignarImpuesto();
   const desasignarMutation = useDesasignarImpuesto();
 
-  const ultimoDigito = Number(cliente.nit.slice(-1));
-
   useEffect(() => {
     const cargarCatalogo = async () => {
       try {
@@ -60,7 +58,7 @@ export const FichaObligaciones = ({
       {
         clienteId: cliente.id,
         impuestoId: selectedImpuesto,
-        ultimoDigitoNit: ultimoDigito,
+        // Delegamos el cruce del NIT a la capa de servicios (Backend)
       },
       {
         onSuccess: () => setSelectedImpuesto(""),
@@ -145,7 +143,7 @@ export const FichaObligaciones = ({
                 value={selectedImpuesto}
                 onChange={(e) => setSelectedImpuesto(e.target.value)}
                 disabled={submitting || loading}
-                className="flex-1 px-3 py-2 border border-text-muted/30 rounded-md bg-surface text-sm outline-none focus:ring-1 focus:ring-accent transition-colors"
+                className="flex-1 px-3 py-2 border border-text-muted/30 rounded-md bg-surface text-sm outline-none focus:ring-1 focus:ring-accent transition-colors cursor-pointer"
               >
                 <option value="">
                   Selecciona una obligación del catálogo...
@@ -165,8 +163,8 @@ export const FichaObligaciones = ({
               </button>
             </div>
             <p className="text-[10px] text-text-muted">
-              * El sistema usará automáticamente el dígito <b>{ultimoDigito}</b>{" "}
-              para sembrar la agenda de vencimientos en tiempo real.
+              * El sistema cruzará dinámicamente el NIT de esta empresa con las
+              reglas oficiales para sembrar los vencimientos en tiempo real.
             </p>
           </div>
 

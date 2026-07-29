@@ -22,8 +22,7 @@ export const clienteImpuestosService = {
     return data;
   },
 
-  
-  async asignarImpuesto(clienteId: string, impuestoId: string, ultimoDigitoNit: number) {
+  async asignarImpuesto(clienteId: string, impuestoId: string) {
     
     const { data: existenciaPrevia } = await supabase
       .from('cliente_impuestos')
@@ -35,7 +34,6 @@ export const clienteImpuestosService = {
     let asignacion;
 
     if (existenciaPrevia) {
-      
       const { data: reactivado, error: errorReactivar } = await supabase
         .from('cliente_impuestos')
         .update({ estado: 'ACTIVO', eliminado: null })
@@ -46,7 +44,6 @@ export const clienteImpuestosService = {
       if (errorReactivar) throw errorReactivar;
       asignacion = reactivado;
     } else {
-      
       const { data: nuevaAsignacion, error: errorAsignacion } = await supabase
         .from('cliente_impuestos')
         .insert([{ cliente_id: clienteId, impuesto_id: impuestoId, estado: 'ACTIVO' }])
@@ -60,29 +57,34 @@ export const clienteImpuestosService = {
       asignacion = nuevaAsignacion;
     }
 
-    
+    // 1. Extraemos el NIT de la base de datos
+    const { data: clienteInfo } = await supabase
+      .from('clientes')
+      .select('nit')
+      .eq('id', clienteId)
+      .single();
+      
+    const nitCliente = clienteInfo?.nit ? String(clienteInfo.nit) : "";
     const anioActual = new Date().getFullYear();
     
-    let queryBase = supabase
+    // 2. Traemos todas las reglas del calendario para el impuesto este año
+    const { data: fechasOficialesTodas, error: errorCalendario } = await supabase
       .from('calendario_base_impuestos')
       .select('*')
       .eq('impuesto_id', impuestoId)
       .eq('anio', anioActual);
 
-    const { data: impuestoInfo } = await supabase.from('impuestos').select('regla_vencimiento').eq('id', impuestoId).single();
-    
-    if (impuestoInfo?.regla_vencimiento === 'FECHA_FIJA') {
-      queryBase = queryBase.is('digito', null);
-    } else {
-      queryBase = queryBase.eq('digito', ultimoDigitoNit);
-    }
-
-    const { data: fechasOficiales, error: errorCalendario } = await queryBase;
-
     if (errorCalendario) throw errorCalendario;
 
-    
-    if (fechasOficiales && fechasOficiales.length > 0) {
+    // 3. Cruzamos dinámicamente usando 1 o 2 caracteres como texto exacto
+    const fechasOficiales = fechasOficialesTodas?.filter(cal => {
+      if (cal.digito === null || cal.digito === '') return true;
+      const longitudDigito = String(cal.digito).length;
+      const extractoNit = nitCliente.slice(-longitudDigito);
+      return extractoNit === String(cal.digito);
+    }) || [];
+
+    if (fechasOficiales.length > 0) {
       // Consultamos qué vencimientos ya existen para este cliente e impuesto
       const { data: existentes } = await supabase
         .from('vencimientos')
@@ -92,7 +94,6 @@ export const clienteImpuestosService = {
 
       const idsExistentes = existentes?.map(v => v.calendario_base_id) || [];
 
-      
       const vencimientosPayload = fechasOficiales
         .filter(fechaBase => !idsExistentes.includes(fechaBase.id))
         .map(fechaBase => ({
@@ -116,7 +117,6 @@ export const clienteImpuestosService = {
     return asignacion;
   },
 
-  
   async desasignarImpuesto(asignacionId: string, clienteId: string, impuestoId: string) {
     const ahora = new Date().toISOString();
 
@@ -137,8 +137,7 @@ export const clienteImpuestosService = {
     if (errorClean) console.error('Error limpiando agenda pendiente:', errorClean);
   },
 
-  
-  async asignarImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>, ultimoDigitoMapa: Record<string, number>) {
+  async asignarImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>) {
     if (obligaciones.length === 0) return;
 
     const { error } = await supabase
@@ -151,6 +150,18 @@ export const clienteImpuestosService = {
       throw new Error('No se pudieron vincular las obligaciones en lote.');
     }
 
+    // 1. Obtener todos los NITs de los clientes involucrados en el cargue
+    const clientIds = [...new Set(obligaciones.map(o => o.cliente_id))];
+    const { data: clientesData } = await supabase
+      .from('clientes')
+      .select('id, nit')
+      .in('id', clientIds);
+      
+    const nitMap: Record<string, string> = {};
+    clientesData?.forEach(c => {
+      nitMap[c.id] = String(c.nit);
+    });
+
     const anioActual = new Date().getFullYear();
     const { data: calendarios } = await supabase
       .from('calendario_base_impuestos')
@@ -162,11 +173,15 @@ export const clienteImpuestosService = {
     const vencimientosPayload: any[] = [];
 
     for (const ob of obligaciones) {
-      const digitoCliente = ultimoDigitoMapa[ob.cliente_id];
+      const nitCliente = nitMap[ob.cliente_id] || "";
 
+      // 2. Cruce dinámico con la longitud exacta requerida por el calendario
       const fechasFiltradas = calendarios.filter(c => {
         if (c.impuesto_id !== ob.impuesto_id) return false;
-        return c.digito === null || c.digito === digitoCliente;
+        if (c.digito === null || c.digito === '') return true;
+        const longitudDigito = String(c.digito).length;
+        const extractoNit = nitCliente.slice(-longitudDigito);
+        return extractoNit === String(c.digito);
       });
 
       fechasFiltradas.forEach(f => {
