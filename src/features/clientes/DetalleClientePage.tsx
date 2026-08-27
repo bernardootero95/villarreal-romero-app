@@ -85,6 +85,15 @@ export const DetalleClientePage = () => {
 
   const vencimientos = todosLosVencimientos.filter((v) => v.clientes.id === id);
 
+  // El directorio de clientes es visible para todos, pero los vencimientos solo se traen
+  // para los clientes propios (contador asignado) o impuestos donde el usuario es
+  // especialista. Si esta lista sale vacía y el usuario no es el contador asignado, es
+  // probable que el cliente sí tenga obligaciones pero el usuario no tenga acceso a verlas
+  // — no que esté "al día". No cubre el caso de acceso por especialista de impuesto (evitar
+  // una consulta extra), así que el mensaje queda como una señal, no como certeza.
+  const esContadorAsignado = cliente.contador_id === perfil?.id;
+  const puedeVerTodasLasObligaciones = !!puedeAdministrar || esContadorAsignado;
+
   const getBadgeStyles = (estado: string) => {
     switch (estado) {
       case "PRESENTADO":
@@ -278,8 +287,18 @@ export const DetalleClientePage = () => {
               <div className="text-center py-6 text-text-muted space-y-1">
                 <AlertCircle className="w-8 h-8 text-text-muted/60 mx-auto stroke-[1.5]" />
                 <p className="text-xs font-medium">
-                  Sin obligaciones este mes.
+                  {puedeVerTodasLasObligaciones
+                    ? "Sin obligaciones este mes."
+                    : "No se encontraron obligaciones visibles para ti en este cliente."}
                 </p>
+                {!puedeVerTodasLasObligaciones && (
+                  <p className="text-[11px] text-text-muted/80">
+                    Solo ves los vencimientos de clientes que tienes asignados
+                    o de impuestos donde eres especialista. Puede que este
+                    cliente sí tenga obligaciones pendientes a cargo de otro
+                    responsable.
+                  </p>
+                )}
               </div>
             ) : (
               vencimientos.map((vencimiento) => (
