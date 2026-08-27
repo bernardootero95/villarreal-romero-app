@@ -105,9 +105,12 @@ export const calendarioBaseService = {
     }
 
     if (data && data.length > 0) {
-      for (const registro of data) {
-        await this.sincronizarVencimientosConCalendarioBase(registro as CalendarioBase);
-      }
+      // Cada fila del calendario sincroniza un conjunto de clientes independiente (no
+      // comparten calendario_base_id), así que se pueden lanzar en paralelo en vez de
+      // esperar una por una.
+      await Promise.all(
+        data.map((registro) => this.sincronizarVencimientosConCalendarioBase(registro as CalendarioBase))
+      );
     }
 
     return data;
@@ -144,40 +147,68 @@ export const calendarioBaseService = {
 
     const periodoFiscalStr = `${calendario.anio}-${calendario.periodo}`;
 
+    // Una sola consulta trae TODOS los vencimientos ya generados para este calendario
+    // oficial (en vez de una consulta por cliente afectado).
+    const { data: vencimientosExistentes, error: errExistentes } = await supabase
+      .from('vencimientos')
+      .select('id, cliente_id, estado_tarea')
+      .eq('calendario_base_id', calendario.id);
+
+    if (errExistentes) throw new Error('No se pudo revisar los vencimientos existentes: ' + errExistentes.message);
+
+    const existentePorCliente = new Map(
+      (vencimientosExistentes || []).map((v) => [v.cliente_id, v])
+    );
+
+    const idsAActualizar: string[] = [];
+    const nuevosVencimientos: Array<{
+      cliente_id: string;
+      impuesto_id: string;
+      calendario_base_id: string;
+      fecha_limite: string;
+      periodo_fiscal: string;
+      estado_tarea: string;
+    }> = [];
+
     for (const asig of clientesAfectados) {
-      const { data: vtoExistente } = await supabase
-        .from('vencimientos')
-        .select('id, estado_tarea')
-        .eq('cliente_id', asig.cliente_id)
-        .eq('calendario_base_id', calendario.id)
-        .maybeSingle();
+      const existente = existentePorCliente.get(asig.cliente_id);
 
-      if (vtoExistente) {
-        if (vtoExistente.estado_tarea !== 'PRESENTADO') {
-          const { error: errUpdate } = await supabase
-            .from('vencimientos')
-            .update({
-              fecha_limite: calendario.fecha_vencimiento_oficial,
-              actualizado: new Date().toISOString()
-            })
-            .eq('id', vtoExistente.id);
-
-          if (errUpdate) throw new Error('No se pudo actualizar el vencimiento sincronizado: ' + errUpdate.message);
+      if (existente) {
+        if (existente.estado_tarea !== 'PRESENTADO') {
+          idsAActualizar.push(existente.id);
         }
       } else {
-        const { error: errInsert } = await supabase
-          .from('vencimientos')
-          .insert([{
-            cliente_id: asig.cliente_id,
-            impuesto_id: calendario.impuesto_id,
-            calendario_base_id: calendario.id,
-            fecha_limite: calendario.fecha_vencimiento_oficial,
-            periodo_fiscal: periodoFiscalStr,
-            estado_tarea: 'PENDIENTE'
-          }]);
-
-        if (errInsert) throw new Error('No se pudo crear el vencimiento sincronizado: ' + errInsert.message);
+        nuevosVencimientos.push({
+          cliente_id: asig.cliente_id,
+          impuesto_id: calendario.impuesto_id,
+          calendario_base_id: calendario.id,
+          fecha_limite: calendario.fecha_vencimiento_oficial,
+          periodo_fiscal: periodoFiscalStr,
+          estado_tarea: 'PENDIENTE'
+        });
       }
+    }
+
+    // Todos los que hay que actualizar reciben la misma fecha, así que es un solo UPDATE
+    // masivo en vez de uno por cliente.
+    if (idsAActualizar.length > 0) {
+      const { error: errUpdate } = await supabase
+        .from('vencimientos')
+        .update({
+          fecha_limite: calendario.fecha_vencimiento_oficial,
+          actualizado: new Date().toISOString()
+        })
+        .in('id', idsAActualizar);
+
+      if (errUpdate) throw new Error('No se pudo actualizar los vencimientos sincronizados: ' + errUpdate.message);
+    }
+
+    if (nuevosVencimientos.length > 0) {
+      const { error: errInsert } = await supabase
+        .from('vencimientos')
+        .insert(nuevosVencimientos);
+
+      if (errInsert) throw new Error('No se pudo crear los vencimientos sincronizados: ' + errInsert.message);
     }
   }
 };
