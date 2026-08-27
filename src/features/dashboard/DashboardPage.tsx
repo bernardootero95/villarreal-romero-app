@@ -53,17 +53,21 @@ export const DashboardPage = () => {
     error: errorMetricas,
   } = useDashboardMetricas(session?.user?.id, perfil?.cargo, vista);
 
+  // En vista PERSONAL forzamos un cargo no-admin para que vencimientosService/tareasService
+  // filtren por usuario, sin importar el cargo real del directivo (evita fuga de datos globales).
+  const cargoParaFiltro = esVistaGlobal ? "Ingeniero" : "Contador";
+
   const { data: vencimientosMes = [], isLoading: loadingVencimientos } =
     useVencimientosMes(
       hoy.getFullYear(),
       hoy.getMonth(),
       session?.user?.id,
-      esVistaGlobal ? "Ingeniero" : perfil?.cargo,
+      cargoParaFiltro,
     );
 
   const { data: tareas = [], isLoading: loadingTareas } = useTareas(
     session?.user?.id,
-    esVistaGlobal ? "Ingeniero" : perfil?.cargo,
+    cargoParaFiltro,
   );
 
   const { data: resumenImpuestos = [], isLoading: loadingDistribucion } =

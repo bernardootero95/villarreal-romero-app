@@ -6,6 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const obtenerFechaLocal = (fecha: Date | string = new Date()): string =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(
+    typeof fecha === "string" ? new Date(fecha) : fecha,
+  );
+
 const sumarDiasHabiles = (fechaBase: Date, diasHabilesAAgregar: number): Date => {
   const fecha = new Date(fechaBase.getTime());
   let diasAgregados = 0;
@@ -101,13 +106,10 @@ serve(async (req) => {
     const COLOR_PRIMARIO = Deno.env.get('APP_COLOR_PRIMARY') || '#0f172a';
 
     const hoy = new Date()
-    const hoyStr = hoy.toISOString().split('T')[0]
-    
-    const fechaInicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-    const inicioMesStr = fechaInicioMes.toISOString().split('T')[0]
+    const hoyStr = obtenerFechaLocal(hoy)
 
     const fechaCritica = sumarDiasHabiles(hoy, 3);
-    const limiteFuturoStr = fechaCritica.toISOString().split('T')[0]
+    const limiteFuturoStr = obtenerFechaLocal(fechaCritica)
 
     const { data: usuarios } = await supabaseAdmin
       .from('usuarios')
@@ -131,7 +133,6 @@ serve(async (req) => {
       .is('clientes.eliminado', null)
       .eq('impuestos.estado', 'ACTIVO')
       .is('impuestos.eliminado', null)
-      .gte('fecha_limite', inicioMesStr)
       .lte('fecha_limite', limiteFuturoStr)
 
     const { data: tareas } = await supabaseAdmin
@@ -139,7 +140,6 @@ serve(async (req) => {
       .select('titulo, fecha_limite, usuario_id')
       .eq('estado', 'PENDIENTE')
       .is('eliminado', null)
-      .gte('fecha_limite', inicioMesStr)
       .lte('fecha_limite', limiteFuturoStr)
 
     let totalCorreosEnviados = 0

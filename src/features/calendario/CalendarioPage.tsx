@@ -98,7 +98,7 @@ export const CalendarioPage = () => {
   const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
   const handleMarcarPresentado = async (tareaId: string) => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || !perfil?.cargo) return;
     const observacionText = radicados[tareaId] || "";
     setErrorLocal(null);
 
@@ -110,6 +110,7 @@ export const CalendarioPage = () => {
         anio: year,
         mes: month,
         usuarioId: session.user.id,
+        cargo: perfil.cargo,
       },
       {
         onSuccess: () => {

@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { vencimientosService, type Vencimiento } from "./vencimientosService";
 
-export const getVencimientosQueryKey = (anio: number, mes: number, usuarioId: string) => 
-  ["vencimientos", anio, mes, usuarioId] as const;
+export const getVencimientosQueryKey = (anio: number, mes: number, usuarioId: string, cargo: string) =>
+  ["vencimientos", anio, mes, usuarioId, cargo] as const;
 
 export const useVencimientosMes = (
   anio: number,
@@ -11,10 +11,10 @@ export const useVencimientosMes = (
   cargo: string | undefined
 ) => {
   return useQuery<Vencimiento[], Error>({
-    queryKey: getVencimientosQueryKey(anio, mes, usuarioId || ""),
+    queryKey: getVencimientosQueryKey(anio, mes, usuarioId || "", cargo || ""),
     queryFn: () => vencimientosService.getVencimientosMes(anio, mes, usuarioId!, cargo!),
     enabled: !!usuarioId && !!cargo,
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -25,6 +25,7 @@ interface ParamsActualizarEstado {
   anio: number;
   mes: number;
   usuarioId: string;
+  cargo: string;
 }
 
 export const useActualizarEstadoVencimiento = () => {
@@ -35,7 +36,7 @@ export const useActualizarEstadoVencimiento = () => {
       vencimientosService.actualizarEstado(id, nuevoEstado, observaciones || ""),
     
     onMutate: async (variables) => {
-      const queryKey = getVencimientosQueryKey(variables.anio, variables.mes, variables.usuarioId);
+      const queryKey = getVencimientosQueryKey(variables.anio, variables.mes, variables.usuarioId, variables.cargo);
 
       await queryClient.cancelQueries({ queryKey });
 
@@ -63,7 +64,7 @@ export const useActualizarEstadoVencimiento = () => {
 
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({
-        queryKey: getVencimientosQueryKey(variables.anio, variables.mes, variables.usuarioId),
+        queryKey: getVencimientosQueryKey(variables.anio, variables.mes, variables.usuarioId, variables.cargo),
       });
     },
   });

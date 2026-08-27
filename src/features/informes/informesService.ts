@@ -10,6 +10,13 @@ import type {
   ClasificacionVencimiento,
 } from "./types";
 
+// Colombia no observa horario de verano, pero usamos Intl con timeZone explícito
+// en vez de un offset fijo para evitar depender de eso.
+const obtenerFechaLocal = (fecha: Date | string = new Date()): string =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(
+    typeof fecha === "string" ? new Date(fecha) : fecha,
+  );
+
 export const informesService = {
   async getVencimientosPorEmpleado(
     filtros: FiltrosInformeData,
@@ -52,7 +59,7 @@ export const informesService = {
     if (errUsu) throw errUsu;
     if (errVto) throw errVto;
 
-    const hoyStr = new Date().toISOString().split("T")[0];
+    const hoyStr = obtenerFechaLocal();
     const mapaEmpleados: Record<string, MetricaVencimientosEmpleado> = {};
 
     (usuarios || []).forEach((u: any) => {
@@ -83,7 +90,7 @@ export const informesService = {
 
         if (v.estado_tarea === "PRESENTADO") {
           const fechaRadicacion = v.actualizado
-            ? v.actualizado.split("T")[0]
+            ? obtenerFechaLocal(v.actualizado)
             : hoyStr;
 
           if (fechaRadicacion <= v.fecha_limite) {
@@ -151,7 +158,7 @@ export const informesService = {
     if (errImp) throw errImp;
     if (errVto) throw errVto;
 
-    const hoyStr = new Date().toISOString().split("T")[0];
+    const hoyStr = obtenerFechaLocal();
     const mapaImpuestos: Record<string, MetricaVencimientosImpuesto> = {};
 
     (impuestos || []).forEach((imp: any) => {
@@ -176,7 +183,7 @@ export const informesService = {
 
       if (v.estado_tarea === "PRESENTADO") {
         const fechaRadicacion = v.actualizado
-          ? v.actualizado.split("T")[0]
+          ? obtenerFechaLocal(v.actualizado)
           : hoyStr;
 
         if (fechaRadicacion <= v.fecha_limite) {
@@ -242,7 +249,7 @@ export const informesService = {
     if (errUsu) throw errUsu;
     if (errVto) throw errVto;
 
-    const hoyStr = new Date().toISOString().split("T")[0];
+    const hoyStr = obtenerFechaLocal();
 
     const asignados = (vencimientos || []).filter(
       (v: any) =>
@@ -256,7 +263,7 @@ export const informesService = {
     let vencidos = 0;
 
     const items: DetalleVencimientoEmpleado[] = asignados.map((v: any) => {
-      const fechaRadicacion = v.actualizado ? v.actualizado.split("T")[0] : null;
+      const fechaRadicacion = v.actualizado ? obtenerFechaLocal(v.actualizado) : null;
       let clasificacion: ClasificacionVencimiento;
 
       if (v.estado_tarea === "PRESENTADO") {
@@ -364,7 +371,7 @@ export const informesService = {
       mapaUsuarios[u.id] = u.nombre_completo;
     });
 
-    const hoyStr = new Date().toISOString().split("T")[0];
+    const hoyStr = obtenerFechaLocal();
 
     let a_tiempo = 0;
     let tarde = 0;
@@ -374,7 +381,7 @@ export const informesService = {
     const items: DetalleVencimientoImpuesto[] = (vencimientos || []).map(
       (v: any) => {
         const fechaRadicacion = v.actualizado
-          ? v.actualizado.split("T")[0]
+          ? obtenerFechaLocal(v.actualizado)
           : null;
         let clasificacion: ClasificacionVencimiento;
 
