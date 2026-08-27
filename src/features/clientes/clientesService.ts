@@ -1,6 +1,5 @@
 import { supabase } from '../../lib/supabase';
 import type { ClienteFormData } from './types';
-import { usuariosService } from '../usuarios/usuariosService';
 
 export const clientesService = {
   
@@ -49,7 +48,6 @@ export const clientesService = {
 
         if (errUpdate) throw new Error('Error al reactivar el cliente histórico: ' + errUpdate.message);
 
-        await usuariosService.registrarAuditoria('REACTIVAR', 'CLIENTES', reactivado.id, existente, reactivado);
         return reactivado;
       }
     }
@@ -66,13 +64,10 @@ export const clientesService = {
       throw new Error('Error al registrar la empresa: ' + error.message);
     }
 
-    await usuariosService.registrarAuditoria('CREAR', 'CLIENTES', data.id, null, data);
     return data;
   },
 
   async update(id: string, cliente: ClienteFormData) {
-    const { data: previo } = await supabase.from('clientes').select('*').eq('id', id).single();
-
     const { data, error } = await supabase
       .from('clientes')
       .update({ 
@@ -88,13 +83,10 @@ export const clientesService = {
       throw new Error('Error al actualizar el cliente: ' + error.message);
     }
 
-    await usuariosService.registrarAuditoria('MODIFICAR', 'CLIENTES', id, previo, data);
     return data;
   },
 
   async delete(id: string) {
-    const { data: previo } = await supabase.from('clientes').select('*').eq('id', id).single();
-
     // Borrado Lógico
     const { error } = await supabase
       .from('clientes')
@@ -105,8 +97,6 @@ export const clientesService = {
       .eq('id', id);
 
     if (error) throw new Error('Error al desactivar el cliente: ' + error.message);
-
-    await usuariosService.registrarAuditoria('ELIMINAR', 'CLIENTES', id, previo, { estado: 'INACTIVO' });
   },
 
   async createBulk(clientes: Array<ClienteFormData & { dv: number }>) {
@@ -128,8 +118,6 @@ export const clientesService = {
 
     if (error) throw new Error('Error en la estructuración de la carga masiva: ' + error.message);
 
-    await usuariosService.registrarAuditoria('CREAR_MASIVO', 'CLIENTES', 'bulk', null, { cantidad: payload.length });
-    
     return data || [];
   }
 };

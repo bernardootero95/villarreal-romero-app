@@ -1,6 +1,5 @@
 import { supabase } from '../../lib/supabase';
 import type { Impuesto, ImpuestoFormData, ImpuestoConEspecialista } from './types';
-import { usuariosService } from '../usuarios/usuariosService';
 
 export const impuestosService = {
   async getAll() {
@@ -32,7 +31,6 @@ export const impuestosService = {
 
     if (error) throw new Error('Error al crear el impuesto: ' + error.message);
 
-    await usuariosService.registrarAuditoria('CREAR', 'IMPUESTOS', data.id, null, data);
     return data as Impuesto;
   },
 
@@ -43,8 +41,6 @@ export const impuestosService = {
       actualizado: new Date().toISOString()
     };
 
-    const { data: previo } = await supabase.from('impuestos').select('*').eq('id', id).single();
-
     const { data, error } = await supabase
       .from('impuestos')
       .update(payload)
@@ -54,20 +50,15 @@ export const impuestosService = {
 
     if (error) throw new Error('Error al actualizar el impuesto: ' + error.message);
 
-    await usuariosService.registrarAuditoria('MODIFICAR', 'IMPUESTOS', id, previo, data);
     return data as Impuesto;
   },
 
   async delete(id: string) {
-    const { data: previo } = await supabase.from('impuestos').select('*').eq('id', id).single();
-    
     const { error } = await supabase
       .from('impuestos')
       .update({ eliminado: new Date().toISOString(), estado: 'INACTIVO' })
       .eq('id', id);
 
     if (error) throw error;
-
-    await usuariosService.registrarAuditoria('ELIMINAR', 'IMPUESTOS', id, previo, { eliminado: true });
   }
 };

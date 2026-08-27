@@ -1,6 +1,5 @@
 import { supabase } from '../../lib/supabase';
 import type { Tarea, TareaFormData } from './types';
-import { usuariosService } from '../usuarios/usuariosService';
 
 export const tareasService = {
   async getAll(usuarioId: string, cargo: string) {
@@ -31,13 +30,10 @@ export const tareasService = {
       .single();
 
     if (error) throw new Error('Error al crear la tarea: ' + error.message);
-    await usuariosService.registrarAuditoria('CREAR', 'TAREAS', data.id, null, data);
     return data as Tarea;
   },
 
   async update(id: string, formData: TareaFormData) {
-    const { data: previo } = await supabase.from('tareas').select('*').eq('id', id).single();
-    
     const { data, error } = await supabase
       .from('tareas')
       .update({ ...formData, actualizado: new Date().toISOString() })
@@ -46,19 +42,16 @@ export const tareasService = {
       .single();
 
     if (error) throw new Error('Error al actualizar la tarea: ' + error.message);
-    await usuariosService.registrarAuditoria('MODIFICAR', 'TAREAS', id, previo, data);
     return data as Tarea;
   },
 
   async delete(id: string) {
-    const { data: previo } = await supabase.from('tareas').select('*').eq('id', id).single();
     const { error } = await supabase
       .from('tareas')
       .update({ eliminado: new Date().toISOString() })
       .eq('id', id);
 
     if (error) throw new Error('Error al eliminar la tarea: ' + error.message);
-    await usuariosService.registrarAuditoria('ELIMINAR', 'TAREAS', id, previo, { eliminado: true });
   },
 
   async updateEstado(id: string, estado: string) {
