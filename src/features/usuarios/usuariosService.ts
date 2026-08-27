@@ -32,13 +32,8 @@ export const usuariosService = {
 
   
   async create(formData: UsuarioFormData) {
-    const { data: { user } } = await supabase.auth.getUser();
-    
     const { data, error } = await supabase.functions.invoke('crear-usuario', {
-      body: {
-        ...formData,
-        admin_id: user?.id
-      }
+      body: formData
     });
 
     if (error) {
@@ -55,8 +50,6 @@ export const usuariosService = {
 
   
   async update(id: string, formData: UsuarioFormData) {
-    const { data: previo } = await supabase.from('usuarios').select('*').eq('id', id).single();
-
     const { data, error } = await supabase
       .from('usuarios')
       .update({
@@ -72,22 +65,17 @@ export const usuariosService = {
 
     if (error) throw error;
 
-    await this.registrarAuditoria('MODIFICAR', 'USUARIOS', id, previo, data);
     return data;
   },
 
-  
+
   async delete(id: string) {
-    const { data: previo } = await supabase.from('usuarios').select('*').eq('id', id).single();
-    
     const { error } = await supabase
       .from('usuarios')
       .update({ eliminado: new Date().toISOString(), estado: 'INACTIVO' })
       .eq('id', id);
 
     if (error) throw error;
-
-    await this.registrarAuditoria('ELIMINAR', 'USUARIOS', id, previo, { eliminado: true });
   },
 
   async forzarCambioPassword(usuarioId: string, nuevaClave: string): Promise<void> {
@@ -95,14 +83,10 @@ export const usuariosService = {
       throw new Error("La nueva clave de acceso debe tener por lo menos 6 caracteres.");
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-
-    
     const { data, error } = await supabase.functions.invoke('resetear-clave', {
       body: {
         usuario_id: usuarioId,
-        nueva_clave: nuevaClave.trim(),
-        admin_id: user?.id
+        nueva_clave: nuevaClave.trim()
       }
     });
 

@@ -18,13 +18,30 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     )
 
-    const { usuario_id, nueva_clave, admin_id } = await req.json()
+    const { usuario_id, nueva_clave } = await req.json()
 
-    
+    // Autenticamos al llamador a partir de su propio JWT (no de un admin_id enviado en el body)
+    const authHeader = req.headers.get('Authorization')
+    const jwt = authHeader?.replace('Bearer ', '')
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: 'No autenticado.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
+    }
+
+    const { data: { user: caller }, error: callerError } = await supabaseClient.auth.getUser(jwt)
+    if (callerError || !caller) {
+      return new Response(JSON.stringify({ error: 'Sesión inválida o expirada.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
+    }
+
     const { data: perfilAdmin } = await supabaseClient
       .from('usuarios')
       .select('cargo')
-      .eq('id', admin_id)
+      .eq('id', caller.id)
       .single()
 
     if (!perfilAdmin || !['Gerente', 'Ingeniero'].includes(perfilAdmin.cargo)) {
