@@ -1,9 +1,54 @@
 import { supabase } from '../../lib/supabase';
 import type { ClienteFormData } from './types';
 
+export interface ClientesQueryParams {
+  page: number;
+  pageSize: number;
+  search?: string;
+  contadorId?: string;
+}
+
 export const clientesService = {
-  
-  async getAll() {
+
+  // Paginado y filtrado en el servidor (para el directorio general en ClientesPage):
+  // trae solo la página pedida, no la tabla completa.
+  async getAll({ page, pageSize, search = '', contadorId = '' }: ClientesQueryParams) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from('clientes')
+      .select(`
+        *,
+        usuarios (
+          nombre_completo,
+          cargo
+        )
+      `, { count: 'exact' })
+      .is('eliminado', null)
+      .order('razon_social', { ascending: true })
+      .range(from, to);
+
+    // Los caracteres ,()  tienen significado especial en la sintaxis de filtros de
+    // PostgREST (.or()); se descartan del término de búsqueda para no romper el filtro.
+    const term = search.trim().replace(/[,()]/g, '');
+    if (term) {
+      query = query.or(`razon_social.ilike.%${term}%,nit.ilike.%${term}%`);
+    }
+
+    if (contadorId) {
+      query = query.eq('contador_id', contadorId);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) throw error;
+    return { data: data || [], count: count || 0 };
+  },
+
+  // Un solo cliente por id (para DetalleClientePage) — no depende de tener la lista
+  // paginada completa en caché.
+  async getById(id: string) {
     const { data, error } = await supabase
       .from('clientes')
       .select(`
@@ -13,6 +58,23 @@ export const clientesService = {
           cargo
         )
       `)
+      .eq('id', id)
+      .is('eliminado', null)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Todos los clientes activos de un contador puntual (para "Mis Empresas Asignadas" en
+  // PerfilPage) — ya viene acotado por contador_id en el servidor, así que no hace falta
+  // paginar: por diseño es un subconjunto pequeño de la tabla completa.
+  async getMisClientes(contadorId: string) {
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('contador_id', contadorId)
+      .eq('estado', 'ACTIVO')
       .is('eliminado', null)
       .order('razon_social', { ascending: true });
 

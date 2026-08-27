@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { useClientes, useClienteImpuestos } from "./useClientes";
+import { useCliente, useClienteImpuestos } from "./useClientes";
 import { useVencimientosMes } from "../calendario/useVencimientos";
 import {
   ArrowLeft,
@@ -30,10 +30,10 @@ export const DetalleClientePage = () => {
   const [showForm, setShowForm] = useState(false);
 
   const {
-    data: clientes = [],
+    data: cliente,
     isLoading: loadingClientes,
     error: errorClientes,
-  } = useClientes();
+  } = useCliente(id);
 
   const { data: impuestosCargo = [], isLoading: loadingImpuestos } =
     useClienteImpuestos(id!);
@@ -50,7 +50,6 @@ export const DetalleClientePage = () => {
     perfil?.cargo,
   );
 
-  const cliente = clientes.find((c) => c.id === id);
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 

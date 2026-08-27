@@ -1,6 +1,7 @@
-import { useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useClientes, useDeleteCliente } from "./useClientes";
+import { useUsuarios } from "../usuarios/useUsuarios";
 import type { ClienteConContador } from "./types";
 import {
   Building2,
@@ -29,9 +30,6 @@ export const ClientesPage = () => {
   const { perfil } = useAuth();
   const navigate = useNavigate();
 
-  const { data: clientes = [], isLoading, error } = useClientes();
-  const deleteClienteMutation = useDeleteCliente();
-
   const [showForm, setShowForm] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
   const [clienteEditando, setClienteEditando] =
@@ -39,11 +37,46 @@ export const ClientesPage = () => {
   const [clienteObligaciones, setClienteObligaciones] =
     useState<ClienteConContador | null>(null);
 
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedResponsable, setSelectedResponsable] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
+
+  // Debounce: esperamos a que el usuario deje de escribir antes de consultar al
+  // servidor, para no disparar una petición por cada tecla.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  const { data: usuarios = [] } = useUsuarios();
+  const listaResponsables = usuarios
+    .filter((u) => u.estado === "ACTIVO")
+    .map((u) => ({ id: u.id, nombre: u.nombre_completo }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+  const {
+    data: resultado,
+    isLoading,
+    isPlaceholderData,
+    error,
+  } = useClientes({
+    page: currentPage,
+    pageSize: itemsPerPage,
+    search: searchTerm,
+    contadorId: selectedResponsable,
+  });
+
+  const clientes = resultado?.data || [];
+  const totalClientes = resultado?.count || 0;
+  const totalPages = Math.max(1, Math.ceil(totalClientes / itemsPerPage));
+
+  const deleteClienteMutation = useDeleteCliente();
 
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
@@ -78,36 +111,7 @@ export const ClientesPage = () => {
     setShowForm(true);
   };
 
-  const listaResponsables = Array.from(
-    new Set(
-      clientes
-        .map((c) => c.usuarios?.nombre_completo)
-        .filter((nombre): nombre is string => !!nombre),
-    ),
-  ).sort();
-
-  const clientesFiltrados = clientes.filter((c) => {
-    const matchesSearch =
-      c.razon_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.nit.includes(searchTerm);
-
-    const matchesResponsable =
-      selectedResponsable === "" ||
-      c.usuarios?.nombre_completo === selectedResponsable;
-
-    return matchesSearch && matchesResponsable;
-  });
-
-  clientesFiltrados.sort((a, b) =>
-    a.razon_social.localeCompare(b.razon_social, "es", { sensitivity: "base" }),
-  );
-
-  const totalPages = Math.ceil(clientesFiltrados.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedClientes = clientesFiltrados.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
 
   const errorAMostrar = error?.message || errorLocal;
 
@@ -157,11 +161,8 @@ export const ClientesPage = () => {
           <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Buscar por Razón Social o NIT..."
               className="w-full pl-10 pr-4 py-2 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors"
             />
@@ -179,8 +180,8 @@ export const ClientesPage = () => {
             >
               <option value="">Todos los Responsables</option>
               {listaResponsables.map((resp) => (
-                <option key={resp} value={resp}>
-                  {resp}
+                <option key={resp.id} value={resp.id}>
+                  {resp.nombre}
                 </option>
               ))}
             </select>
@@ -202,7 +203,9 @@ export const ClientesPage = () => {
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-text-muted/10 text-sm">
+            <tbody
+              className={`divide-y divide-text-muted/10 text-sm transition-opacity ${isPlaceholderData ? "opacity-50" : "opacity-100"}`}
+            >
               {isLoading ? (
                 <tr>
                   <td
@@ -212,7 +215,7 @@ export const ClientesPage = () => {
                     Cargando directorio...
                   </td>
                 </tr>
-              ) : clientesFiltrados.length === 0 ? (
+              ) : clientes.length === 0 ? (
                 <tr>
                   <td
                     colSpan={puedeAdministrar ? 5 : 4}
@@ -224,7 +227,7 @@ export const ClientesPage = () => {
                   </td>
                 </tr>
               ) : (
-                paginatedClientes.map((cliente) => (
+                clientes.map((cliente) => (
                   <tr
                     key={cliente.id}
                     className="hover:bg-primary/5 transition-colors"
@@ -306,7 +309,7 @@ export const ClientesPage = () => {
           </table>
         </div>
 
-        {!isLoading && clientesFiltrados.length > 0 && (
+        {!isLoading && totalClientes > 0 && (
           <div className="p-4 border-t border-text-muted/20 bg-surface flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
             <div className="flex flex-col sm:flex-row items-center gap-4 text-text-muted">
               <span>
@@ -316,14 +319,11 @@ export const ClientesPage = () => {
                 </span>{" "}
                 a{" "}
                 <span className="font-semibold text-text-main">
-                  {Math.min(
-                    startIndex + itemsPerPage,
-                    clientesFiltrados.length,
-                  )}
+                  {Math.min(startIndex + itemsPerPage, totalClientes)}
                 </span>{" "}
                 de{" "}
                 <span className="font-semibold text-text-main">
-                  {clientesFiltrados.length}
+                  {totalClientes}
                 </span>{" "}
                 clientes
               </span>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
-import { useClientes } from "../clientes/useClientes";
+import { useMisClientes } from "../clientes/useClientes";
 import {
   AlertNotification,
   type AlertType,
@@ -45,8 +45,8 @@ export const PerfilPage = () => {
     texto: "",
   });
 
-  const { data: todosLosClientes = [], isLoading: loadingClientes } =
-    useClientes();
+  const { data: misClientes = [], isLoading: loadingClientes } =
+    useMisClientes(perfil?.id);
 
   useEffect(() => {
     if (perfil?.correo_notificacion) {
@@ -55,10 +55,6 @@ export const PerfilPage = () => {
   }, [perfil]);
 
   if (!perfil) return null;
-
-  const misClientes = todosLosClientes.filter(
-    (c) => c.contador_id === perfil.id && c.estado === "ACTIVO",
-  );
 
   const handleActualizarPassword = async (e: React.FormEvent) => {
     e.preventDefault();

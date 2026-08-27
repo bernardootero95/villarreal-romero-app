@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { clientesService } from "./clientesService";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { clientesService, type ClientesQueryParams } from "./clientesService";
 import { clienteImpuestosService } from "./clienteImpuestosService";
 import type { ClienteFormData } from "./types";
 
@@ -7,17 +7,46 @@ import type { ClienteFormData } from "./types";
 export const CLIENTES_KEY = ["clientes"] as const;
 export const CLIENTE_IMPUESTOS_KEY = ["cliente-impuestos"] as const;
 
-export const getClientesQueryKey = () => CLIENTES_KEY;
+export const getClientesQueryKey = (params: ClientesQueryParams) => [...CLIENTES_KEY, "lista", params] as const;
+export const getClienteQueryKey = (id: string) => [...CLIENTES_KEY, "detalle", id] as const;
+export const getMisClientesQueryKey = (contadorId: string) => [...CLIENTES_KEY, "mis-clientes", contadorId] as const;
 export const getClienteImpuestosQueryKey = (clienteId: string) => [...CLIENTE_IMPUESTOS_KEY, clienteId] as const;
 
 /**
- * Hook para consultar todos los clientes y sus contadores responsables asignados
+ * Hook para consultar una página del directorio de clientes (búsqueda y filtro por
+ * responsable resueltos en el servidor, no en memoria).
  */
-export const useClientes = () => {
+export const useClientes = (params: ClientesQueryParams) => {
   return useQuery({
-    queryKey: getClientesQueryKey(),
-    queryFn: () => clientesService.getAll(),
-    staleTime: 1000 * 60 * 5, // Consideramos los clientes frescos por 5 minutos
+    queryKey: getClientesQueryKey(params),
+    queryFn: () => clientesService.getAll(params),
+    staleTime: 1000 * 60 * 5,
+    placeholderData: keepPreviousData, // evita el parpadeo de "cargando" al cambiar de página
+  });
+};
+
+/**
+ * Hook para consultar un único cliente por id (ficha de detalle).
+ */
+export const useCliente = (id: string | undefined) => {
+  return useQuery({
+    queryKey: getClienteQueryKey(id || ""),
+    queryFn: () => clientesService.getById(id!),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+  });
+};
+
+/**
+ * Hook para consultar todos los clientes activos asignados a un contador puntual
+ * (widget "Mis Empresas Asignadas" en PerfilPage).
+ */
+export const useMisClientes = (contadorId: string | undefined) => {
+  return useQuery({
+    queryKey: getMisClientesQueryKey(contadorId || ""),
+    queryFn: () => clientesService.getMisClientes(contadorId!),
+    enabled: !!contadorId,
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -30,7 +59,7 @@ export const useCreateCliente = () => {
   return useMutation({
     mutationFn: (formData: ClienteFormData) => clientesService.create(formData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getClientesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: CLIENTES_KEY });
     },
   });
 };
@@ -49,7 +78,7 @@ export const useUpdateCliente = () => {
   return useMutation({
     mutationFn: ({ id, payload }: UpdateClienteParams) => clientesService.update(id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getClientesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: CLIENTES_KEY });
     },
   });
 };
@@ -63,7 +92,7 @@ export const useDeleteCliente = () => {
   return useMutation({
     mutationFn: (id: string) => clientesService.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getClientesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: CLIENTES_KEY });
     },
   });
 };
@@ -77,7 +106,7 @@ export const useCreateBulkClientes = () => {
   return useMutation({
     mutationFn: (clientes: Array<ClienteFormData & { dv: number }>) => clientesService.createBulk(clientes),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getClientesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: CLIENTES_KEY });
     },
   });
 };
