@@ -19,7 +19,8 @@ interface ClienteCargaMasivaProps {
   onSuccess: () => void;
 }
 
-const calcularDV = (nit: string): number => {
+const calcularDV = (nit: string): number | null => {
+  if (!nit || !/^[0-9]+$/.test(nit)) return null;
   const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
   let x = 0;
   const z = nit.length;
@@ -192,6 +193,11 @@ export const ClienteCargaMasiva = ({
           }
 
           const dv = calcularDV(nit);
+          if (dv === null) {
+            throw new Error(
+              `Pestaña 'Clientes' - Fila ${i + 1}: El NIT '${row[0]}' es inválido (debe contener solo dígitos).`,
+            );
+          }
 
           clientesPayload.push({
             nit,
