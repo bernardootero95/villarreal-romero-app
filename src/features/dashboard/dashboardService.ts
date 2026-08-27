@@ -1,6 +1,5 @@
 import { supabase } from "../../lib/supabase";
 import { vencimientosService } from "../calendario/vencimientosService";
-import { clientesService } from "../clientes/clientesService";
 
 export type ModoVistaDashboard = "GLOBAL" | "PERSONAL";
 
@@ -18,9 +17,20 @@ export const dashboardService = {
     const esRolDirectivo = ["Gerente", "Ingeniero"].includes(cargo);
     const aplicarVistaGlobal = esRolDirectivo && vista === "GLOBAL";
 
-    // 1. Descarga en paralelo de clientes y vencimientos del mes
-    const [todosLosClientes, todosLosVencimientos] = await Promise.all([
-      clientesService.getAll(),
+    // 1. Conteo de clientes activos asignados (solo el número, sin traer la tabla completa)
+    //    y vencimientos del mes, en paralelo.
+    let queryConteoClientes = supabase
+      .from("clientes")
+      .select("*", { count: "exact", head: true })
+      .eq("estado", "ACTIVO")
+      .is("eliminado", null);
+
+    if (!aplicarVistaGlobal) {
+      queryConteoClientes = queryConteoClientes.eq("contador_id", usuarioId);
+    }
+
+    const [{ count: totalClientesAsignados, error: errClientes }, todosLosVencimientos] = await Promise.all([
+      queryConteoClientes,
       vencimientosService.getVencimientosMes(
         anio,
         mes,
@@ -29,12 +39,7 @@ export const dashboardService = {
       ),
     ]);
 
-    // 2. Filtrado estricto de clientes activos asignados según el modo de vista
-    const clientesAsignados = todosLosClientes.filter((c) => {
-      if (c.estado !== "ACTIVO" || c.eliminado !== null) return false;
-      if (aplicarVistaGlobal) return true;
-      return c.contador_id === usuarioId;
-    });
+    if (errClientes) throw errClientes;
 
     // 3. Filtrado de Vencimientos y cálculo de efectividad
     // Si la vista es personal, nos aseguramos de que solo pasen los donde el usuario es contador o especialista
@@ -121,7 +126,7 @@ export const dashboardService = {
       .slice(0, 5);
 
     return {
-      totalClientes: clientesAsignados.length,
+      totalClientes: totalClientesAsignados || 0,
       totalVencimientos: totalVencimientosMes,
       tareasPendientes: pendientes,
       porcentajeEfectividad: efectividad,

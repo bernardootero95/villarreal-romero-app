@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   useVencimientosMes,
@@ -63,22 +63,32 @@ export const CalendarioPage = () => {
   const localDate = new Date();
   const dateStrToday = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
-  const vencimientosPorDia = vencimientos.reduce(
-    (acc, v) => {
-      if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
-      acc[v.fecha_limite].push(v);
-      return acc;
-    },
-    {} as Record<string, Vencimiento[]>,
+  // Se recalculan solo cuando cambian los datos, no en cada render (por ejemplo, al
+  // escribir en el input de radicado, que es estado local ajeno a estos datos).
+  const vencimientosPorDia = useMemo(
+    () =>
+      vencimientos.reduce(
+        (acc, v) => {
+          if (!acc[v.fecha_limite]) acc[v.fecha_limite] = [];
+          acc[v.fecha_limite].push(v);
+          return acc;
+        },
+        {} as Record<string, Vencimiento[]>,
+      ),
+    [vencimientos],
   );
 
-  const tareasPorDia = tareas.reduce(
-    (acc, t) => {
-      if (!acc[t.fecha_limite]) acc[t.fecha_limite] = [];
-      acc[t.fecha_limite].push(t);
-      return acc;
-    },
-    {} as Record<string, Tarea[]>,
+  const tareasPorDia = useMemo(
+    () =>
+      tareas.reduce(
+        (acc, t) => {
+          if (!acc[t.fecha_limite]) acc[t.fecha_limite] = [];
+          acc[t.fecha_limite].push(t);
+          return acc;
+        },
+        {} as Record<string, Tarea[]>,
+      ),
+    [tareas],
   );
 
   const meses = [
