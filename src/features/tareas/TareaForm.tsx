@@ -35,6 +35,7 @@ export const TareaForm = ({
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<TareaFormData>({
     resolver: zodResolver(tareaSchema),
@@ -57,6 +58,16 @@ export const TareaForm = ({
       });
     }
   }, [tareaAEditar, reset]);
+
+  // Si el perfil todavía no había resuelto cuando se montó el formulario (usuario_id
+  // quedó en "" por defecto), lo rellenamos apenas esté disponible. Sin esto, un usuario
+  // no-admin (que no tiene un selector editable para corregirlo) quedaba sin poder crear
+  // tareas.
+  useEffect(() => {
+    if (!isEditing && perfil?.id) {
+      setValue("usuario_id", perfil.id);
+    }
+  }, [isEditing, perfil?.id, setValue]);
 
   const onSubmit = async (data: TareaFormData) => {
     setErrorPersistencia(null);
