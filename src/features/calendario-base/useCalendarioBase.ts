@@ -19,8 +19,11 @@ export const useCreateCalendarioBase = () => {
 
   return useMutation({
     mutationFn: (formData: CalendarioBaseFormData) => calendarioBaseService.create(formData),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: getCalendarioBaseQueryKey(data.anio) });
+    onSuccess: () => {
+      // Invalida el prefijo completo (todos los años en caché), no solo el año del
+      // registro creado/editado: si al editar cambia el campo "anio", el año que el
+      // usuario tenía abierto en pantalla también debe refrescarse.
+      queryClient.invalidateQueries({ queryKey: CALENDARIO_BASE_KEY });
     },
   });
 };
@@ -35,24 +38,19 @@ export const useUpdateCalendarioBase = () => {
 
   return useMutation({
     mutationFn: ({ id, payload }: MutateUpdateParams) => calendarioBaseService.update(id, payload),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: getCalendarioBaseQueryKey(data.anio) });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CALENDARIO_BASE_KEY });
     },
   });
 };
-
-interface MutateDeleteParams {
-  id: string;
-  anio: number;
-}
 
 export const useDeleteCalendarioBase = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id }: MutateDeleteParams) => calendarioBaseService.delete(id),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: getCalendarioBaseQueryKey(variables.anio) });
+    mutationFn: ({ id }: { id: string }) => calendarioBaseService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CALENDARIO_BASE_KEY });
     },
   });
 };
@@ -61,10 +59,10 @@ export const useCreateBulkCalendarioBase = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ registros }: { registros: CalendarioBaseFormData[]; anio: number }) => 
+    mutationFn: ({ registros }: { registros: CalendarioBaseFormData[]; anio: number }) =>
       calendarioBaseService.createBulk(registros),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: getCalendarioBaseQueryKey(variables.anio) });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CALENDARIO_BASE_KEY });
     },
   });
 };

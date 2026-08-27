@@ -64,7 +64,7 @@ export const DetalleImpuestoPage = () => {
       )
     ) {
       deleteFechaMutation.mutate(
-        { id: fechaId, anio: anioFiltro },
+        { id: fechaId },
         {
           onError: (err: any) => {
             setErrorLocal(
