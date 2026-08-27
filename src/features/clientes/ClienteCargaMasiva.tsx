@@ -217,15 +217,14 @@ export const ClienteCargaMasiva = ({
           );
         }
 
-        const clientesCreados =
-          await createBulkClientesMutation.mutateAsync(clientesPayload);
-
-        const nitToIdMapa: Record<string, string> = {};
-        clientesCreados.forEach((c) => {
-          nitToIdMapa[c.nit] = c.id;
-        });
-
-        const obligacionesPayload: any[] = [];
+        // Validamos toda la hoja de Obligaciones ANTES de tocar la base de datos: si algo
+        // está mal (campo faltante, impuesto que no existe en el catálogo), se detiene aquí
+        // y no se crea ningún cliente. El único dato que falta en este punto es el id real
+        // del cliente (nitBusqueda -> clienteId), que solo existe después de crearlos.
+        const obligacionesValidadas: Array<{
+          nit: string;
+          impuestoId: string;
+        }> = [];
 
         for (let j = 1; j < filasObligaciones.length; j++) {
           const rowOb = filasObligaciones[j];
@@ -245,28 +244,52 @@ export const ClienteCargaMasiva = ({
             );
           }
 
-          const clienteId = nitToIdMapa[nitBusqueda];
           const llaveBusqueda = `${impuestoStr}|${periodicidadStr}`;
           const impuestoId = impuestosSistema[llaveBusqueda];
 
-          if (!clienteId) continue;
           if (!impuestoId) {
             throw new Error(
               `Pestaña 'Obligaciones' - Fila ${j + 1}: No existe concordancia en el catálogo para el impuesto '${impuestoStr}' con periodicidad '${periodicidadStr}'.`,
             );
           }
 
-          obligacionesPayload.push({
-            cliente_id: clienteId,
-            impuesto_id: impuestoId,
-            estado: "ACTIVO",
-          });
+          obligacionesValidadas.push({ nit: nitBusqueda, impuestoId });
         }
 
+        const clientesCreados =
+          await createBulkClientesMutation.mutateAsync(clientesPayload);
+
+        const nitToIdMapa: Record<string, string> = {};
+        clientesCreados.forEach((c) => {
+          nitToIdMapa[c.nit] = c.id;
+        });
+
+        const obligacionesPayload = obligacionesValidadas
+          .map((ob) => ({
+            cliente_id: nitToIdMapa[ob.nit],
+            impuesto_id: ob.impuestoId,
+            estado: "ACTIVO",
+          }))
+          .filter((ob) => !!ob.cliente_id);
+
         if (obligacionesPayload.length > 0) {
-          await asignarImpuestosBulkMutation.mutateAsync({
-            obligaciones: obligacionesPayload,
-          });
+          try {
+            await asignarImpuestosBulkMutation.mutateAsync({
+              obligaciones: obligacionesPayload,
+            });
+          } catch (errorObligaciones) {
+            // Los clientes YA quedaron creados/actualizados en este punto. La vinculación de
+            // obligaciones es una operación idempotente (reactiva en vez de duplicar), así
+            // que reintentar con el mismo archivo es seguro: no duplica clientes ni
+            // obligaciones ya vinculadas, solo completa lo que falló.
+            const mensaje =
+              errorObligaciones instanceof Error
+                ? errorObligaciones.message
+                : "error desconocido";
+            throw new Error(
+              `Se crearon/actualizaron ${clientesCreados.length} clientes, pero no se pudieron vincular sus obligaciones (${mensaje}). Puedes volver a subir el mismo archivo: los clientes y las obligaciones ya vinculadas no se duplican.`,
+            );
+          }
         }
 
         setMensajeExito(

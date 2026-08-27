@@ -140,18 +140,59 @@ export const clienteImpuestosService = {
   async asignarImpuestosBulk(obligaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }>) {
     if (obligaciones.length === 0) return;
 
-    const { error } = await supabase
+    // Revisamos qué pares cliente+impuesto ya existen (activos o soft-deleted) para
+    // reactivar en vez de duplicar, igual que hace asignarImpuesto() con la asignación
+    // individual. Sin esto, re-subir el mismo Excel dos veces duplicaba filas activas.
+    const clientIds = [...new Set(obligaciones.map(o => o.cliente_id))];
+    const { data: existentes, error: errorExistentes } = await supabase
       .from('cliente_impuestos')
-      .insert(obligaciones)
-      .select();
+      .select('id, cliente_id, impuesto_id, eliminado')
+      .in('cliente_id', clientIds);
 
-    if (error) {
-      console.error('Error inyectando obligaciones masivas:', error);
-      throw new Error('No se pudieron vincular las obligaciones en lote.');
+    if (errorExistentes) {
+      throw new Error('No se pudo verificar obligaciones existentes: ' + errorExistentes.message);
+    }
+
+    const mapaExistentes = new Map<string, { id: string; eliminado: string | null }>();
+    (existentes || []).forEach((e) => {
+      mapaExistentes.set(`${e.cliente_id}:${e.impuesto_id}`, { id: e.id, eliminado: e.eliminado });
+    });
+
+    const idsAReactivar: string[] = [];
+    const nuevasAsignaciones: Array<{ cliente_id: string; impuesto_id: string; estado: string }> = [];
+
+    obligaciones.forEach((ob) => {
+      const previa = mapaExistentes.get(`${ob.cliente_id}:${ob.impuesto_id}`);
+      if (previa) {
+        if (previa.eliminado) idsAReactivar.push(previa.id);
+        // Si ya está activa, no hacemos nada: evita duplicar.
+      } else {
+        nuevasAsignaciones.push(ob);
+      }
+    });
+
+    if (idsAReactivar.length > 0) {
+      const { error: errorReactivar } = await supabase
+        .from('cliente_impuestos')
+        .update({ estado: 'ACTIVO', eliminado: null })
+        .in('id', idsAReactivar);
+
+      if (errorReactivar) {
+        throw new Error('No se pudieron reactivar obligaciones previas: ' + errorReactivar.message);
+      }
+    }
+
+    if (nuevasAsignaciones.length > 0) {
+      const { error: errorInsertar } = await supabase
+        .from('cliente_impuestos')
+        .insert(nuevasAsignaciones);
+
+      if (errorInsertar) {
+        throw new Error('No se pudieron vincular las obligaciones nuevas: ' + errorInsertar.message);
+      }
     }
 
     // 1. Obtener todos los NITs de los clientes involucrados en el cargue
-    const clientIds = [...new Set(obligaciones.map(o => o.cliente_id))];
     const { data: clientesData } = await supabase
       .from('clientes')
       .select('id, nit')
