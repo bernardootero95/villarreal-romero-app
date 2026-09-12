@@ -70,8 +70,8 @@ export const DetalleClientePage = () => {
           Error 404: Empresa No Encontrada
         </h3>
         <p className="text-xs text-text-muted">
-          El registro solicitado no figura en el directorio activo de
-          Villarreal-Romero.
+          El registro solicitado no figura en el directorio activo de{" "}
+          {import.meta.env.VITE_EMPRESA_NOMBRE || "Villarreal-Romero"}.
         </p>
         <button
           onClick={() => navigate("/clientes")}

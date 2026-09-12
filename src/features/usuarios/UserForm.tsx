@@ -70,7 +70,9 @@ export const UserForm = ({
         },
       );
     } else {
-      const generatedEmail = `${data.username.toLowerCase().trim()}@villarreal-romero.local`;
+      const empresaDominio =
+        import.meta.env.VITE_EMPRESA_DOMINIO || "villarreal-romero.local";
+      const generatedEmail = `${data.username.toLowerCase().trim()}@${empresaDominio}`;
       const dataAEnviar = {
         ...data,
         email: generatedEmail,

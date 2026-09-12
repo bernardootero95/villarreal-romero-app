@@ -71,9 +71,9 @@ export const ClienteCargaMasiva = ({
         ["NIT", "Razón Social", "Celular", "Correo", "Persona a Cargo"],
         [
           "900123456",
-          "Inversiones Villarreal Romero S.A.S.",
+          "Empresa Ejemplo S.A.S.",
           "3151234567",
-          "contacto@villarreal.com",
+          "contacto@ejemplo.com",
           "Juan Perez",
         ],
       ];

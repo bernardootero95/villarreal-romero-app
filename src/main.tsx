@@ -12,6 +12,20 @@ const colorAccent = import.meta.env.VITE_COLOR_ACCENT || "#C9A84C";
 document.documentElement.style.setProperty("--color-primary", colorPrimario);
 document.documentElement.style.setProperty("--color-accent", colorAccent);
 
+// Inyección dinámica de nombre corporativo en el título y metadata de la pestaña
+const empresaNombre =
+  import.meta.env.VITE_EMPRESA_NOMBRE || "Villarreal-Romero";
+
+document.title = `${empresaNombre} | Sistema de Gestión`;
+
+const metaDescription = document.querySelector('meta[name="description"]');
+if (metaDescription) {
+  metaDescription.setAttribute(
+    "content",
+    `Sistema de Gestión y Vencimientos Tributarios - ${empresaNombre}`,
+  );
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

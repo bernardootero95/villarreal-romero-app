@@ -90,6 +90,8 @@ export const UsersPage = () => {
   );
 
   const errorAMostrar = error?.message || errorLocal;
+  const empresaNombre =
+    import.meta.env.VITE_EMPRESA_NOMBRE || "Villarreal-Romero";
 
   return (
     <div className="space-y-6">
@@ -99,7 +101,7 @@ export const UsersPage = () => {
             Equipo de Trabajo
           </h1>
           <p className="text-text-muted">
-            Gestiona los miembros de Villarreal-Romero y sus cargos.
+            Gestiona los miembros de {empresaNombre} y sus cargos.
           </p>
         </div>
         <button

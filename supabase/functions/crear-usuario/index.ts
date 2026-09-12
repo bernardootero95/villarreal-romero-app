@@ -64,7 +64,7 @@ serve(async (req) => {
       throw new Error("El cargo asignado no es válido.")
     }
 
-    const passwordTemporal = 'Villarreal2026*'
+    const passwordTemporal = Deno.env.get('PASSWORD_TEMPORAL_DEFAULT') || 'CambiarClave2026*'
 
     // 2. Crear usuario en Auth (Solo con el correo principal de acceso)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
