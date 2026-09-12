@@ -51,12 +51,12 @@ export const vencimientosService = {
 
     const isAdmin = ['Gerente', 'Ingeniero'].includes(cargo);
 
-    const vencimientosPermitidos = (data as any[]).filter(v => {
+    const vencimientosPermitidos = (data as unknown as Vencimiento[]).filter(v => {
       if (isAdmin) return true;
       return v.clientes.contador_id === usuarioId || v.impuestos?.especialista_id === usuarioId;
     });
 
-    return vencimientosPermitidos as Vencimiento[];
+    return vencimientosPermitidos;
   },
 
   async actualizarEstado(id: string, nuevoEstado: string, observaciones: string = '') {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   X,
   Upload,
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Loader } from "../../components/Loader";
 import { useCreateBulkClientes, useAsignarImpuestosBulk } from "./useClientes";
+import type { ClienteFormData } from "./types";
 import { useUsuarios } from "../usuarios/useUsuarios";
 import { useImpuestos } from "../impuestos/useImpuestos";
 import { AlertNotification } from "../../components/ui/AlertNotification";
@@ -37,12 +38,6 @@ export const ClienteCargaMasiva = ({
   onSuccess,
 }: ClienteCargaMasivaProps) => {
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [usuariosSistema, setUsuariosSistema] = useState<
-    Record<string, string>
-  >({});
-  const [impuestosSistema, setImpuestosSistema] = useState<
-    Record<string, string>
-  >({});
   const [errorProcesamiento, setErrorProcesamiento] = useState<string | null>(
     null,
   );
@@ -54,26 +49,20 @@ export const ClienteCargaMasiva = ({
   const { data: usuarios = [], isLoading: loadingUsers } = useUsuarios();
   const { data: impuestos = [], isLoading: loadingTaxes } = useImpuestos();
 
-  useEffect(() => {
-    if (usuarios.length > 0) {
-      const userMap = usuarios.reduce(
-        (acc, u) => ({
-          ...acc,
-          [u.nombre_completo.toLowerCase().trim()]: u.id,
-        }),
-        {},
-      );
-      setUsuariosSistema(userMap);
-    }
+  const usuariosSistema = useMemo(() => {
+    return usuarios.reduce<Record<string, string>>((acc, u) => {
+      acc[u.nombre_completo.toLowerCase().trim()] = u.id;
+      return acc;
+    }, {});
+  }, [usuarios]);
 
-    if (impuestos.length > 0) {
-      const taxMap = impuestos.reduce((acc, i) => {
-        const llaveCompuesta = `${i.nombre.toUpperCase().trim()}|${i.periodicidad.toUpperCase().trim()}`;
-        return { ...acc, [llaveCompuesta]: i.id };
-      }, {});
-      setImpuestosSistema(taxMap);
-    }
-  }, [usuarios, impuestos]);
+  const impuestosSistema = useMemo(() => {
+    return impuestos.reduce<Record<string, string>>((acc, i) => {
+      const llaveCompuesta = `${i.nombre.toUpperCase().trim()}|${i.periodicidad.toUpperCase().trim()}`;
+      acc[llaveCompuesta] = i.id;
+      return acc;
+    }, {});
+  }, [impuestos]);
 
   const handleDescargarModelo = () => {
     try {
@@ -148,16 +137,16 @@ export const ClienteCargaMasiva = ({
         const hojaClientes = workbook.Sheets[workbook.SheetNames[0]];
         const hojaObligaciones = workbook.Sheets[workbook.SheetNames[1]];
 
-        const filasClientes = XLSX.utils.sheet_to_json<any[]>(hojaClientes, {
+        const filasClientes = XLSX.utils.sheet_to_json<unknown[]>(hojaClientes, {
           header: 1,
           defval: null,
         });
-        const filasObligaciones = XLSX.utils.sheet_to_json<any[]>(
+        const filasObligaciones = XLSX.utils.sheet_to_json<unknown[]>(
           hojaObligaciones,
           { header: 1, defval: null },
         );
 
-        const clientesPayload: any[] = [];
+        const clientesPayload: Array<ClienteFormData & { dv: number }> = [];
 
         for (let i = 1; i < filasClientes.length; i++) {
           const row = filasClientes[i];
@@ -288,6 +277,7 @@ export const ClienteCargaMasiva = ({
                 : "error desconocido";
             throw new Error(
               `Se crearon/actualizaron ${clientesCreados.length} clientes, pero no se pudieron vincular sus obligaciones (${mensaje}). Puedes volver a subir el mismo archivo: los clientes y las obligaciones ya vinculadas no se duplican.`,
+              { cause: errorObligaciones },
             );
           }
         }
@@ -298,10 +288,11 @@ export const ClienteCargaMasiva = ({
         setTimeout(() => {
           onSuccess();
         }, 1500);
-      } catch (error: any) {
+      } catch (error) {
         setErrorProcesamiento(
-          error.message ||
-            "Ocurrió un conflicto al descomprimir las matrices de celdas.",
+          error instanceof Error
+            ? error.message
+            : "Ocurrió un conflicto al descomprimir las matrices de celdas.",
         );
       }
     };

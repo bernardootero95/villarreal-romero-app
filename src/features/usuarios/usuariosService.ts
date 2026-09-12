@@ -15,7 +15,7 @@ export const usuariosService = {
   },
 
   
-  async registrarAuditoria(accion: string, modulo: string, id: string, previo: any = null, nuevo: any = null) {
+  async registrarAuditoria(accion: string, modulo: string, id: string, previo: Record<string, unknown> | null = null, nuevo: Record<string, unknown> | null = null) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 

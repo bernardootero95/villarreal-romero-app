@@ -44,7 +44,7 @@ export const ResetPasswordModal = ({
         onSuccess: () => {
           setCambioExitoso(true);
         },
-        onError: (err: any) => {
+        onError: (err) => {
           setErrorValidation(
             err.message || "Error al procesar el cambio de credenciales.",
           );

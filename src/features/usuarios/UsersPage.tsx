@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useState } from "react";
+import { useAuth } from "../../contexts/useAuth";
 import { useUsuarios, useDeleteUsuario } from "./useUsuarios";
 import type { Usuario } from "./types";
 import {
@@ -36,9 +36,10 @@ export const UsersPage = () => {
   const puedeAdministrar =
     perfil && ["Gerente", "Ingeniero"].includes(perfil.cargo);
 
-  useEffect(() => {
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
     setCurrentPage(1);
-  }, [searchTerm]);
+  };
 
   const handleDelete = async (id: string) => {
     if (
@@ -55,7 +56,7 @@ export const UsersPage = () => {
             "El miembro del equipo ha sido revocado de forma correcta.",
           );
         },
-        onError: (err: any) => {
+        onError: (err) => {
           setErrorLocal(
             err.message || "Fallo técnico al desactivar el miembro del equipo.",
           );
@@ -138,7 +139,7 @@ export const UsersPage = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Buscar por nombre o cargo..."
               className="w-full pl-10 pr-4 py-2 border border-text-muted/30 rounded-md bg-surface text-sm focus:ring-1 focus:ring-accent outline-none transition-colors"
             />

@@ -24,10 +24,9 @@ const calcularDV = (nit: string): number | null => {
   if (!nit || !/^[0-9]+$/.test(nit)) return null;
   const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
   let x = 0;
-  let y = 0;
   const z = nit.length;
   for (let i = 0; i < z; i++) {
-    y = parseInt(nit.charAt(i), 10);
+    const y = parseInt(nit.charAt(i), 10);
     x += y * vpri[z - 1 - i];
   }
   const y1 = x % 11;
@@ -118,7 +117,7 @@ export const ClienteForm = ({
         { id: clienteAEditar.id, payload: datosLimpios },
         {
           onSuccess: () => onSuccess(),
-          onError: (err: any) =>
+          onError: (err) =>
             setSubmitError(err.message || "Fallo al actualizar el cliente."),
         },
       );
@@ -132,7 +131,7 @@ export const ClienteForm = ({
             onSuccess();
           }
         },
-        onError: (err: any) =>
+        onError: (err) =>
           setSubmitError(err.message || "No se pudo registrar el cliente."),
       });
     }

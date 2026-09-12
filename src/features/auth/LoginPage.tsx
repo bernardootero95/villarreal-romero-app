@@ -5,7 +5,7 @@ import { z } from "zod";
 import { supabase } from "../../lib/supabase";
 import { Lock, User as UserIcon, Eye, EyeOff, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import { Loader } from "../../components/Loader";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 

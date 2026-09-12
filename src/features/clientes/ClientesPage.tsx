@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import { useClientes, useDeleteCliente } from "./useClientes";
 import { useUsuarios } from "../usuarios/useUsuarios";
 import type { ClienteConContador } from "./types";
@@ -88,7 +88,7 @@ export const ClientesPage = () => {
       )
     ) {
       deleteClienteMutation.mutate(id, {
-        onError: (err: any) => {
+        onError: (err) => {
           setErrorLocal(
             err.message ||
               "Fallo de persistencia al intentar desactivar el registro contable.",

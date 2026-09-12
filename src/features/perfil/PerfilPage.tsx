@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useState } from "react";
+import { useAuth } from "../../contexts/useAuth";
 import { supabase } from "../../lib/supabase";
 import { useMisClientes } from "../clientes/useClientes";
 import {
@@ -30,7 +30,9 @@ export const PerfilPage = () => {
   const { perfil } = useAuth();
   const navigate = useNavigate();
   const [newPassword, setNewPassword] = useState("");
-  const [correoNotif, setCorreoNotif] = useState("");
+  const [correoNotif, setCorreoNotif] = useState(
+    () => perfil?.correo_notificacion || "",
+  );
   const [loadingPass, setLoadingPass] = useState(false);
   const [loadingCorreo, setLoadingCorreo] = useState(false);
 
@@ -47,12 +49,6 @@ export const PerfilPage = () => {
 
   const { data: misClientes = [], isLoading: loadingClientes } =
     useMisClientes(perfil?.id);
-
-  useEffect(() => {
-    if (perfil?.correo_notificacion) {
-      setCorreoNotif(perfil.correo_notificacion);
-    }
-  }, [perfil]);
 
   if (!perfil) return null;
 
@@ -82,13 +78,14 @@ export const PerfilPage = () => {
           "¡Tu clave de acceso ha sido sobreescrita correctamente en la bóveda de autenticación!",
       });
       setNewPassword("");
-    } catch (error: any) {
+    } catch (error) {
       setNotifPass({
         tipo: "error",
         titulo: "Error de Seguridad",
         texto:
-          error.message ||
-          "Fallo técnico al intentar actualizar la contraseña.",
+          error instanceof Error
+            ? error.message
+            : "Fallo técnico al intentar actualizar la contraseña.",
       });
     } finally {
       setLoadingPass(false);
@@ -126,13 +123,14 @@ export const PerfilPage = () => {
         texto:
           "¡Canal de alertas enrutado! Por favor reinicia la aplicación para refrescar el perfil de sesión.",
       });
-    } catch (error: any) {
+    } catch (error) {
       setNotifCorreo({
         tipo: "error",
         titulo: "Fallo de Persistencia",
         texto:
-          error.message ||
-          "Error al registrar el nuevo correo de notificaciones en la base de datos.",
+          error instanceof Error
+            ? error.message
+            : "Error al registrar el nuevo correo de notificaciones en la base de datos.",
       });
     } finally {
       setLoadingCorreo(false);

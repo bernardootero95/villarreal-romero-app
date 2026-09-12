@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import { useCliente, useClienteImpuestos } from "./useClientes";
+import type { ObligacionCliente } from "./types";
 import { useVencimientosMes } from "../calendario/useVencimientos";
 import {
   ArrowLeft,
@@ -248,7 +249,7 @@ export const DetalleClientePage = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {impuestosCargo.map((obl: any) => (
+                  {impuestosCargo.map((obl: ObligacionCliente) => (
                     <div
                       key={obl.id}
                       className="flex items-center gap-2.5 p-3 bg-background rounded-lg border border-text-muted/10 shadow-2xs"

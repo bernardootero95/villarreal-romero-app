@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import { useImpuestos } from "./useImpuestos";
 import {
   useCalendarioBase,
@@ -66,7 +66,7 @@ export const DetalleImpuestoPage = () => {
       deleteFechaMutation.mutate(
         { id: fechaId },
         {
-          onError: (err: any) => {
+          onError: (err) => {
             setErrorLocal(
               err.message ||
                 "Fallo de persistencia: La fecha oficial se encuentra vinculada a obligaciones activas.",
@@ -134,7 +134,7 @@ export const DetalleImpuestoPage = () => {
   const errorAMostrar =
     errorImpuesto?.message ||
     errorLocal ||
-    (deleteFechaMutation.error as any)?.message;
+    deleteFechaMutation.error?.message;
   const loading = loadingCalendario;
 
   return (

@@ -131,7 +131,11 @@ export const calendarioBaseService = {
     if (!asignaciones || asignaciones.length === 0) return;
 
     // CRUCE DINÁMICO DE DÍGITOS (1 O 2 CARACTERES COMO TEXTO EXACTO)
-    const clientesAfectados = asignaciones.filter((asig: any) => {
+    const asignacionesTipadas = asignaciones as unknown as Array<{
+      cliente_id: string;
+      clientes: { nit: string };
+    }>;
+    const clientesAfectados = asignacionesTipadas.filter((asig) => {
       if (calendario.digito === null || calendario.digito === '') return true;
 
       const nitCliente = String(asig.clientes.nit);

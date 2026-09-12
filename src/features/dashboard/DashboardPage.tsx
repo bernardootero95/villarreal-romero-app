@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useState } from "react";
+import { useAuth } from "../../contexts/useAuth";
 import { useDashboardMetricas, useDashboardDistribucion } from "./useDashboard";
 import { type ModoVistaDashboard } from "./dashboardService";
 import { useVencimientosMes } from "../calendario/useVencimientos";
@@ -34,13 +34,61 @@ const calcularDiasRestantes = (fechaLimiteStr: string): number => {
   return Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24));
 };
 
+interface DiaSemana {
+  nombre: string;
+  fechaStr: string;
+  numeroDia: number;
+  esHoy: boolean;
+}
+
+const calcularSemanaActual = (): {
+  semana: DiaSemana[];
+  diaSeleccionado: string;
+} => {
+  const hoy = new Date();
+  const diaActual = hoy.getDay();
+  const distanciaAlLunes = diaActual === 0 ? -6 : 1 - diaActual;
+
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() + distanciaAlLunes);
+
+  const nombresDias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const semana: DiaSemana[] = [];
+  let banderaDiaSeleccionado = "";
+
+  for (let i = 0; i < 7; i++) {
+    const diaParaCalcular = new Date(lunes);
+    diaParaCalcular.setDate(lunes.getDate() + i);
+
+    const anio = diaParaCalcular.getFullYear();
+    const mes = String(diaParaCalcular.getMonth() + 1).padStart(2, "0");
+    const dia = String(diaParaCalcular.getDate()).padStart(2, "0");
+    const fechaStr = `${anio}-${mes}-${dia}`;
+
+    const esHoy = hoy.toDateString() === diaParaCalcular.toDateString();
+    if (esHoy) banderaDiaSeleccionado = fechaStr;
+
+    semana.push({
+      nombre: nombresDias[i],
+      fechaStr,
+      numeroDia: diaParaCalcular.getDate(),
+      esHoy,
+    });
+  }
+
+  return { semana, diaSeleccionado: banderaDiaSeleccionado || semana[0].fechaStr };
+};
+
 export const DashboardPage = () => {
   const { perfil, session } = useAuth();
   const navigate = useNavigate();
 
   const [vista, setVista] = useState<ModoVistaDashboard>("PERSONAL");
-  const [diasSemana, setDiasSemana] = useState<any[]>([]);
-  const [diaSeleccionado, setDiaSeleccionado] = useState<string>("");
+  const [semanaInfo] = useState(calcularSemanaActual);
+  const diasSemana = semanaInfo.semana;
+  const [diaSeleccionado, setDiaSeleccionado] = useState<string>(
+    semanaInfo.diaSeleccionado,
+  );
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
   const hoy = new Date();
@@ -72,46 +120,6 @@ export const DashboardPage = () => {
 
   const { data: resumenImpuestos = [], isLoading: loadingDistribucion } =
     useDashboardDistribucion(esVistaGlobal && !!perfil);
-
-  const calcularSemanaActual = () => {
-    const hoy = new Date();
-    const diaActual = hoy.getDay();
-    const distanciaAlLunes = diaActual === 0 ? -6 : 1 - diaActual;
-
-    const lunes = new Date(hoy);
-    lunes.setDate(hoy.getDate() + distanciaAlLunes);
-
-    const nombresDias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-    const semana: any[] = [];
-    let banderaDiaSeleccionado = "";
-
-    for (let i = 0; i < 7; i++) {
-      const diaParaCalcular = new Date(lunes);
-      diaParaCalcular.setDate(lunes.getDate() + i);
-
-      const anio = diaParaCalcular.getFullYear();
-      const mes = String(diaParaCalcular.getMonth() + 1).padStart(2, "0");
-      const dia = String(diaParaCalcular.getDate()).padStart(2, "0");
-      const fechaStr = `${anio}-${mes}-${dia}`;
-
-      const esHoy = hoy.toDateString() === diaParaCalcular.toDateString();
-      if (esHoy) banderaDiaSeleccionado = fechaStr;
-
-      semana.push({
-        nombre: nombresDias[i],
-        fechaStr,
-        numeroDia: diaParaCalcular.getDate(),
-        esHoy,
-      });
-    }
-
-    setDiasSemana(semana);
-    setDiaSeleccionado(banderaDiaSeleccionado || semana[0].fechaStr);
-  };
-
-  useEffect(() => {
-    calcularSemanaActual();
-  }, []);
 
   const vtosDiaSeleccionado = vencimientosMes.filter(
     (v) => v.fecha_limite === diaSeleccionado,
@@ -353,7 +361,7 @@ export const DashboardPage = () => {
                     </p>
                   </div>
                 ) : (
-                  metricas.alertasCriticas?.map((alerta: any) => {
+                  metricas.alertasCriticas?.map((alerta) => {
                     const diasRestantes = calcularDiasRestantes(
                       alerta.fecha_limite,
                     );
@@ -430,7 +438,7 @@ export const DashboardPage = () => {
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {metricas.topClientesCarga?.map((item: any, idx: number) => (
+                {metricas.topClientesCarga?.map((item, idx) => (
                   <div
                     key={idx}
                     className="p-3 bg-background border border-text-muted/10 rounded-lg flex justify-between items-center"

@@ -1,32 +1,11 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import type { Usuario } from "../features/usuarios/types";
 import { useInactividad } from "../hooks/useInactividad"; // <-- Importamos el controlador de inactividad
-
-interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  perfil: Usuario | null;
-  signOut: () => Promise<void>;
-  isLoading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType>({
-  session: null,
-  user: null,
-  perfil: null,
-  signOut: async () => {},
-  isLoading: true,
-});
+import { AuthContext } from "./authContextObject";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -100,5 +79,3 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext);

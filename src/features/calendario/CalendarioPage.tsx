@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import {
   useVencimientosMes,
   useActualizarEstadoVencimiento,
@@ -130,7 +130,7 @@ export const CalendarioPage = () => {
             return copia;
           });
         },
-        onError: (err: any) => {
+        onError: (err) => {
           setErrorLocal(
             err.message ||
               "No se pudo actualizar el radicado de la obligación tributaria.",

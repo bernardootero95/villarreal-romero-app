@@ -26,12 +26,31 @@ const sumarDiasHabiles = (fechaBase: Date, diasHabilesAAgregar: number): Date =>
   return fecha;
 };
 
+interface UsuarioNotif {
+  id: string;
+  nombre_completo: string;
+  correo_notificacion: string | null;
+}
+
+interface VencimientoNotif {
+  fecha_limite: string;
+  periodo_fiscal: string;
+  clientes: { razon_social: string; contador_id: string | null };
+  impuestos: { nombre: string; especialista_id: string | null };
+}
+
+interface TareaNotif {
+  titulo: string;
+  fecha_limite: string;
+  usuario_id: string;
+}
+
 const generarPlantillaEmail = (
-  usuario: any,
-  vtosVencidos: any[],
-  tareasVencidas: any[],
-  vtosProximos: any[],
-  tareasProximas: any[],
+  usuario: UsuarioNotif,
+  vtosVencidos: VencimientoNotif[],
+  tareasVencidas: TareaNotif[],
+  vtosProximos: VencimientoNotif[],
+  tareasProximas: TareaNotif[],
   empresaNombre: string,
   colorPrimario: string
 ) => {
@@ -52,10 +71,10 @@ const generarPlantillaEmail = (
         <h3 style="color: #991B1B; font-size: 14px; margin: 0 0 8px 0; text-transform: uppercase;">🚨 Actividades Vencidas (Mes Actual)</h3>
         <ul style="font-size: 13px; margin: 0; padding-left: 20px; color: #7F1D1D;">
     `
-    vtosVencidos.forEach((v: any) => {
+    vtosVencidos.forEach((v) => {
       htmlContent += `<li style="margin-bottom: 4px;"><strong>[${v.fecha_limite}]</strong> ${v.clientes.razon_social} — ${v.impuestos.nombre} (Per: ${v.periodo_fiscal})</li>`
     })
-    tareasVencidas.forEach((t: any) => {
+    tareasVencidas.forEach((t) => {
       htmlContent += `<li style="margin-bottom: 4px;"><strong>[${t.fecha_limite}]</strong> Tarea: ${t.titulo}</li>`
     })
     htmlContent += `</ul></div>`
@@ -67,10 +86,10 @@ const generarPlantillaEmail = (
         <h3 style="color: #92400E; font-size: 14px; margin: 0 0 8px 0; text-transform: uppercase;">⚠️ Próximos Vencimientos (3 días hábiles)</h3>
         <ul style="font-size: 13px; margin: 0; padding-left: 20px; color: #92400E;">
     `
-    vtosProximos.forEach((v: any) => {
+    vtosProximos.forEach((v) => {
       htmlContent += `<li style="margin-bottom: 4px;"><strong>[${v.fecha_limite}]</strong> ${v.clientes.razon_social} — ${v.impuestos.nombre}</li>`
     })
-    tareasProximas.forEach((t: any) => {
+    tareasProximas.forEach((t) => {
       htmlContent += `<li style="margin-bottom: 4px;"><strong>[${t.fecha_limite}]</strong> Tarea: ${t.titulo}</li>`
     })
     htmlContent += `</ul></div>`
@@ -157,18 +176,18 @@ serve(async (req) => {
 
       if (yaEnviado) continue
 
-      const vtosAsignados = (vencimientos || []).filter((v: any) => 
+      const vtosAsignados = ((vencimientos || []) as VencimientoNotif[]).filter((v) =>
         v.clientes.contador_id === usuario.id || v.impuestos.especialista_id === usuario.id
       )
-      const tareasAsignadas = (tareas || []).filter((t: any) => t.usuario_id === usuario.id)
+      const tareasAsignadas = ((tareas || []) as TareaNotif[]).filter((t) => t.usuario_id === usuario.id)
 
       if (vtosAsignados.length === 0 && tareasAsignadas.length === 0) continue
 
-      const vtosVencidos = vtosAsignados.filter((v: any) => v.fecha_limite < hoyStr)
-      const vtosProximos = vtosAsignados.filter((v: any) => v.fecha_limite >= hoyStr)
-      
-      const tareasVencidas = tareasAsignadas.filter((t: any) => t.fecha_limite < hoyStr)
-      const tareasProximas = tareasAsignadas.filter((t: any) => t.fecha_limite >= hoyStr)
+      const vtosVencidos = vtosAsignados.filter((v) => v.fecha_limite < hoyStr)
+      const vtosProximos = vtosAsignados.filter((v) => v.fecha_limite >= hoyStr)
+
+      const tareasVencidas = tareasAsignadas.filter((t) => t.fecha_limite < hoyStr)
+      const tareasProximas = tareasAsignadas.filter((t) => t.fecha_limite >= hoyStr)
 
       const htmlContent = generarPlantillaEmail(
         usuario, 
@@ -207,9 +226,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error desconocido.'
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }

@@ -10,6 +10,59 @@ import type {
   ClasificacionVencimiento,
 } from "./types";
 
+interface UsuarioBasico {
+  id: string;
+  nombre_completo: string;
+  cargo: string;
+}
+
+interface UsuarioNombre {
+  id: string;
+  nombre_completo: string;
+}
+
+interface ImpuestoBasico {
+  id: string;
+  nombre: string;
+  periodicidad: string;
+}
+
+interface VencimientoRawEmpleado {
+  fecha_limite: string;
+  estado_tarea: string;
+  actualizado: string | null;
+  clientes: { contador_id: string | null };
+  impuestos: { especialista_id: string | null };
+}
+
+interface VencimientoRawImpuesto {
+  impuesto_id: string;
+  fecha_limite: string;
+  estado_tarea: string;
+  actualizado: string | null;
+}
+
+interface VencimientoDetalleEmpleadoRaw {
+  id: string;
+  fecha_limite: string;
+  estado_tarea: string;
+  actualizado: string | null;
+  periodo_fiscal: string;
+  observaciones: string | null;
+  clientes: { contador_id: string | null; razon_social: string; nit: string; dv: number };
+  impuestos: { especialista_id: string | null; nombre: string };
+}
+
+interface VencimientoDetalleImpuestoRaw {
+  id: string;
+  fecha_limite: string;
+  estado_tarea: string;
+  actualizado: string | null;
+  periodo_fiscal: string;
+  observaciones: string | null;
+  clientes: { contador_id: string | null; razon_social: string; nit: string; dv: number };
+}
+
 // Colombia no observa horario de verano, pero usamos Intl con timeZone explícito
 // en vez de un offset fijo para evitar depender de eso.
 const obtenerFechaLocal = (fecha: Date | string = new Date()): string =>
@@ -62,7 +115,7 @@ export const informesService = {
     const hoyStr = obtenerFechaLocal();
     const mapaEmpleados: Record<string, MetricaVencimientosEmpleado> = {};
 
-    (usuarios || []).forEach((u: any) => {
+    (usuarios || []).forEach((u: UsuarioBasico) => {
       mapaEmpleados[u.id] = {
         usuario_id: u.id,
         nombre_completo: u.nombre_completo,
@@ -76,7 +129,7 @@ export const informesService = {
       };
     });
 
-    (vencimientos || []).forEach((v: any) => {
+    ((vencimientos || []) as unknown as VencimientoRawEmpleado[]).forEach((v) => {
       const responsables = new Set<string>();
       if (v.clientes?.contador_id) responsables.add(v.clientes.contador_id);
       if (v.impuestos?.especialista_id)
@@ -161,7 +214,7 @@ export const informesService = {
     const hoyStr = obtenerFechaLocal();
     const mapaImpuestos: Record<string, MetricaVencimientosImpuesto> = {};
 
-    (impuestos || []).forEach((imp: any) => {
+    (impuestos || []).forEach((imp: ImpuestoBasico) => {
       mapaImpuestos[imp.id] = {
         impuesto_id: imp.id,
         nombre: imp.nombre,
@@ -175,7 +228,7 @@ export const informesService = {
       };
     });
 
-    (vencimientos || []).forEach((v: any) => {
+    (vencimientos || []).forEach((v: VencimientoRawImpuesto) => {
       const imp = mapaImpuestos[v.impuesto_id];
       if (!imp) return;
 
@@ -251,8 +304,8 @@ export const informesService = {
 
     const hoyStr = obtenerFechaLocal();
 
-    const asignados = (vencimientos || []).filter(
-      (v: any) =>
+    const asignados = ((vencimientos || []) as unknown as VencimientoDetalleEmpleadoRaw[]).filter(
+      (v) =>
         v.clientes?.contador_id === usuarioId ||
         v.impuestos?.especialista_id === usuarioId,
     );
@@ -262,7 +315,7 @@ export const informesService = {
     let pendientes = 0;
     let vencidos = 0;
 
-    const items: DetalleVencimientoEmpleado[] = asignados.map((v: any) => {
+    const items: DetalleVencimientoEmpleado[] = asignados.map((v) => {
       const fechaRadicacion = v.actualizado ? obtenerFechaLocal(v.actualizado) : null;
       let clasificacion: ClasificacionVencimiento;
 
@@ -367,7 +420,7 @@ export const informesService = {
     if (errUsu) throw errUsu;
 
     const mapaUsuarios: Record<string, string> = {};
-    (usuarios || []).forEach((u: any) => {
+    (usuarios || []).forEach((u: UsuarioNombre) => {
       mapaUsuarios[u.id] = u.nombre_completo;
     });
 
@@ -378,8 +431,8 @@ export const informesService = {
     let pendientes = 0;
     let vencidos = 0;
 
-    const items: DetalleVencimientoImpuesto[] = (vencimientos || []).map(
-      (v: any) => {
+    const items: DetalleVencimientoImpuesto[] = ((vencimientos || []) as unknown as VencimientoDetalleImpuestoRaw[]).map(
+      (v) => {
         const fechaRadicacion = v.actualizado
           ? obtenerFechaLocal(v.actualizado)
           : null;

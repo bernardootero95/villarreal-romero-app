@@ -3,6 +3,15 @@ import { vencimientosService } from "../calendario/vencimientosService";
 
 export type ModoVistaDashboard = "GLOBAL" | "PERSONAL";
 
+export interface AlertaCritica {
+  id: string;
+  fecha_limite: string;
+  periodo_fiscal: string;
+  estado_tarea: string;
+  clientes: { id: string; razon_social: string; contador_id: string };
+  impuestos: { id: string; nombre: string; especialista_id: string | null };
+}
+
 export const dashboardService = {
   async getMetricasContador(
     usuarioId: string,
@@ -43,7 +52,7 @@ export const dashboardService = {
 
     // 3. Filtrado de Vencimientos y cálculo de efectividad
     // Si la vista es personal, nos aseguramos de que solo pasen los donde el usuario es contador o especialista
-    const vencimientosFiltrados = todosLosVencimientos.filter((v: any) => {
+    const vencimientosFiltrados = todosLosVencimientos.filter((v) => {
       if (aplicarVistaGlobal) return true;
       const esContador = v.clientes?.contador_id === usuarioId;
       const esEspecialista = v.impuestos?.especialista_id === usuarioId;
@@ -68,7 +77,7 @@ export const dashboardService = {
     fechaLimiteAlerta.setDate(hoy.getDate() + 5);
     const endDateStr = `${fechaLimiteAlerta.getFullYear()}-${String(fechaLimiteAlerta.getMonth() + 1).padStart(2, "0")}-${String(fechaLimiteAlerta.getDate()).padStart(2, "0")}`;
 
-    let queryAlertas = supabase
+    const queryAlertas = supabase
       .from("vencimientos")
       .select(
         `
@@ -92,7 +101,7 @@ export const dashboardService = {
     if (errAlertas) throw errAlertas;
 
     // Filtramos las alertas en memoria según el modo de vista seleccionado
-    const alertasCrudas = (dataAlertas || []).filter((v: any) => {
+    const alertasCrudas = ((dataAlertas as unknown as AlertaCritica[] | null) || []).filter((v) => {
       if (aplicarVistaGlobal) return true;
       return (
         v.clientes.contador_id === usuarioId ||
@@ -108,7 +117,7 @@ export const dashboardService = {
       { nombre: string; pendientes: number }
     > = {};
 
-    vencimientosFiltrados.forEach((v: any) => {
+    vencimientosFiltrados.forEach((v) => {
       if (v.estado_tarea !== "PRESENTADO" && v.clientes?.id) {
         const idCliente = v.clientes.id;
         if (!conteoPorCliente[idCliente]) {

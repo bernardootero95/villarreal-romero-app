@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, Upload, FileSpreadsheet, FileUp } from "lucide-react";
 import { useCreateBulkCalendarioBase } from "./useCalendarioBase";
+import type { CalendarioBaseFormData } from "./types";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 import * as XLSX from "xlsx";
 
@@ -25,7 +26,7 @@ export const CalendarioCargaMasiva = ({
 
   const bulkMutation = useCreateBulkCalendarioBase();
 
-  const procesarFechaExcel = (fechaStr: any) => {
+  const procesarFechaExcel = (fechaStr: unknown) => {
     if (!fechaStr) return "";
     const parts = String(fechaStr).split(/[-/]/);
     if (parts.length === 3) {
@@ -57,13 +58,13 @@ export const CalendarioCargaMasiva = ({
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
 
-        const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, {
+        const rows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
           header: 1,
           raw: false,
           dateNF: "yyyy-mm-dd",
         });
 
-        const registrosValidos: any[] = [];
+        const registrosValidos: CalendarioBaseFormData[] = [];
 
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
@@ -115,16 +116,18 @@ export const CalendarioCargaMasiva = ({
                 onSuccess();
               }, 1500);
             },
-            onError: (err: any) => {
+            onError: (err) => {
               setErrorProcesamiento(
                 err.message || "Fallo de persistencia al impactar Supabase.",
               );
             },
           },
         );
-      } catch (error: any) {
+      } catch (error) {
         setErrorProcesamiento(
-          error.message || "Error al decodificar la matriz del archivo Excel.",
+          error instanceof Error
+            ? error.message
+            : "Error al decodificar la matriz del archivo Excel.",
         );
       }
     };

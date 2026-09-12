@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import { useImpuestos, useDesactivarImpuesto } from "./useImpuestos";
 import type { ImpuestoConEspecialista } from "./types";
 import { Search, Trash2, Plus, Edit2, Eye } from "lucide-react";
@@ -30,7 +30,7 @@ export const ImpuestosPage = () => {
       )
     ) {
       desactivarMutation.mutate(id, {
-        onError: (err: any) => {
+        onError: (err) => {
           setErrorLocal(
             err.message ||
               "Fallo de persistencia al intentar desactivar el impuesto.",

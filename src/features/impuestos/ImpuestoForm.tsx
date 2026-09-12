@@ -49,8 +49,8 @@ export const ImpuestoForm = ({
     if (impuestoAEditar) {
       reset({
         nombre: impuestoAEditar.nombre,
-        periodicidad: impuestoAEditar.periodicidad as any,
-        regla_vencimiento: impuestoAEditar.regla_vencimiento as any,
+        periodicidad: impuestoAEditar.periodicidad,
+        regla_vencimiento: impuestoAEditar.regla_vencimiento,
         especialista_id: impuestoAEditar.especialista_id || "",
         estado: impuestoAEditar.estado as "ACTIVO" | "INACTIVO",
       });
@@ -83,10 +83,11 @@ export const ImpuestoForm = ({
 
       queryClient.invalidateQueries({ queryKey: IMPUESTOS_QUERY_KEY });
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       setSubmitError(
-        error.message ||
-          "Ocurrió un error inesperado al intentar guardar la configuración fiscal.",
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error inesperado al intentar guardar la configuración fiscal.",
       );
     }
   };

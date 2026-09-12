@@ -5,7 +5,7 @@ import { tareaSchema, type TareaFormData, type Tarea } from "./types";
 import { X, Save, ClipboardList } from "lucide-react";
 import { useCreateTarea, useUpdateTarea } from "./useTareas";
 import { useUsuarios } from "../usuarios/useUsuarios";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 
 interface TareaFormProps {
@@ -54,7 +54,7 @@ export const TareaForm = ({
         descripcion: tareaAEditar.descripcion || "",
         fecha_limite: tareaAEditar.fecha_limite,
         usuario_id: tareaAEditar.usuario_id,
-        estado: tareaAEditar.estado as any,
+        estado: tareaAEditar.estado,
       });
     }
   }, [tareaAEditar, reset]);
@@ -81,8 +81,10 @@ export const TareaForm = ({
         await createMutation.mutateAsync(data);
       }
       onSuccess();
-    } catch (err: any) {
-      setErrorPersistencia(err.message || "Error al procesar la tarea.");
+    } catch (err) {
+      setErrorPersistencia(
+        err instanceof Error ? err.message : "Error al procesar la tarea.",
+      );
     }
   };
 

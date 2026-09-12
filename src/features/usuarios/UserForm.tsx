@@ -49,8 +49,8 @@ export const UserForm = ({
         nombre_completo: usuarioAEditar.nombre_completo,
         email: usuarioAEditar.email || "",
         correo_notificacion: usuarioAEditar.correo_notificacion || "",
-        cargo: usuarioAEditar.cargo as any,
-        estado: usuarioAEditar.estado as any,
+        cargo: usuarioAEditar.cargo,
+        estado: usuarioAEditar.estado,
       });
     }
   }, [usuarioAEditar, reset]);
@@ -63,7 +63,7 @@ export const UserForm = ({
         { id: usuarioAEditar.id, payload: data },
         {
           onSuccess: () => onSuccess(),
-          onError: (err: any) =>
+          onError: (err) =>
             setErrorPersistencia(
               err.message || "No se pudo actualizar el miembro del equipo.",
             ),
@@ -79,7 +79,7 @@ export const UserForm = ({
 
       createMutation.mutate(dataAEnviar as UsuarioFormData, {
         onSuccess: () => onSuccess(),
-        onError: (err: any) =>
+        onError: (err) =>
           setErrorPersistencia(
             err.message ||
               "Fallo del microservicio al dar de alta al nuevo usuario.",

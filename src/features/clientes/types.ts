@@ -49,3 +49,14 @@ export interface ClienteConContador extends Cliente {
     nombre_completo: string;
   };
 }
+
+export interface ObligacionCliente {
+  id: string;
+  estado: string;
+  impuestos: {
+    id: string;
+    nombre: string;
+    periodicidad: string;
+    regla_vencimiento: string;
+  } | null;
+}

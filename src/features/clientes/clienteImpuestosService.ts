@@ -1,7 +1,8 @@
 import { supabase } from '../../lib/supabase';
+import type { ObligacionCliente } from './types';
 
 export const clienteImpuestosService = {
-  
+
   async getImpuestosPorCliente(clienteId: string) {
     const { data, error } = await supabase
       .from('cliente_impuestos')
@@ -19,7 +20,7 @@ export const clienteImpuestosService = {
       .is('eliminado', null);
 
     if (error) throw error;
-    return data;
+    return data as unknown as ObligacionCliente[];
   },
 
   async asignarImpuesto(clienteId: string, impuestoId: string) {
@@ -211,7 +212,14 @@ export const clienteImpuestosService = {
 
     if (!calendarios || calendarios.length === 0) return;
 
-    const vencimientosPayload: any[] = [];
+    const vencimientosPayload: Array<{
+      cliente_id: string;
+      impuesto_id: string;
+      calendario_base_id: string;
+      fecha_limite: string;
+      periodo_fiscal: string;
+      estado_tarea: string;
+    }> = [];
 
     for (const ob of obligaciones) {
       const nitCliente = nitMap[ob.cliente_id] || "";

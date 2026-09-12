@@ -6,7 +6,7 @@ import {
 } from "./useClientes";
 import { impuestosService } from "../impuestos/impuestosService";
 import { AlertNotification } from "../../components/ui/AlertNotification";
-import type { ClienteConContador } from "./types";
+import type { ClienteConContador, ObligacionCliente } from "./types";
 import type { ImpuestoConEspecialista } from "../impuestos/types";
 import { useEffect, useState } from "react";
 
@@ -62,7 +62,7 @@ export const FichaObligaciones = ({
       },
       {
         onSuccess: () => setSelectedImpuesto(""),
-        onError: (err: any) =>
+        onError: (err) =>
           setErrorFicha(
             err.message ||
               "No se pudo inyectar la nueva obligación en el calendario.",
@@ -81,7 +81,7 @@ export const FichaObligaciones = ({
       desasignarMutation.mutate(
         { asignacionId, clienteId: cliente.id, impuestoId },
         {
-          onError: (err: any) =>
+          onError: (err) =>
             setErrorFicha(
               err.message ||
                 "Fallo de persistencia al intentar remover la obligación fiscal.",
@@ -92,7 +92,10 @@ export const FichaObligaciones = ({
   };
 
   const impuestosDisponibles = catImpuestos.filter(
-    (cat) => !obligaciones.some((obl: any) => obl.impuestos?.id === cat.id),
+    (cat) =>
+      !obligaciones.some(
+        (obl: ObligacionCliente) => obl.impuestos?.id === cat.id,
+      ),
   );
 
   const loading = loadingObligaciones || loadingCat;
@@ -202,7 +205,7 @@ export const FichaObligaciones = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-text-muted/10 text-sm">
-                    {obligaciones.map((obl: any) => (
+                    {obligaciones.map((obl: ObligacionCliente) => (
                       <tr
                         key={obl.id}
                         className="hover:bg-text-muted/5 transition-colors"
@@ -218,7 +221,7 @@ export const FichaObligaciones = ({
                         <td className="px-4 py-3 text-right">
                           <button
                             onClick={() =>
-                              handleQuitar(obl.id, obl.impuestos?.id)
+                              handleQuitar(obl.id, obl.impuestos?.id ?? "")
                             }
                             disabled={submitting}
                             className="text-text-muted hover:text-danger p-1 transition-colors cursor-pointer disabled:opacity-30"

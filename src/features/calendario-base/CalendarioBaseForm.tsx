@@ -11,8 +11,7 @@ import {
   useCreateCalendarioBase,
   useUpdateCalendarioBase,
 } from "./useCalendarioBase";
-import { impuestosService } from "../impuestos/impuestosService";
-import type { ImpuestoConEspecialista } from "../impuestos/types";
+import { useImpuestos } from "../impuestos/useImpuestos";
 import { Loader } from "../../components/Loader";
 import { AlertNotification } from "../../components/ui/AlertNotification";
 
@@ -29,9 +28,7 @@ export const CalendarioBaseForm = ({
   fechaAEditar,
   impuestoId,
 }: CalendarioBaseFormProps) => {
-  const [impuestoMeta, setImpuestoMeta] =
-    useState<ImpuestoConEspecialista | null>(null);
-  const [loadingMeta, setLoadingMeta] = useState(true);
+  const { data: impuestos = [], isLoading: loadingMeta } = useImpuestos();
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const createMutation = useCreateCalendarioBase();
@@ -52,19 +49,11 @@ export const CalendarioBaseForm = ({
   });
 
   const isEditing = !!fechaAEditar;
+  const impuestoMeta = impuestos.find((i) => i.id === impuestoId) ?? null;
   const requiereDigito = impuestoMeta?.regla_vencimiento !== "FECHA_FIJA";
 
   useEffect(() => {
     setValue("impuesto_id", impuestoId);
-    setLoadingMeta(true);
-    impuestosService
-      .getAll()
-      .then((data) => {
-        const meta = data.find((i) => i.id === impuestoId);
-        if (meta) setImpuestoMeta(meta);
-      })
-      .catch((err) => console.error("Error al recuperar metadatos:", err))
-      .finally(() => setLoadingMeta(false));
   }, [impuestoId, setValue]);
 
   useEffect(() => {
@@ -88,14 +77,14 @@ export const CalendarioBaseForm = ({
         { id: fechaAEditar.id, payload },
         {
           onSuccess: () => onSuccess(),
-          onError: (err: any) =>
+          onError: (err) =>
             setSubmitError(err.message || "Fallo al actualizar el registro."),
         },
       );
     } else {
       createMutation.mutate(payload, {
         onSuccess: () => onSuccess(),
-        onError: (err: any) =>
+        onError: (err) =>
           setSubmitError(err.message || "Fallo al crear el registro contable."),
       });
     }
