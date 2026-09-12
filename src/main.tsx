@@ -26,6 +26,16 @@ if (metaDescription) {
   );
 }
 
+// Favicon corporativo: reutiliza el mismo logo de marca blanca (VITE_LOGO_URL). Si la
+// empresa no configuró uno, se conserva el favicon por defecto empaquetado en index.html.
+const logoUrl = import.meta.env.VITE_LOGO_URL;
+if (logoUrl) {
+  const faviconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (faviconLink) {
+    faviconLink.href = logoUrl;
+  }
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
