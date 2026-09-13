@@ -7,9 +7,10 @@ export const Footer = () => {
     <footer className="w-full bg-surface border-t border-gray-200 py-4 mt-auto">
       <div className="w-full px-6 flex flex-col md:flex-row items-center justify-between text-xs text-text-muted">
         <p>
-          &copy; {currentYear}{" "}
-          <span className="font-semibold text-text-main">{empresaNombre}</span>.
-          Todos los derechos reservados.
+          &copy; {currentYear} Tecnoingeniería B.O. Todos los derechos
+          reservados. Uso licenciado a{" "}
+          <span className="font-semibold text-text-main">{empresaNombre}</span>
+          .
         </p>
         <p className="mt-2 md:mt-0">
           Diseñado y desarrollado por{" "}
